@@ -1,0 +1,21 @@
+# Performance budget (High preset, 1440p, RX 7800 XT / 7800X3D class)
+
+Hard floor: **60 FPS (16.6 ms)** everywhere; target 90+ average (≤11 ms).
+Numbers are per frame, measured from the in-game perf overlay (F3) / benchmark report.
+
+| Metric | Budget (High) | Notes |
+|---|---|---|
+| Draw calls (total render pass) | ≤ 3,000 | MultiMesh for props/foliage; merged building chunks; HLOD beyond 400 m |
+| Visible primitives (triangles) | ≤ 6 M | Auto-LOD on every mesh; visibility ranges |
+| Shadow-casting lights | sun + ≤ 4 omni/spot | Headlights cast shadows only for the player vehicle |
+| Non-shadow dynamic lights visible | ≤ 48 | Street lights fade out beyond 120 m, emissive-only beyond |
+| Active rigid/vehicle bodies | ≤ 60 | Far vehicles become kinematic/frozen |
+| NPC pedestrians active | ≤ 60 (≤ 20 full-rate animated) | AI LOD: 0–30 m every frame, 30–80 m every 4th frame, >80 m anim off/impostor |
+| Traffic vehicles active | ≤ 35 | |
+| GDScript time | ≤ 4 ms | Profiled in benchmark report |
+| Physics time | ≤ 3 ms | Jolt |
+| Chunk load hitch | 0 frames > 25 ms | Threaded loading only |
+| VRAM | ≤ 8 GB | Texture streaming via mipmaps, VRAM compression on |
+
+Graphics presets: Low / Medium / High / Ultra (see `scripts/core/graphics_settings.gd`).
+SDFGI + volumetric fog + SSR are the expensive toggles; High enables SSAO, SSIL(half), SSR(half), SDFGI(low cascades).

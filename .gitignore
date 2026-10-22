@@ -1,0 +1,13 @@
+# Godot
+.godot/
+*.translation
+export_presets.local.cfg
+# Raw Mixamo library (re-downloaded from the shared link; never commit)
+assets/source/mixamo_raw/
+# Build output (released through GitHub Actions)
+build/
+# Local scratch
+*.tmp
+__pycache__/
+tests/output/
+assets/source/mixamo/**/*.fbx
