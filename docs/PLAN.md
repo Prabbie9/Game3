@@ -23,4 +23,4 @@ After v1.0.0: iterate on the weakest-looking / weakest-feeling areas (screenshot
 2. Read `PROGRESS.md`, this file, `git log --oneline -20`.
 3. If Mixamo source clips are needed and `assets/source/mixamo_raw/` is empty: `tools/fetch_mixamo.sh`.
 4. Work → `tools/screenshots.sh` → look at the PNGs → commit/push → update `PROGRESS.md`.
-5. Milestone end: `tools/export_windows.sh` smoke test, tag `vX.Y.0`, push tag, check `gh run list`.
+5. Milestone end: `tools/export_windows.sh` + smoke test, write `vX.Y.0` to `release.txt` + update `release_notes.md`, push to main (the proxy blocks tag pushes; the workflow creates the tag + Release), check `gh run list`.

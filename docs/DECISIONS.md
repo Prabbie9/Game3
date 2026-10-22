@@ -10,3 +10,4 @@
 - 2026-10-22 — Fan palms composed from a trunk mesh + the young fan-palm model as the crown (no CC mature Washingtonia found).
 - 2026-10-22 — Wine can't run the Windows build in this container; smoke tests run the identical .pck on the Linux release template.
 - 2026-10-22 — Only the player character is shipped until pedestrians (M6) to keep the pck small (345 MB); character textures capped at 2K.
+- 2026-10-22 — The proxy returns 403 for tag pushes, so releases are cut by committing release.txt on main; the workflow tags and publishes with GITHUB_TOKEN.
