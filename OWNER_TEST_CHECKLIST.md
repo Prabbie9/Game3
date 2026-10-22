@@ -8,6 +8,26 @@ reply whenever convenient and the next session will act on it.
   branch `claude/tmp-push-test` (*Code → Branches*). The session's proxy does not allow changing the default branch or
   deleting branches.
 
+## Optional: two Mixamo clips that would make swimming look better
+The shared Mixamo folder has no surface-swimming or treading-water animation, so swimming currently uses "Swimming
+Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
+mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
+
+## v0.2.0 — Milestone 2 player polish
+Download `PortSolano-v0.2.0-windows-x86_64.zip` from the Releases page, unzip, run `PortSolano.exe`.
+Esc shows all controls for keyboard or gamepad.
+
+1. **Benchmark** again (main menu → Graphics HIGH → Benchmark) and paste the report — this build has more props.
+2. Try the new moves and tell me anything that looks or feels off:
+   - **Space at a wall/fence/bench:** low fences and barriers are vaulted, chest-high walls climbed, walls up to
+     ~2.4 m jumped at and climbed. Is the hand placement convincing? Does anything clip or snap?
+   - **C** crouch, **Q** take cover against a wall (A/D slides along it, Q or move away to leave).
+   - Mouse wheel switches to **fists**; LMB punches (three-hit combo).
+   - The **pool** in the palm plaza (the blue square on the minimap): jump in, swim, climb out at the edge.
+   - Jump off something high (or drive up and bail out) to see the ragdoll fall and get-up.
+   - Run and let go of the keys (skid stop); from standing, press the opposite direction (turn on the spot).
+3. Camera: does it feel smooth in vaults/climbs, sprinting and when backed against a wall?
+
 ## v0.1.1 — Milestone 1 vertical slice (use v0.1.1, not v0.1.0: v0.1.0 has an untextured player)
 Download `PortSolano-v0.1.1-windows-x86_64.zip` from the GitHub Releases page, unzip, run `PortSolano.exe`.
 

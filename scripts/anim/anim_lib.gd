@@ -90,7 +90,7 @@ const TRAVERSE := {
 ## EXTRACT_Y clips whose end pose isn't a standing one: hips height above the ledge at the end (normalized units).
 const END_HIPS := {"climb": 0.74}
 ## Clips whose root keeps its facing: hips twist during vaults/climbs is part of the pose, not a turn.
-const NO_YAW := ["vault", "vault_high", "jump_hang", "climb"]
+const NO_YAW := ["vault", "vault_high", "jump_hang", "climb", "run_stop"]
 
 ## Root paths of EXTRACT clips: clip -> {"pos": PackedVector3Array, "yaw": PackedFloat32Array} sampled at PATH_HZ
 ## (normalized skeleton units, Mixamo axes: +Z forward). Player roots follow these instead of the hips.

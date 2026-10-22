@@ -12,3 +12,13 @@
 - 2026-10-22 — Only the player character is shipped until pedestrians (M6) to keep the pck small (345 MB); character textures capped at 2K.
 - 2026-10-22 — The proxy returns 403 for tag pushes, so releases are cut by committing release.txt on main; the workflow tags and publishes with GITHUB_TOKEN.
 - 2026-10-22 — v0.1.0 shipped an untextured player: the CI cache of assets/source/mixamo restored stale *.import files over the committed ones. CI now caches only *.fbx. Character textures are also embedded at import (Basis Universal) rather than extracted to PNGs, which is simpler and reproducible.
+- 2026-10-22 — Traversal: vault/climb clips are fitted to the real obstacle by a vertical offset curve per clip
+  (bump for vaults, ramp for the jump to hang, constant for the braced climb) plus a start placement from the
+  measured hand-plant distance, instead of scaling the motion; root yaw isn't extracted for these clips (hip twist
+  stays in the pose). Chest-high ledges use "Climb Wall From Braced Hang To Crouch"; higher ones chain
+  "Jump To A Braced Hang" into it (same braced pose, no blend).
+- 2026-10-22 — Mixamo's cover set is authored with the character turned around relative to its root, so the root faces
+  the wall (FACING = PI) and lateral input maps to -tangent. Verified with front/side/back pose renders.
+- 2026-10-22 — Street props get simple collision (cylinders for poles/hydrants/bins, bounds boxes otherwise) on layer 16;
+  Poly Haven kits that stack clean + weathered variants keep one per instance (separate RNG so the layout is stable).
+- 2026-10-22 — Gamepad: A = sprint, X = jump (GTA layout); keyboard shoulder swap moved to MMB since Q is cover.

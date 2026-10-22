@@ -16,7 +16,7 @@ const MOUSE := {
 	"weapon_next": [MOUSE_BUTTON_WHEEL_DOWN], "weapon_prev": [MOUSE_BUTTON_WHEEL_UP],
 }
 const PAD_BUTTONS := {
-	"jump": [JOY_BUTTON_A], "sprint": [JOY_BUTTON_A], "crouch": [JOY_BUTTON_LEFT_STICK],
+	"jump": [JOY_BUTTON_X], "sprint": [JOY_BUTTON_A], "crouch": [JOY_BUTTON_LEFT_STICK],
 	"interact": [JOY_BUTTON_Y], "reload": [JOY_BUTTON_B], "shoulder_swap": [JOY_BUTTON_RIGHT_STICK], "cover": [JOY_BUTTON_RIGHT_SHOULDER],
 	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "headlights": [JOY_BUTTON_DPAD_LEFT],
 	"camera_mode": [JOY_BUTTON_BACK], "pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],

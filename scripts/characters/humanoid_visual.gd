@@ -28,7 +28,7 @@ var _aim_points := {}
 ## One-shot actions: clip -> playback speed (they return to "ground" when finished).
 const ACTIONS := {
 	"vault": 1.1, "vault_high": 1.1, "jump_hang": 1.25, "climb": 1.1, "get_up_back": 1.35, "get_up_front": 1.5, "turn_left": 1.35, "turn_right": 1.35,
-	"turn_180": 1.3, "run_stop": 1.0, "punch_jab": 1.25, "punch_cross": 1.2, "punch_hook": 1.2, "hit_head": 1.3,
+	"turn_180": 1.3, "run_stop": 1.3, "punch_jab": 1.25, "punch_cross": 1.2, "punch_hook": 1.2, "hit_head": 1.3,
 	"hit_body": 1.3, "hard_land": 1.0
 }
 ## Looping base states the player can sit in, each with its own 1D blend: state -> [[clip, position], ...]
@@ -137,7 +137,8 @@ func _build_tree() -> void:
 		sm.add_node(act, bt)
 		for b in bases:
 			_link(sm, b, act, 0.12 if act.begins_with("punch") or act.begins_with("hit") else 0.2)
-		_link(sm, act, "ground", 0.2, true)
+		if act != "jump_hang":  # chains straight into the climb (the player starts it)
+			_link(sm, act, "ground", 0.2, true)
 		_link(sm, act, "ground", 0.2)
 		_link(sm, act, "crouch", 0.2)
 		_link(sm, act, "fall", 0.2)
@@ -150,8 +151,7 @@ func _build_tree() -> void:
 		_link(sm, "fall", b, 0.3)
 		_link(sm, b, "fall", 0.25)
 		_link(sm, b, "jump", 0.15)
-	_link(sm, "Start", "ground", 0.0)
-	(sm.get_transition(0) as AnimationNodeStateMachineTransition).advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
+	_link(sm, "Start", "ground", 0.0).advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
 	for s in ["jump", "jump_run", "fall"]:
 		_link(sm, "ground", s, 0.15)
 	_link(sm, "jump", "fall", 0.25, true)
@@ -235,15 +235,17 @@ func path_ledge(act: String) -> float:
 	return float(AnimLib.paths.get(act, {}).get("ledge", 0.0)) * motion_scale
 
 
-func _link(sm: AnimationNodeStateMachine, from: String, to: String, xfade: float, at_end := false) -> void:
-	if sm.has_transition(from, to):
-		return
+func _link(sm: AnimationNodeStateMachine, from: String, to: String, xfade: float, at_end := false) -> AnimationNodeStateMachineTransition:
+	for i in sm.get_transition_count():
+		if sm.get_transition_from(i) == StringName(from) and sm.get_transition_to(i) == StringName(to):
+			return sm.get_transition(i)
 	var t := AnimationNodeStateMachineTransition.new()
 	t.xfade_time = xfade
 	if at_end:
 		t.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END
 		t.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
 	sm.add_transition(from, to, t)
+	return t
 
 
 ## Ground locomotion: horizontal speed in m/s. Speeds above the sprint clip speed up playback.

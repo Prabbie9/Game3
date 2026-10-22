@@ -1,8 +1,18 @@
 extends CanvasLayer
-## Pause menu (Milestone 1 version: resume / graphics preset / quit to menu / quit).
+## Pause menu: resume / graphics preset / quit to menu / quit, plus the controls for the current device.
+
+const CONTROLS := [
+	["ON FOOT", ""],
+	["Move / sprint", "move_forward|sprint"], ["Jump, vault, climb", "jump"], ["Crouch", "crouch"], ["Take cover", "cover"],
+	["Aim / shoot", "aim|fire"], ["Reload", "reload"], ["Fists / pistol", "weapon_next"], ["Swap shoulder", "shoulder_swap"],
+	["Enter vehicle", "interact"],
+	["VEHICLE", ""],
+	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Exit vehicle", "interact"],
+]
 
 var _root: Control
 var _preset_btn: Button
+var _controls: GridContainer
 
 
 func _ready() -> void:
@@ -29,8 +39,30 @@ func _ready() -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/main.tscn"))
 	_btn(col, "QUIT GAME", func(): get_tree().quit())
+	_controls = GridContainer.new()
+	_controls.columns = 2
+	_controls.add_theme_constant_override("h_separation", 28)
+	_controls.add_theme_constant_override("v_separation", 6)
+	_controls.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_controls.position = Vector2(-560, 200)
+	_root.add_child(_controls)
 	_root.visible = false
 	_update_label()
+
+
+func _fill_controls() -> void:
+	for c in _controls.get_children():
+		c.queue_free()
+	for row: Array in CONTROLS:
+		if row[1] == "":
+			_controls.add_child(UITheme.label(row[0], 22, UITheme.heading))
+			_controls.add_child(Control.new())
+			continue
+		var keys := []
+		for a: String in String(row[1]).split("|"):
+			keys.append(InputPrompts.prompt(a) if a != "move_forward" else ("[L-STICK]" if Game.using_gamepad else "[WASD]"))
+		_controls.add_child(UITheme.label(row[0], 17, UITheme.body))
+		_controls.add_child(UITheme.label(" ".join(keys), 17, UITheme.body_bold))
 
 
 func _btn(parent: Control, t: String, cb: Callable) -> Button:
@@ -59,13 +91,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			resume()
 		else:
 			_root.visible = true
+			_fill_controls()
+			_set_hud(false)
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 			_root.get_child(1).get_child(2).grab_focus()
 		get_viewport().set_input_as_handled()
 
 
+func _set_hud(on: bool) -> void:
+	var hud := Game.world.get_node_or_null("HUD") as CanvasLayer if Game.world else null
+	if hud:
+		hud.visible = on
+
+
 func resume() -> void:
 	_root.visible = false
+	_set_hud(true)
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

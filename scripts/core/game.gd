@@ -59,6 +59,7 @@ func _exit_tree() -> void:
 	UITheme.body = null
 	UITheme.body_bold = null
 	AnimLib._lib = null
+	WaterVolume._mat = null
 
 
 func message(text: String) -> void:

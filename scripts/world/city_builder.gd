@@ -18,6 +18,11 @@ var props_root: Node3D
 var map_roads := []      # [Vector2 a, Vector2 b, float width]
 var map_buildings := []  # Rect2
 var map_parks := []      # Rect2
+var map_water := []      # Rect2
+## The plaza's public pool (water area, x/z); the ground is cut out under it.
+var pool_rect := Rect2()
+const POOL_DEPTH := 2.0
+const POOL_WATER := 0.0  # water surface height (the coping sits at CURB_H)
 
 
 func _ready() -> void:
@@ -26,6 +31,7 @@ func _ready() -> void:
 
 func build() -> void:
 	rng.seed = 1977
+	_variant_rng.seed = 4242
 	_static = StaticBody3D.new()
 	_static.name = "Collision"
 	_static.collision_layer = 1
@@ -33,6 +39,7 @@ func build() -> void:
 	props_root = Node3D.new()
 	props_root.name = "Props"
 	add_child(props_root)
+	pool_rect = _plan_pool()
 	_build_ground()
 	_build_roads()
 	_build_blocks()
@@ -117,8 +124,41 @@ func _road_w(line: float) -> float:
 # ---------------------------------------------------------------- ground & roads
 
 func _build_ground() -> void:
-	# a single slab under everything (roads sit at y = 0)
-	_box_col(Vector3(0, -0.5, 0), Vector3(EXTENT * 2 + 60, 1.0, EXTENT * 2 + 60))
+	# a single slab under everything (roads sit at y = 0), with the pool cut out
+	var e := EXTENT + 30.0
+	_slab(Rect2(-e, -e, e * 2.0, e * 2.0), pool_rect, -1.0, 0.0)
+
+
+## Collision slab between y0 and y1 over `r`, leaving out `hole` (if it is inside r).
+func _slab(r: Rect2, hole: Rect2, y0: float, y1: float) -> void:
+	var parts := [r] if not r.encloses(hole) or hole.size == Vector2.ZERO else _around(r, hole)
+	for q: Rect2 in parts:
+		_box_col(Vector3(q.get_center().x, (y0 + y1) * 0.5, q.get_center().y), Vector3(q.size.x, y1 - y0, q.size.y))
+
+
+## The four rectangles of `r` around `hole` (south/north full width, west/east between them).
+static func _around(r: Rect2, hole: Rect2) -> Array:
+	return [
+		Rect2(r.position.x, r.position.y, r.size.x, hole.position.y - r.position.y),
+		Rect2(r.position.x, hole.end.y, r.size.x, r.end.y - hole.end.y),
+		Rect2(r.position.x, hole.position.y, hole.position.x - r.position.x, hole.size.y),
+		Rect2(hole.end.x, hole.position.y, r.end.x - hole.end.x, hole.size.y),
+	]
+
+
+## Where the plaza's pool goes: the middle of the plaza lot (same layout maths as _build_blocks/_fill_block).
+func _plan_pool() -> Rect2:
+	var l0: float = ROAD_LINES[0]
+	var l1: float = ROAD_LINES[1]
+	var l2: float = ROAD_LINES[2]
+	var r := Rect2()
+	r.position = Vector2(l0 + _road_w(l0) * 0.5 + SIDEWALK, l1 + _road_w(l1) * 0.5 + SIDEWALK)
+	r.end = Vector2(l1 - _road_w(l1) * 0.5 - SIDEWALK, l2 - _road_w(l2) * 0.5 - SIDEWALK)
+	var hw := r.size.x * 0.5
+	var hd := r.size.y * 0.5
+	var lot := Rect2(r.position + Vector2(hw + 2.5, hd + 2.5), Vector2(hw - 2.5, hd - 2.5))
+	var size := Vector2(12.0, 6.5)
+	return Rect2(lot.get_center() - size * 0.5, size)
 
 
 func _build_roads() -> void:
@@ -279,10 +319,14 @@ func _fill_block(r: Rect2, kind: String) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var y := CURB_H
-	quad(st, Vector3(r.position.x, y, r.end.y), Vector3(r.end.x, y, r.end.y), Vector3(r.end.x, y, r.position.y), Vector3(r.position.x, y, r.position.y),
-		Vector2(r.position.x, r.end.y), Vector2(r.end.x, r.end.y), Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.position.y))
+	var has_pool := r.encloses(pool_rect)
+	var coping := pool_rect.grow(0.45)
+	for q: Rect2 in (_around(r, coping) if has_pool else [r]):
+		_flat_quad(st, q, y)
 	_mesh(st, _pbr("concrete_pavement", 3.0, Color(0.8, 0.78, 0.74)), "BlockGround", false)
-	_box_col(Vector3(r.get_center().x, y * 0.5, r.get_center().y), Vector3(r.size.x, y, r.size.y))
+	_slab(r, pool_rect if has_pool else Rect2(), 0.0, y)
+	if has_pool:
+		_build_pool(coping)
 
 	var hw := r.size.x * 0.5
 	var hd := r.size.y * 0.5
@@ -395,9 +439,10 @@ func _roof(lot: Rect2, top: float, tall: bool) -> void:
 func _plaza(lot: Rect2) -> void:
 	map_parks.append(lot)
 	var c := lot.get_center()
-	for i in 4:
-		var a := TAU * i / 4.0 + PI / 4.0
-		_prop("modular_street_seating", Vector3(c.x + cos(a) * 6.0, CURB_H, c.y + sin(a) * 6.0), -a + PI / 2.0)
+	# benches facing the pool along its long sides
+	for sx: float in [-3.5, 3.5]:
+		for sz: float in [-1.0, 1.0]:
+			_prop("modular_street_seating", Vector3(c.x + sx, CURB_H, c.y + sz * (pool_rect.size.y * 0.5 + 2.2)), 0.0 if sz < 0.0 else PI)
 	for i in 4:
 		var a := TAU * i / 4.0
 		_prop("street_lamp_01", Vector3(c.x + cos(a) * 11.0, CURB_H, c.y + sin(a) * 11.0), -a)
@@ -406,18 +451,164 @@ func _plaza(lot: Rect2) -> void:
 		_palm(Vector3(c.x + cos(a) * 15.5, CURB_H, c.y + sin(a) * 15.5), i)
 
 
+# ---------------------------------------------------------------- pool
+
+func _flat_quad(st: SurfaceTool, q: Rect2, y: float) -> void:
+	quad(st, Vector3(q.position.x, y, q.end.y), Vector3(q.end.x, y, q.end.y), Vector3(q.end.x, y, q.position.y), Vector3(q.position.x, y, q.position.y),
+		Vector2(q.position.x, q.end.y), Vector2(q.end.x, q.end.y), Vector2(q.end.x, q.position.y), Vector2(q.position.x, q.position.y))
+
+
+## Sunken public pool: tiled basin, stone coping flush with the plaza, water volume to swim in.
+func _build_pool(coping: Rect2) -> void:
+	var p := pool_rect
+	var floor_y := POOL_WATER - POOL_DEPTH
+	# coping: a light stone band around the basin, and its inner lip down to the water
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for q: Rect2 in _around(coping, p):
+		_flat_quad(st, q, CURB_H + 0.004)
+	_basin_walls(st, p, POOL_WATER - 0.12, CURB_H + 0.004)
+	_mesh(st, _pbr("concrete_pavement", 1.5, Color(0.97, 0.95, 0.9)), "PoolCoping", false)
+	# tiled basin
+	var tiles := ShaderMaterial.new()
+	tiles.shader = preload("res://assets/shaders/pool_tiles.gdshader")
+	st = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_flat_quad(st, p, floor_y)
+	_basin_walls(st, p, floor_y, POOL_WATER - 0.12)
+	_mesh(st, tiles, "PoolBasin", false)
+	# collision: floor and the four walls below the plaza slabs
+	_box_col(Vector3(p.get_center().x, floor_y - 0.25, p.get_center().y), Vector3(p.size.x + 1.0, 0.5, p.size.y + 1.0))
+	var wy := (floor_y + 0.0) * 0.5
+	var wh := 0.0 - floor_y
+	_box_col(Vector3(p.position.x - 0.25, wy, p.get_center().y), Vector3(0.5, wh, p.size.y + 1.0))
+	_box_col(Vector3(p.end.x + 0.25, wy, p.get_center().y), Vector3(0.5, wh, p.size.y + 1.0))
+	_box_col(Vector3(p.get_center().x, wy, p.position.y - 0.25), Vector3(p.size.x, wh, 0.5))
+	_box_col(Vector3(p.get_center().x, wy, p.end.y + 0.25), Vector3(p.size.x, wh, 0.5))
+	var water := WaterVolume.new()
+	water.name = "PoolWater"
+	water.size = Vector3(p.size.x, POOL_DEPTH, p.size.y)
+	water.position = Vector3(p.get_center().x, POOL_WATER - POOL_DEPTH * 0.5, p.get_center().y)
+	add_child(water)
+	map_water.append(p)
+
+
+## Inside faces of a rectangular basin between heights y0 and y1 (facing inwards).
+func _basin_walls(st: SurfaceTool, p: Rect2, y0: float, y1: float) -> void:
+	var x0 := p.position.x
+	var x1 := p.end.x
+	var z0 := p.position.y
+	var z1 := p.end.y
+	# UVs in metres along the wall (u) and height (v) so tiles keep their size
+	quad(st, Vector3(x0, y0, z0), Vector3(x1, y0, z0), Vector3(x1, y1, z0), Vector3(x0, y1, z0), Vector2(x0, y0), Vector2(x1, y0), Vector2(x1, y1), Vector2(x0, y1))
+	quad(st, Vector3(x1, y0, z1), Vector3(x0, y0, z1), Vector3(x0, y1, z1), Vector3(x1, y1, z1), Vector2(x1, y0), Vector2(x0, y0), Vector2(x0, y1), Vector2(x1, y1))
+	quad(st, Vector3(x0, y0, z1), Vector3(x0, y0, z0), Vector3(x0, y1, z0), Vector3(x0, y1, z1), Vector2(z1, y0), Vector2(z0, y0), Vector2(z0, y1), Vector2(z1, y1))
+	quad(st, Vector3(x1, y0, z0), Vector3(x1, y0, z1), Vector3(x1, y1, z1), Vector3(x1, y1, z0), Vector2(z0, y0), Vector2(z1, y0), Vector2(z1, y1), Vector2(z0, y1))
+
+
 # ---------------------------------------------------------------- props
 
+## Street furniture solid enough to stop people and cars: collision layer 16 ("props").
+const PROP_LAYER := 16
+## Thin upright props collide as a cylinder (radius, height); the rest use their mesh bounds.
+const PROP_CYLINDERS := {"street_lamp_01": [0.1, 3.8], "fire_hydrant": [0.14, 0.8], "metal_trash_can": [0.29, 0.95]}
+
+
 func _prop(name: String, pos: Vector3, yaw: float, scale := 1.0) -> Node3D:
+	if name == "modular_street_seating":
+		return _bench(pos, yaw)
 	var path := "res://assets/models/polyhaven/%s/%s_1k.gltf" % [name, name]
 	var ps: PackedScene = load(path)
 	if ps == null:
 		return null
 	var n: Node3D = ps.instantiate()
+	_pick_variant(n)
 	n.position = pos
 	n.rotation.y = yaw
 	n.scale = Vector3.ONE * scale
 	props_root.add_child(n)
+	if PROP_CYLINDERS.has(name):
+		var c: Array = PROP_CYLINDERS[name]
+		var cyl := CylinderShape3D.new()
+		cyl.radius = c[0] * scale
+		cyl.height = c[1] * scale
+		_prop_body(pos, yaw, cyl, Vector3(0, c[1] * scale * 0.5, 0))
+	else:
+		var b := _local_bounds(n)
+		var box := BoxShape3D.new()
+		box.size = b.size * scale
+		_prop_body(pos, yaw, box, b.get_center() * scale)
+	return n
+
+
+## Poly Haven kits often stack a clean and a weathered variant ("_aged"/"_rust") on top of each other:
+## keep one of them per instance (both drawn together z-fight).
+func _pick_variant(n: Node) -> void:
+	var weathered := []
+	var clean := []
+	for c in n.get_children():
+		var lname := String(c.name).to_lower()
+		(weathered if lname.contains("aged") or lname.contains("rust") else clean).append(c)
+	if weathered.is_empty() or clean.is_empty():
+		return
+	for c: Node in (clean if _variant_rng.randf() < 0.45 else weathered):
+		n.remove_child(c)
+		c.free()
+
+
+func _local_bounds(n: Node3D) -> AABB:
+	var out := AABB()
+	var first := true
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var xf := n.global_transform.affine_inverse() * m.global_transform if n.is_inside_tree() else m.transform
+		var b: AABB = xf * m.get_aabb()
+		out = b if first else out.merge(b)
+		first = false
+	return out
+
+
+func _prop_body(pos: Vector3, yaw: float, shape: Shape3D, offset: Vector3) -> void:
+	var sb := StaticBody3D.new()
+	sb.collision_layer = PROP_LAYER
+	sb.collision_mask = 0
+	var cs := CollisionShape3D.new()
+	cs.shape = shape
+	cs.position = offset
+	sb.add_child(cs)
+	sb.position = pos
+	sb.rotation.y = yaw
+	props_root.add_child(sb)
+
+
+var _bench_parts := {}
+var _variant_rng := RandomNumberGenerator.new()  # separate stream so the city layout doesn't shift
+
+
+## Backless slatted bench assembled from Poly Haven's modular street seating kit (the kit ships every
+## piece at the origin): seat on two leg frames.
+func _bench(pos: Vector3, yaw: float) -> Node3D:
+	if _bench_parts.is_empty():
+		var kit: Node = (load("res://assets/models/polyhaven/modular_street_seating/modular_street_seating_1k.gltf") as PackedScene).instantiate()
+		for c in kit.get_children():
+			if c is MeshInstance3D:
+				_bench_parts[String(c.name)] = (c as MeshInstance3D).mesh
+		kit.free()
+	var n := Node3D.new()
+	n.name = "Bench"
+	var parts := [["seat_bench", Vector3(0, 0.475, 0), 0.0], ["legs_single", Vector3(-0.84, 0, 0), 0.0], ["legs_single", Vector3(0.84, 0, 0), PI]]
+	for part: Array in parts:
+		var mi := MeshInstance3D.new()
+		mi.mesh = _bench_parts[part[0]]
+		mi.position = part[1]
+		mi.rotation.y = part[2]
+		n.add_child(mi)
+	n.position = pos
+	n.rotation.y = yaw
+	props_root.add_child(n)
+	var box := BoxShape3D.new()
+	box.size = Vector3(1.84, 0.475, 0.6)
+	_prop_body(pos, yaw, box, Vector3(0, 0.2375, 0))
 	return n
 
 

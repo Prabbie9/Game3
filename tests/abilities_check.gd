@@ -121,7 +121,7 @@ func _traverse(label: String, from: Vector3, height: float, clip: String, obstac
 			await _shot(clip + "_plant", -1.0)
 	get_tree().physics_frame.disconnect(sampler)
 	Input.action_release("move_forward")
-	await _phys(30)
+	await _phys(70)
 	var on_top := absf(p.global_position.y - height) < 0.1 and p.global_position.z < obstacle_z + depth * 0.5 - 0.1
 	var over := p.global_position.z < obstacle_z - depth * 0.5 - 0.3 and absf(p.global_position.y) < 0.1
 	var ok: bool = started == clip and float(best[0]) < 0.12 and p.state == Player.State.ON_FOOT and p.is_on_floor()
@@ -161,6 +161,9 @@ func _run() -> void:
 	_box(root, Vector3(-40, -0.5, 42.5), Vector3(20, 1, 115))    # in front of the pool (z -5..100)
 	_box(root, Vector3(-40, -0.5, -62.5), Vector3(20, 1, 75))    # behind the pool (z -100..-25)
 	_box(root, Vector3(-40, -3.5, -15), Vector3(20, 1, 20))      # pool floor at y -3
+	for w: Array in [[Vector3(-40, -1.5, -4.75), Vector3(20, 3, 0.5)], [Vector3(-40, -1.5, -25.25), Vector3(20, 3, 0.5)],
+			[Vector3(-50.25, -1.5, -15), Vector3(0.5, 3, 20)], [Vector3(-29.75, -1.5, -15), Vector3(0.5, 3, 20)]]:
+		_box(root, w[0], w[1])                                    # pool walls
 	_box(root, Vector3(0, 0.4, -10), Vector3(4, 0.8, 0.3))      # barrier to vault (0.8 m)
 	_box(root, Vector3(8, 0.625, -10), Vector3(4, 1.25, 0.3))   # wall to vault (1.25 m)
 	_box(root, Vector3(20, 0.9, -11.5), Vector3(6, 1.8, 3))     # platform to climb (1.8 m)
@@ -184,6 +187,7 @@ func _run() -> void:
 	root.add_child(p)
 	Game.controls_enabled = true
 	await _phys(30)
+	_check("animation starts on its own", p.visual.current_state() == &"ground", "state %s" % p.visual.current_state())
 
 	# crouch
 	await _place(Vector3(0, 0.1, 0))
@@ -268,6 +272,38 @@ func _run() -> void:
 	await _shot("swim_move")
 	Input.action_release("move_left")
 	_check("swims forward", p.global_position.distance_to(sx) > 0.8, "moved %.2f m" % p.global_position.distance_to(sx))
+
+	# swim to the edge and climb out
+	await _place(Vector3(-40, -2.4, -7.0))
+	Input.action_press("move_back")
+	var climbed := false
+	for i in 60 * 5:
+		await get_tree().physics_frame
+		if p.state == Player.State.ACTION and p._act == "climb":
+			climbed = true
+			Input.action_release("move_back")
+		if climbed and p.state == Player.State.ON_FOOT:
+			break
+	Input.action_release("move_back")
+	await _phys(20)
+	_check("climbs out of the pool", climbed and p.state == Player.State.ON_FOOT and absf(p.global_position.y) < 0.1 and p.global_position.z > -5.0,
+		"state %s, pos %s" % [Player.State.keys()[p.state], p.global_position.snapped(Vector3.ONE * 0.01)])
+
+	# sprint, let go: skid to a stop with the stopping clip, still facing the same way
+	await _place(Vector3(80, 0.1, 30), 0.0)
+	Input.action_press("sprint")
+	Input.action_press("move_forward")
+	await _phys(70)
+	Input.action_release("move_forward")
+	await _phys(7)
+	var stopping := p.state == Player.State.ACTION and p._act == "run_stop"
+	var z0 := p.global_position.z
+	await _phys(50)
+	Input.action_release("sprint")
+	await _shot("run_stop")
+	await _phys(30)
+	_check("run stop", stopping and p.state == Player.State.ON_FOOT and absf(p.global_position.z - z0) < 2.0 and absf(wrapf(p.rotation.y, -PI, PI)) < 0.2,
+		"started %s, slid %.2f m, yaw %.0f°" % [stopping, absf(p.global_position.z - z0), rad_to_deg(p.rotation.y)])
 
 	# turn in place
 	await _place(Vector3(80, 0.1, 0), 0.0)

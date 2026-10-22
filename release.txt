@@ -1,2 +1,1 @@
-v0.1.1
-# rebuild after CI cache fix
+v0.2.0

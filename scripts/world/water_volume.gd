@@ -15,13 +15,35 @@ func _ready() -> void:
 		pm.size = Vector2(size.x, size.z)
 		mi.mesh = pm
 		mi.position.y = size.y * 0.5
-		var m := StandardMaterial3D.new()
-		m.albedo_color = Color(0.12, 0.32, 0.38, 0.75)
-		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.roughness = 0.05
-		m.metallic = 0.2
-		mi.material_override = m
+		mi.material_override = _material()
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
+
+
+static var _mat: ShaderMaterial
+
+
+## Shared water material (ripple normal maps generated once from seamless noise).
+static func _material() -> ShaderMaterial:
+	if _mat:
+		return _mat
+	_mat = ShaderMaterial.new()
+	_mat.shader = preload("res://assets/shaders/water.gdshader")
+	for i in 2:
+		var noise := FastNoiseLite.new()
+		noise.seed = 11 + i * 37
+		noise.frequency = 0.02 if i == 0 else 0.035
+		noise.fractal_octaves = 3
+		var tex := NoiseTexture2D.new()
+		tex.width = 256
+		tex.height = 256
+		tex.seamless = true
+		tex.as_normal_map = true
+		tex.bump_strength = 6.0
+		tex.generate_mipmaps = true
+		tex.noise = noise
+		_mat.set_shader_parameter("ripple_a" if i == 0 else "ripple_b", tex)
+	return _mat
 
 
 func surface_y() -> float:

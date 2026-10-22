@@ -20,6 +20,11 @@ var vehicle_distance := 6.5
 var vehicle_height := 1.7
 var shake := 0.0
 var crouch := false
+## Extra framing from the player's state: widen the view when sprinting, pull back while ragdolled.
+var sprinting := false
+var ragdolled := false
+## Hidden when the camera is squeezed against the character (back to a wall, tight corners).
+var hide_when_close: Node3D
 
 var _dist := 3.4
 var _height := 1.55
@@ -85,18 +90,32 @@ func _process(delta: float) -> void:
 		p.fov = 72.0 + clampf(spd - 15.0, 0.0, 25.0) * 0.35
 	pitch = clampf(pitch, deg_to_rad(-70), deg_to_rad(55) if mode != Mode.VEHICLE else deg_to_rad(30))
 
+	if mode == Mode.ON_FOOT:
+		p = p.duplicate()
+		if sprinting:
+			p.fov += 6.0
+			p.dist += 0.35
+		if ragdolled:
+			p.dist += 1.0
+			p.height -= 0.6
 	var k := 1.0 - exp(-delta * 10.0)
 	_dist = lerpf(_dist, p.dist, k)
 	_height = lerpf(_height, p.height - (0.45 if crouch and mode != Mode.VEHICLE else 0.0), k)
 	_side = lerpf(_side, p.side * shoulder, k)
 	camera.fov = lerpf(camera.fov, p.fov, k)
 
-	var focus := tgt_xf.origin + Vector3(0, _height, 0)
+	# characters can supply a smoother anchor than their root (the pelvis during vaults, climbs, ragdoll)
+	var anchor := tgt_xf.origin
+	if mode != Mode.VEHICLE and target.has_method("camera_anchor"):
+		anchor = target.camera_anchor(tgt_xf.origin)
+	var focus := anchor + Vector3(0, _height, 0)
 	_focus = focus if _focus == Vector3.ZERO else _focus.lerp(focus, 1.0 - exp(-delta * (25.0 if mode != Mode.VEHICLE else 12.0)))
 	global_position = _focus
 	rotation = Vector3(pitch, yaw, 0)
 	spring.spring_length = _dist
 	spring.position = Vector3(_side, 0, 0)
+	if hide_when_close:
+		hide_when_close.visible = mode == Mode.VEHICLE or spring.get_hit_length() > 0.55
 	if shake > 0.0:
 		camera.h_offset = randf_range(-1, 1) * shake * 0.05
 		camera.v_offset = randf_range(-1, 1) * shake * 0.05

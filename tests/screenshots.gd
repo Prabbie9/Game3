@@ -79,6 +79,27 @@ func _run() -> void:
 		await _snap("aerial")
 		c.queue_free()
 		p.cam.camera.make_current()
+	if _want("pool"):
+		var pr: Rect2 = world.city.pool_rect
+		var pc := Vector3(pr.get_center().x, 0.0, pr.get_center().y)
+		var c := Camera3D.new()
+		world.add_child(c)
+		c.look_at_from_position(pc + Vector3(-9.0, 4.0, 8.0), pc + Vector3(0, -0.5, 0))
+		c.make_current()
+		await _frames(20)
+		await _snap("pool")
+		c.queue_free()
+		p.cam.camera.make_current()
+		var keep := p.global_transform
+		p.global_position = pc + Vector3(1.0, -1.2, 0.5)
+		p.cam.yaw = deg_to_rad(200)
+		p.cam.pitch = -0.25
+		await _frames(40)
+		await _snap("swim")
+		p.state = Player.State.ON_FOOT
+		p.global_transform = keep
+		p.visual.jump_to("ground")
+		await _frames(10)
 	if _want("enter"):
 		var v: Vehicle = world.get_tree().get_nodes_in_group("vehicles")[0]
 		p.global_position = v.driver_door_position() + v.global_basis.x * -0.8
@@ -127,6 +148,8 @@ func _run() -> void:
 		world.add_child(pm)
 		await _frames(2)
 		pm._root.visible = true
+		pm._fill_controls()
+		pm._set_hud(false)
 		await _frames(5)
 		await _snap("pause")
 	get_tree().quit()

@@ -51,6 +51,10 @@ var _act_height := -1.0  # obstacle/ledge height for traversal clips (-1 = none)
 var _act_blend := 0.18
 var _act_next := ""  # chained action (jump to hang -> climb)
 var _act_hit_done := false
+var _swim_push := 0.0
+var _release_t := 1.0
+var _anchor_w := 0.0
+var _release_speed := 0.0
 # cover
 var _cover_normal := Vector3.ZERO
 var _cover_low := false
@@ -79,6 +83,7 @@ func _ready() -> void:
 	ragdoll = Ragdoll.new(visual.skeleton)
 	_capsule = _col.shape
 	spawn_point = global_transform
+	cam.hide_when_close = visual
 
 
 func _physics_process(delta: float) -> void:
@@ -124,6 +129,18 @@ func _on_foot(delta: float) -> void:
 		var diff := wrapf(want_yaw - rotation.y, -PI, PI)
 		if absf(diff) > deg_to_rad(135):
 			_start_action("turn_180", true)
+			return
+
+	# letting go of the stick at a run: skid to a stop with the stopping clip (after a short grace period,
+	# so switching keys mid-run doesn't trigger it)
+	if input.length() > 0.1:
+		_release_t = 0.0
+		_release_speed = Vector2(velocity.x, velocity.z).length()
+	else:
+		_release_t += delta
+		if Game.controls_enabled and _release_t > 0.07 and _release_t < 0.07 + delta * 1.5 and not aiming and not crouched \
+				and is_on_floor() and _release_speed > visual.run_speed * 0.85:
+			_start_action("run_stop", true)
 			return
 
 	var target_speed := 0.0
@@ -196,6 +213,15 @@ func _on_foot(delta: float) -> void:
 		velocity.y -= GRAVITY * delta
 		_air_time += delta
 		_fall_speed = maxf(_fall_speed, -velocity.y)
+		# a long drop: go limp in the air (unless it ends in water); damage from the predicted impact speed
+		if -velocity.y > RAGDOLL_FALL and _air_time > 0.4:
+			var below := _ground_below(40.0)
+			if not below.is_empty() and not below.water:
+				var h: float = global_position.y - float(below.y)
+				var impact := sqrt(velocity.y * velocity.y + 2.0 * GRAVITY * maxf(h, 0.0))
+				take_damage((impact - RAGDOLL_FALL) * 6.0 + 25.0)
+				go_ragdoll(velocity)
+				return
 		if _air_time > 0.35 and visual.current_state() == &"ground":
 			visual.travel("fall")
 	move_and_slide()
@@ -210,6 +236,7 @@ func _on_foot(delta: float) -> void:
 	visual.set_aim(Vector2(local.x, -local.z), aim_weight)
 	cam.mode = CameraRig.Mode.AIM if aiming else CameraRig.Mode.ON_FOOT
 	cam.crouch = crouched
+	cam.sprinting = speed > visual.run_speed * 1.1
 
 	if Game.controls_enabled and Input.is_action_just_pressed("interact"):
 		var v := _nearest_vehicle()
@@ -367,6 +394,20 @@ func _start_action(act: String, keep_collision: bool, start := Transform3D(), he
 	visual.travel(act)
 
 
+## Point the camera orbits (at feet level): the root normally; during root-motion actions, ragdoll and
+## swimming the pelvis leads the body, so follow it (blended in/out so the switch never pops).
+func camera_anchor(root: Vector3) -> Vector3:
+	var want := 1.0 if (state == State.ACTION and collision_mask == 0) or state in [State.RAGDOLL, State.DEAD] else 0.0
+	_anchor_w = move_toward(_anchor_w, want, get_process_delta_time() * 4.0)
+	if _anchor_w <= 0.0:
+		return root
+	var hips := visual.bone_global("Hips").origin - Vector3(0, visual.clip_hip_height("idle"), 0)
+	if state in [State.RAGDOLL, State.DEAD]:
+		hips = ragdoll.hips_transform().origin - Vector3(0, 0.6, 0)
+	var s := _anchor_w * _anchor_w * (3.0 - 2.0 * _anchor_w)
+	return root.lerp(hips, s)
+
+
 ## True while an action needs both hands (traversal, getting up): the pistol is tucked away.
 func hands_busy() -> bool:
 	return state == State.ACTION and (_act.begins_with("vault") or _act in ["climb", "jump_hang"] or _act.begins_with("get_up"))
@@ -396,7 +437,15 @@ func _action(delta: float) -> void:
 		target.origin.y += _traverse_offset(_act, k, _act_height)
 		# ease from where we were into the action's start pose over the first frames (no visible snap)
 		var b := clampf(_act_t / _act_blend, 0.0, 1.0) if _act_blend > 0.0 else 1.0
-		global_transform = _act_from.interpolate_with(target, b * b * (3.0 - 2.0 * b)) if b < 1.0 else target
+		var xf := _act_from.interpolate_with(target, b * b * (3.0 - 2.0 * b)) if b < 1.0 else target
+		if collision_mask != 0:
+			# grounded actions (turns, stops, get-ups) still collide: follow the path with the character body
+			var step := xf.origin - global_position
+			velocity = Vector3(step.x / delta, -2.0 if is_on_floor() else velocity.y - GRAVITY * delta, step.z / delta)
+			move_and_slide()
+			global_basis = xf.basis
+		else:
+			global_transform = xf
 	if _act.begins_with("punch") and not _act_hit_done and _act_t > _act_len * 0.38:
 		_act_hit_done = true
 		_melee_hit()
@@ -415,6 +464,7 @@ func _action(delta: float) -> void:
 
 func _end_action() -> void:
 	state = State.ON_FOOT
+	velocity = Vector3.ZERO
 	collision_layer = 2
 	collision_mask = MASK_ON_FOOT
 	# settle onto whatever is below (climbs end on a ledge, vaults on the far side)
@@ -517,12 +567,28 @@ func _cover(delta: float) -> void:
 		visual.travel(st)
 	visual.set_state_blend(st, lateral, visual.cover_speed)
 	foot_ik.weight = 1.0
+	cam.crouch = _cover_low
 	if leave:
 		state = State.ON_FOOT
+		cam.crouch = false
 		visual.travel("ground")
 
 
 # --- swimming ----------------------------------------------------------------
+
+## Ground height under the player within `reach` metres: {"y": float, "water": bool} or {} if nothing.
+func _ground_below(reach: float) -> Dictionary:
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 0.1, 0), global_position - Vector3(0, reach, 0), 1 | 8 | 16)
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		return {}
+	var wet := false
+	for w in get_tree().get_nodes_in_group("water"):
+		if w.depth_at(hit.position + Vector3(0, 0.2, 0)) > 0.0:
+			wet = true
+	return {"y": hit.position.y, "water": wet}
+
 
 ## Depth of water above the feet (0 if not in water).
 func _water_depth() -> float:
@@ -542,6 +608,10 @@ func _surface_y() -> float:
 
 func _enter_swim() -> void:
 	state = State.SWIM
+	_air_time = 0.0
+	_fall_speed = 0.0
+	_jump_timer = -1.0
+	_swim_push = 0.0
 	if crouched:
 		_set_crouch(false)
 	foot_ik.weight = 0.0
@@ -550,6 +620,11 @@ func _enter_swim() -> void:
 
 
 func _swim(delta: float) -> void:
+	if _water_depth() <= 0.0:
+		# drifted out of the water volume (e.g. it was moved): fall back to walking/falling
+		state = State.ON_FOOT
+		visual.travel("fall")
+		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back") if Game.controls_enabled else Vector2.ZERO
 	var move_dir := cam.flat_basis() * Vector3(input.x, 0, input.y)
 	var target := visual.swim_speed * SWIM_BOOST * (1.4 if Input.is_action_pressed("sprint") else 1.0)
@@ -558,10 +633,17 @@ func _swim(delta: float) -> void:
 	if move_dir.length() > 0.1:
 		rotation.y = lerp_angle(rotation.y, atan2(-move_dir.x, -move_dir.z), 1.0 - exp(-delta * 4.0))
 	# float with the hips just under the surface; gentle bob
-	var want_y := _surface_y() - visual.clip_hip_height("swim") - 0.05 + sin(Time.get_ticks_msec() * 0.002) * 0.04
+	# treading water keeps the head and shoulders out; swimming lies along the surface
+	var moving := clampf(hvel.length() / maxf(visual.swim_speed * SWIM_BOOST, 0.1), 0.0, 1.0)
+	var hips := lerpf(visual.clip_hip_height("swim_idle") + 0.5, visual.clip_hip_height("swim") + 0.12, moving)
+	var want_y := _surface_y() - hips + sin(Time.get_ticks_msec() * 0.002) * 0.04
 	velocity = Vector3(hvel.x, (want_y - global_position.y) * 4.0, hvel.z)
 	move_and_slide()
 	visual.set_state_blend("swim", hvel.length() / SWIM_BOOST, visual.swim_speed)
+	# pull out over an edge just above the water: press jump, or keep swimming into it
+	_swim_push = _swim_push + delta if input.length() > 0.5 and get_slide_collision_count() > 0 else 0.0
+	if Game.controls_enabled and (Input.is_action_just_pressed("jump") or _swim_push > 0.35) and _try_climb_out():
+		return
 	# climb out where it gets shallow
 	if _water_depth() < SWIM_DEPTH - 0.25:
 		var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.0, 0), global_position + Vector3(0, -0.6, 0), 1 | 16)
@@ -570,6 +652,27 @@ func _swim(delta: float) -> void:
 			global_position.y = hit.position.y
 			state = State.ON_FOOT
 			visual.travel("ground")
+
+
+## Climb out of the water onto an edge in front (pool coping, quay): the braced climb starts from the water.
+func _try_climb_out() -> bool:
+	var fwd := -global_basis.z
+	var surface := _surface_y()
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(Vector3(global_position.x, surface - 0.2, global_position.z), Vector3(global_position.x, surface - 0.2, global_position.z) + fwd * 1.0, 1 | 16)
+	var wall := space.intersect_ray(q)
+	if wall.is_empty() or absf((wall.normal as Vector3).y) > 0.3:
+		return false
+	var wall_dir := -Vector3(wall.normal.x, 0, wall.normal.z).normalized()
+	var probe: Vector3 = wall.position + wall_dir * 0.25
+	var top := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(probe.x, surface + 1.2, probe.z), Vector3(probe.x, surface - 0.3, probe.z), 1 | 16))
+	if top.is_empty() or (top.normal as Vector3).y < 0.7 or top.position.y - surface > 1.0:
+		return false
+	var ledge := visual.path_ledge("climb")
+	var start := Transform3D(Basis.looking_at(wall_dir, Vector3.UP), Vector3(wall.position.x, top.position.y - ledge, wall.position.z) - wall_dir * float(Traversal.PLANT["climb"]))
+	_act_next = ""
+	_start_action("climb", false, start, ledge)
+	return true
 
 
 # --- ragdoll / death ---------------------------------------------------------
@@ -586,6 +689,8 @@ func go_ragdoll(vel: Vector3, impulse := Vector3.ZERO) -> void:
 	aim_weight = 0.0
 	collision_layer = 0
 	collision_mask = 0
+	cam.ragdolled = true
+	cam.sprinting = false
 	ragdoll.start(vel, impulse)
 
 
@@ -615,6 +720,7 @@ func _get_up() -> void:
 	head_dir.y = 0
 	var yaw := atan2(-head_dir.x, -head_dir.z) if head_dir.length() > 0.1 else rotation.y
 	ragdoll.stop()
+	cam.ragdolled = false
 	rotation = Vector3(0, yaw + (PI if not down else 0.0), 0)
 	_start_action("get_up_front" if down else "get_up_back", true)
 	collision_layer = 2
@@ -623,6 +729,7 @@ func _get_up() -> void:
 
 func _respawn() -> void:
 	ragdoll.stop()
+	cam.ragdolled = false
 	_respawn_timer = -1.0
 	health = 100.0
 	armor = 0.0

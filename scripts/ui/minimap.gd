@@ -8,6 +8,7 @@ var follow_camera := true
 const BG := Color(0.12, 0.14, 0.15, 0.92)
 const BUILDING := Color(0.27, 0.29, 0.3)
 const PARK := Color(0.22, 0.34, 0.24)
+const WATER := Color(0.16, 0.36, 0.48)
 const ROAD := Color(0.62, 0.64, 0.66)
 const ROAD_EDGE := Color(0.08, 0.09, 0.1)
 
@@ -36,6 +37,8 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	for r in city.map_parks:
 		_draw_rect_rot(r, to_px, PARK)
+	for r in city.map_water:
+		_draw_rect_rot(r, to_px, WATER)
 	for r in city.map_buildings:
 		_draw_rect_rot(r, to_px, BUILDING)
 	for road in city.map_roads:

@@ -1,11 +1,18 @@
-## Port Solano v0.1.1 — Milestone 1 hotfix
+## Port Solano v0.2.0 — Milestone 2: player polish
 
-**Fix:** the v0.1.0 download had an untextured player character (the build server didn't pick up the character's
-embedded textures). Character textures are now embedded at import time, and every build is checked for missing or
-untextured assets before it is published.
+Unzip and run `PortSolano.exe`. Press **Esc** in game for the full control list (keyboard or gamepad).
 
-Everything else is as in v0.1.0 — unzip, run `PortSolano.exe`, and see `OWNER_TEST_CHECKLIST.md` inside the zip.
-The benchmark (main menu → Benchmark) is the most useful thing to send back.
+**New on foot**
+- Vault low fences and barriers (one- or two-handed), climb chest-high walls, jump up and climb walls up to ~2.4 m — Space / X.
+- Crouch (C / L3), take cover against walls (Q / RB) and slide along them, high and low cover.
+- Fists: mouse wheel / D-pad switches between fists and pistol; jab–cross–hook combo.
+- Swim in the new plaza pool, climb out at the edge.
+- Long falls ragdoll in mid-air and the character gets back up; hard landings hurt.
+- Skid stop when you let go at a run, turn on the spot for sharp reversals; feet plant on kerbs, steps and slopes.
 
-**Also new:** feet plant on slopes, kerbs and steps (foot IK with pelvis adjustment), and the left hand now supports
-the pistol when aiming.
+**Also**
+- Camera follows the body smoothly through vaults, climbs and ragdolls, widens when sprinting, lowers when crouched.
+- Street lamps, bins, hydrants, benches and barriers are now solid.
+- Gamepad jump moved to X (A sprints).
+
+See `OWNER_TEST_CHECKLIST.md` in the zip for what to try and what to send back.
