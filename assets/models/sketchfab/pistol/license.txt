@@ -1,0 +1,11 @@
+Model Information:
+* title:	M1911 pistol
+* source:	https://sketchfab.com/3d-models/m1911-pistol-80a0b8a6c4314da4a7b3a7cfe6cec1d4
+* author:	e.belous (https://sketchfab.com/egorbelous)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "M1911 pistol" (https://sketchfab.com/3d-models/m1911-pistol-80a0b8a6c4314da4a7b3a7cfe6cec1d4) by e.belous (https://sketchfab.com/egorbelous) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

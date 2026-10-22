@@ -10,4 +10,9 @@ build/
 *.tmp
 __pycache__/
 tests/output/
+# Mixamo-derived files (public repo: fetched from the owner's link, never committed)
 assets/source/mixamo/**/*.fbx
+assets/source/mixamo/**/*.png
+assets/source/mixamo/**/*.jpg
+assets/source/mixamo/**/*.jpeg
+assets/source/mixamo/**/*.tga

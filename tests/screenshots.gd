@@ -1,0 +1,103 @@
+extends Node
+## Renders the fixed review shots to PNG (software Vulkan is fine; keep the list short).
+## xvfb-run -a godot --path . res://tests/runner.tscn -- res://tests/screenshots.gd OUT_DIR [shot,shot,...]
+
+var out := "tests/output"
+var only := []
+var world: World
+
+
+func _ready() -> void:
+	var a: Array = get_meta("args", [])
+	if a.size() > 0:
+		out = a[0]
+	if a.size() > 1:
+		only = a[1].split(",")
+	DirAccess.make_dir_recursive_absolute(out)
+	get_tree().root.size = Vector2i(1280, 720)
+	_run.call_deferred()
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame
+
+
+func _snap(name: String) -> void:
+	await RenderingServer.frame_post_draw
+	var img := get_tree().root.get_texture().get_image()
+	img.save_png(out.path_join(name + ".png"))
+	print("shot ", name)
+
+
+func _want(n: String) -> bool:
+	return only.is_empty() or n in only
+
+
+func _run() -> void:
+	if _want("menu"):
+		var menu: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+		get_tree().root.add_child(menu)
+		await _frames(40)
+		await _snap("menu")
+		menu.queue_free()
+		await _frames(2)
+	var ws: PackedScene = load("res://scenes/world/world.tscn")
+	world = ws.instantiate()
+	get_tree().root.add_child(world)
+	get_tree().current_scene = world
+	Game.controls_enabled = false
+	await _frames(30)
+	var p: Player = world.player
+	p.cam.camera.make_current()
+	if _want("day"):
+		world.time_of_day = 16.9
+		world._update_sun()
+		p.cam.yaw = deg_to_rad(120)
+		p.cam.pitch = -0.1
+		await _frames(25)
+		await _snap("day_street")
+	if _want("aim"):
+		p.cam.yaw = deg_to_rad(75)
+		p.cam.pitch = -0.02
+		Input.action_press("aim")
+		await _frames(25)
+		await _snap("on_foot_aim")
+		Input.action_release("aim")
+	if _want("wide"):
+		var c := Camera3D.new()
+		world.add_child(c)
+		c.global_position = Vector3(-30, 28, 45)
+		c.look_at(Vector3(20, 6, -10))
+		c.make_current()
+		await _frames(20)
+		await _snap("aerial")
+		c.queue_free()
+		p.cam.camera.make_current()
+	if _want("car"):
+		var v: Vehicle = world.get_tree().get_nodes_in_group("vehicles")[0]
+		p.debug_seat_in(v)
+		p.cam.yaw = v.rotation.y + deg_to_rad(150)
+		p.cam.pitch = -0.12
+		await _frames(30)
+		await _snap("in_car")
+	if _want("night"):
+		world.time_of_day = 22.0
+		world._update_sun()
+		await _frames(30)
+		await _snap("night")
+	if _want("rain"):
+		world.time_of_day = 15.0
+		world._update_sun()
+		RenderingServer.global_shader_parameter_set("wetness", 1.0)
+		await _frames(20)
+		await _snap("wet")
+		RenderingServer.global_shader_parameter_set("wetness", 0.0)
+	if _want("pause"):
+		var pm: CanvasLayer = load("res://scripts/ui/pause_menu.gd").new()
+		world.add_child(pm)
+		await _frames(2)
+		pm._root.visible = true
+		await _frames(5)
+		await _snap("pause")
+	get_tree().quit()
