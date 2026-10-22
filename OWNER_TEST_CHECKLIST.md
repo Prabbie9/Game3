@@ -13,7 +13,7 @@ Download `PortSolano-v0.1.0-windows-x86_64.zip` from the GitHub Releases page, u
 
 1. **Benchmark (most important):** main menu → *Graphics* until it says **HIGH** → *Benchmark*. It flies through the
    city for ~75 s, then writes `benchmark_<date>.txt` next to the exe. Please paste that file's contents back.
-   Repeat with **ULTRA** if you have time. (Command line alternative: `PortSolano.exe -- --benchmark`.)
+   Repeat with **ULTRA** if you have time. (Command line alternative: `PortSolano.exe -- --benchmark`; the report is written next to the exe.)
 2. **Play** and try: walk (WASD), run (default), sprint (Shift), walk slowly (Alt), jump (Space), aim (RMB) and shoot
    (LMB) the pistol, reload (R), enter/exit the nearby cars (F), drive (W/S/A/D, Space = handbrake, L = headlights),
    F3 = performance overlay, Esc = pause menu. A gamepad should also work.

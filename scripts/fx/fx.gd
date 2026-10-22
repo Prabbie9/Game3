@@ -21,6 +21,16 @@ static var _spark_mat: StandardMaterial3D
 static var _dust_mat: StandardMaterial3D
 
 
+static func release() -> void:
+	_holder = null
+	_decals.clear()
+	_emitters.clear()
+	_tracers.clear()
+	_hole_tex = null
+	_spark_mat = null
+	_dust_mat = null
+
+
 static func surface_of(col: Object) -> int:
 	if col == null:
 		return Surface.CONCRETE

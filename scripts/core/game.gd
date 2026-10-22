@@ -31,14 +31,14 @@ func _ready() -> void:
 func _smoke_test() -> void:
 	await get_tree().create_timer(3.0).timeout
 	var menu := get_tree().current_scene
-	print("SMOKE: main menu scene = %s" % (menu.name if menu else "none"))
+	printerr("SMOKE: main menu scene = %s" % (menu.name if menu else "none"))
 	if menu and menu.has_method("_on_play"):
 		menu._on_play()
 	await get_tree().create_timer(5.0).timeout
 	var ok := player != null and world != null and player.is_inside_tree()
-	print("SMOKE: world loaded = %s, player at %s, fps = %d, renderer = %s" % [ok, player.global_position if player else Vector3.ZERO,
+	printerr("SMOKE: world loaded = %s, player at %s, fps = %d, renderer = %s" % [ok, player.global_position if player else Vector3.ZERO,
 		Engine.get_frames_per_second(), RenderingServer.get_video_adapter_name()])
-	print("SMOKE TEST %s" % ("PASSED" if ok else "FAILED"))
+	printerr("SMOKE TEST %s" % ("PASSED" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)
 
 
@@ -47,6 +47,18 @@ func _input(event: InputEvent) -> void:
 		using_gamepad = true
 	elif event is InputEventKey or event is InputEventMouseButton:
 		using_gamepad = false
+
+
+## Release static caches while the engine servers still exist (otherwise they are freed after
+## RenderingServer shutdown, which crashes on exit).
+func _exit_tree() -> void:
+	CarLibrary._cache.clear()
+	FX.release()
+	UITheme._theme = null
+	UITheme.heading = null
+	UITheme.body = null
+	UITheme.body_bold = null
+	AnimLib._lib = null
 
 
 func message(text: String) -> void:

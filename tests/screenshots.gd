@@ -27,7 +27,12 @@ func _snap(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img := get_tree().root.get_texture().get_image()
 	img.save_png(out.path_join(name + ".png"))
-	print("shot ", name)
+	var vp := get_viewport().get_viewport_rid()
+	print("shot %s  draws %d (+%d shadow)  prims %.2fM  objects %d" % [name,
+		RenderingServer.viewport_get_render_info(vp, 0, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		RenderingServer.viewport_get_render_info(vp, 1, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		RenderingServer.viewport_get_render_info(vp, 0, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1e6,
+		RenderingServer.viewport_get_render_info(vp, 0, RenderingServer.VIEWPORT_RENDER_INFO_OBJECTS_IN_FRAME)])
 
 
 func _want(n: String) -> bool:

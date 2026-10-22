@@ -21,14 +21,20 @@ const MODELS := {
 }
 
 static var _cache := {}
-static var _pack: Node3D
 
 
 static func get_model(model: String) -> Dictionary:
-	if _cache.has(model):
-		return _cache[model]
-	if _pack == null:
-		_pack = (load(PACK) as PackedScene).instantiate()
+	if _cache.is_empty():
+		# Extract every model in one pass and free the pack right away: keeping an out-of-tree node
+		# tree in a static var outlives the RenderingServer and crashes the game on exit.
+		var pack: Node3D = (load(PACK) as PackedScene).instantiate()
+		for m in MODELS:
+			_cache[m] = _extract(pack, m)
+		pack.free()
+	return _cache[model]
+
+
+static func _extract(_pack: Node3D, model: String) -> Dictionary:
 	var cfg: Dictionary = MODELS[model]
 	var body: Node3D = _pack.find_child(cfg.node, true, false)
 	var body_meshes: Array[MeshInstance3D] = []
@@ -106,9 +112,7 @@ static func get_model(model: String) -> Dictionary:
 		var a := (inv * _gxf(mi)) * mi.get_aabb()
 		local_aabb = a if first else local_aabb.merge(a)
 		first = false
-	var data := {"parts": parts, "wheels": wheel_data, "aabb": local_aabb}
-	_cache[model] = data
-	return data
+	return {"parts": parts, "wheels": wheel_data, "aabb": local_aabb}
 
 
 static func _global_aabb(meshes: Array[MeshInstance3D]) -> AABB:

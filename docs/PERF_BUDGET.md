@@ -19,3 +19,10 @@ Numbers are per frame, measured from the in-game perf overlay (F3) / benchmark r
 
 Graphics presets: Low / Medium / High / Ultra (see `scripts/core/graphics_settings.gd`).
 SDFGI + volumetric fog + SSR are the expensive toggles; High enables SSAO, SSIL(half), SSR(half), SDFGI(low cascades).
+
+## Measurements
+| Date | Build | Scene | Draws (+shadow) | Primitives | Notes |
+|---|---|---|---|---|---|
+| 2026-10-22 | v0.1.0 | street view (software render) | 532 (+1249) | 2.26 M | palms are the main shadow-draw cost |
+| 2026-10-22 | v0.1.0 | aerial | 644 (+1552) | 2.38 M | |
+Real FPS: waiting for the owner's benchmark report (OWNER_TEST_CHECKLIST.md).

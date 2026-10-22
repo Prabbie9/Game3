@@ -78,7 +78,7 @@ vec3 room(vec2 p, vec3 r, vec2 id, out float lit) {
 		c = mix(c, vec3(0.3, 0.22, 0.16), counter * step(t, tz) * 0.0 + counter * 0.6);
 		c *= mix(1.0, 0.7, clamp(hit.z / depth, 0.0, 1.0));
 		lit = 1.0;
-		return c * mix(0.42, 0.3, night) + c * vec3(1.0, 0.9, 0.75) * night * 1.2;
+		return c * mix(0.42, 0.22, night) + c * vec3(1.0, 0.88, 0.7) * night * 0.55;
 	}
 	// depth darkening
 	c *= mix(1.0, 0.55, clamp(hit.z / depth, 0.0, 1.0));
