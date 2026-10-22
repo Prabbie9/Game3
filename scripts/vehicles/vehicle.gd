@@ -69,7 +69,7 @@ func _build() -> void:
 	cabin.shape = cbox
 	cabin.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.25, -aabb.size.z * 0.03)
 	add_child(cabin)
-	center_of_mass = Vector3(0, aabb.position.y + aabb.size.y * 0.28, 0)
+	center_of_mass = Vector3(0, aabb.position.y + 0.08, 0)
 
 	for w in data.wheels:
 		var wheel := VehicleWheel3D.new()
@@ -82,8 +82,8 @@ func _build() -> void:
 		wheel.suspension_max_force = vehicle_mass * 12.0
 		wheel.damping_compression = 1.9
 		wheel.damping_relaxation = 2.4
-		wheel.wheel_friction_slip = 3.4 if front else 3.1
-		wheel.wheel_roll_influence = 0.12
+		wheel.wheel_friction_slip = 2.7 if front else 2.5
+		wheel.wheel_roll_influence = 0.04
 		wheel.use_as_steering = front
 		wheel.use_as_traction = not front
 		for part in w.parts:
@@ -100,7 +100,8 @@ func _build() -> void:
 	var wheelbase_front := 0.0
 	for w in data.wheels:
 		wheelbase_front = minf(wheelbase_front, w.pos.z)
-	_seat = Transform3D(Basis.IDENTITY, Vector3(-_size.x * 0.21, aabb.position.y + 0.12, wheelbase_front * 0.18))
+	# seat = where the driver's hips sit (Player offsets its root by the drive clip's hip height)
+	_seat = Transform3D(Basis.IDENTITY, Vector3(-_size.x * 0.21, aabb.position.y + _size.y * 0.3, wheelbase_front * 0.18))
 	_door = Vector3(-_size.x * 0.5 - 0.55, 0.0, wheelbase_front * 0.2)
 	_build_lights(aabb)
 
@@ -143,6 +144,7 @@ func driver_door_position() -> Vector3:
 	return global_transform * _door
 
 
+## Driver hips target (on the seat cushion), facing forward.
 func seat_transform() -> Transform3D:
 	return global_transform * _seat
 
@@ -207,18 +209,30 @@ func _physics_process(delta: float) -> void:
 		drive = 0.0
 	_throttle = move_toward(_throttle, drive, delta * 3.0)
 	var speed_factor := clampf(1.0 - absf(fwd_speed) / top_speed, 0.0, 1.0)
-	engine_force = _throttle * max_engine_force * (0.35 + 0.65 * speed_factor)
-	brake = braking * max_brake + (0.0 if input_enabled or driver else max_brake * 0.4)
+	if _throttle < 0.0:
+		speed_factor = clampf(1.0 - absf(fwd_speed) / 7.0, 0.0, 1.0)  # reverse tops out ~25 km/h
+	# VehicleBody3D drives along +Z; our cars face -Z, so forward thrust is a negative engine force
+	engine_force = -_throttle * max_engine_force * (0.35 + 0.65 * speed_factor)
+	# nobody at the controls (parked, or a driver getting in/out): hold the car firmly
+	brake = braking * max_brake if input_enabled else max_brake
 
-	var steer_limit := lerpf(max_steer, max_steer * 0.28, clampf(absf(fwd_speed) / 35.0, 0.0, 1.0))
+	var steer_limit := max_steer / (1.0 + absf(fwd_speed) / 5.5)
 	var steer_rate := 2.6 if absf(steer_in) > 0.01 else 4.0
 	_steer = move_toward(_steer, steer_in * steer_limit, delta * steer_rate)
 	steering = _steer
 
 	for w in _wheels:
 		if not w.use_as_steering:
-			w.wheel_friction_slip = 1.15 if handbrake else 3.1
+			w.wheel_friction_slip = 1.0 if handbrake else 2.5
 			if handbrake:
 				w.brake = max_brake * 0.8
 	# downforce keeps it planted at speed
 	apply_central_force(-global_basis.y * linear_velocity.length_squared() * 1.6)
+	# arcade anti-roll: resist roll/pitch away from upright (weaker when airborne so jumps still tumble)
+	var grounded := 0
+	for w in _wheels:
+		if w.is_in_contact():
+			grounded += 1
+	var tilt := global_basis.y.cross(Vector3.UP)
+	var k := 16.0 if grounded >= 2 else 1.5
+	apply_torque(tilt * mass * k - (angular_velocity - global_basis.y * angular_velocity.dot(global_basis.y)) * mass * 0.6)

@@ -23,6 +23,23 @@ func _ready() -> void:
 	InputSetup.apply_defaults()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	benchmark_mode = "--benchmark" in OS.get_cmdline_user_args() or "--benchmark" in OS.get_cmdline_args()
+	if "--smoke" in OS.get_cmdline_user_args() or "--smoke" in OS.get_cmdline_args():
+		_smoke_test.call_deferred()
+
+
+## Automated boot check for exported builds: main menu -> Play -> world running -> report -> quit.
+func _smoke_test() -> void:
+	await get_tree().create_timer(3.0).timeout
+	var menu := get_tree().current_scene
+	print("SMOKE: main menu scene = %s" % (menu.name if menu else "none"))
+	if menu and menu.has_method("_on_play"):
+		menu._on_play()
+	await get_tree().create_timer(5.0).timeout
+	var ok := player != null and world != null and player.is_inside_tree()
+	print("SMOKE: world loaded = %s, player at %s, fps = %d, renderer = %s" % [ok, player.global_position if player else Vector3.ZERO,
+		Engine.get_frames_per_second(), RenderingServer.get_video_adapter_name()])
+	print("SMOKE TEST %s" % ("PASSED" if ok else "FAILED"))
+	get_tree().quit(0 if ok else 1)
 
 
 func _input(event: InputEvent) -> void:

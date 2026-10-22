@@ -171,6 +171,11 @@ func clip_displacement(clip: String) -> Vector3:
 	return Vector3(-d.x, d.y, -d.z)
 
 
+## Average hips height of a clip in metres for this character.
+func clip_hip_height(clip: String) -> float:
+	return AnimLib.hip_height.get(clip, 0.9) * motion_scale
+
+
 func clip_yaw(clip: String) -> float:
 	return AnimLib.yaw_change.get(clip, 0.0)
 

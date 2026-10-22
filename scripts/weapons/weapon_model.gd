@@ -5,7 +5,7 @@ extends RefCounted
 
 ## kind -> config: path, nodes to drop (name contains), grip offset from the rear-bottom corner
 const MODELS := {
-	"pistol": {"path": "res://assets/models/sketchfab/pistol/scene.gltf", "drop": [".001", "magazine_empty"],
+	"pistol": {"path": "res://assets/models/sketchfab/pistol/scene.gltf", "drop": ["_001", ".001", "magazine_empty"],
 		"grip": Vector3(0.0, 0.05, 0.045)},
 }
 

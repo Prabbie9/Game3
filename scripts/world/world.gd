@@ -105,7 +105,7 @@ func _build_environment() -> void:
 	env.fog_sky_affect = 0.15
 	env.fog_aerial_perspective = 0.6
 	env.volumetric_fog_enabled = true
-	env.volumetric_fog_density = 0.0035
+	env.volumetric_fog_density = 0.002
 	env.volumetric_fog_albedo = Color(0.92, 0.9, 0.86)
 	env.volumetric_fog_length = 96.0
 	env.volumetric_fog_sky_affect = 0.0

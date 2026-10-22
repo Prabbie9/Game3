@@ -9,15 +9,15 @@ const PACK := "res://assets/models/sketchfab/generic_cars/scene.gltf"
 ## body node name in the pack -> settings. flip: rotate 180° if the wheel-derived axis points backwards.
 const MODELS := {
 	"compact": {"node": "Compact Body", "flip": false},
-	"coupe": {"node": "Coupe Body", "flip": false},
+	"coupe": {"node": "Coupe Body", "flip": true},
 	"hatchback": {"node": "Hatchback Body", "flip": false},
-	"minivan": {"node": "minivan body", "flip": false},
-	"offroad": {"node": "Offroad Body", "flip": false},
-	"pickup": {"node": "Pickup Body", "flip": false},
-	"sedan": {"node": "Sedan Body", "flip": false},
+	"minivan": {"node": "minivan body", "flip": true},
+	"offroad": {"node": "Offroad Body", "flip": true},
+	"pickup": {"node": "Pickup Body", "flip": true},
+	"sedan": {"node": "Sedan Body", "flip": true},
 	"sport": {"node": "Sport body", "flip": false},
-	"suv": {"node": "SUV Body", "flip": false},
-	"wagon": {"node": "Wagon Body", "flip": false},
+	"suv": {"node": "SUV Body", "flip": true},
+	"wagon": {"node": "Wagon Body", "flip": true},
 }
 
 static var _cache := {}
@@ -51,7 +51,18 @@ static func get_model(model: String) -> Dictionary:
 		var c := a.get_center()
 		groups.append({"meshes": meshes, "center": c, "aabb": a, "d": Vector2(c.x - center.x, c.z - center.z).length()})
 	groups.sort_custom(func(a, b): return a.d < b.d)
-	var wheels := groups.slice(0, 4)
+	# the pack contains duplicate wheel groups at identical positions: keep 4 distinct wheels
+	var wheels := []
+	for g in groups:
+		var dup := false
+		for w in wheels:
+			if (w.center as Vector3).distance_to(g.center) < 0.3:
+				dup = true
+				break
+		if not dup:
+			wheels.append(g)
+		if wheels.size() == 4:
+			break
 
 	# axles: pair each wheel with its nearest neighbour; forward = from rear axle mid to front axle mid
 	var w0: Vector3 = wheels[0].center
@@ -88,7 +99,13 @@ static func get_model(model: String) -> Dictionary:
 			wparts.append([mi.mesh, winv * _gxf(mi)])
 		var local_center: Vector3 = inv * (w.center as Vector3)
 		wheel_data.append({"pos": local_center, "radius": (w.aabb as AABB).size.y * 0.5, "parts": wparts})
-	var local_aabb := inv * body_aabb
+	# tight bounds in the car frame (world-axis bounds of rotated cars are inflated)
+	var local_aabb := AABB()
+	var first := true
+	for mi in body_meshes:
+		var a := (inv * _gxf(mi)) * mi.get_aabb()
+		local_aabb = a if first else local_aabb.merge(a)
+		first = false
 	var data := {"parts": parts, "wheels": wheel_data, "aabb": local_aabb}
 	_cache[model] = data
 	return data

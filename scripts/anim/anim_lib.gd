@@ -47,6 +47,8 @@ static var velocity := {}
 static var displacement := {}
 ## Yaw change (radians) of the hips over KEEP clips.
 static var yaw_change := {}
+## Average hips height of each clip (normalized units).
+static var hip_height := {}
 
 
 static func get_library() -> AnimationLibrary:
@@ -84,6 +86,10 @@ static func _process_root(clip_name: String, anim: Animation, mode: int) -> void
 	var t0 := anim.track_get_key_time(t, 0)
 	var t1 := anim.track_get_key_time(t, n - 1)
 	var span := maxf(t1 - t0, 0.001)
+	var hy := 0.0
+	for i in n:
+		hy += (anim.track_get_key_value(t, i) as Vector3).y
+	hip_height[clip_name] = hy / n
 	match mode:
 		Root.KEEP:
 			displacement[clip_name] = p1 - p0

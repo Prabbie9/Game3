@@ -155,7 +155,7 @@ func enter_vehicle(v: Vehicle) -> void:
 	weapon.holster(true)
 	v.reserve(self)
 	# Place the character so the root-motion clip ends with the hips at the seat.
-	var seat := v.seat_transform()
+	var seat := _seat_root(v)
 	var turn := visual.clip_yaw("car_enter")
 	var start_basis := seat.basis * Basis(Vector3.UP, -turn)
 	var d := visual.clip_displacement("car_enter")
@@ -177,7 +177,7 @@ func exit_vehicle() -> void:
 		return
 	state = State.EXITING
 	vehicle.set_driver_input_enabled(false)
-	var seat := vehicle.seat_transform()
+	var seat := _seat_root(vehicle)
 	global_transform = seat
 	var turn := visual.clip_yaw("car_exit")
 	var d := visual.clip_displacement("car_exit")
@@ -188,6 +188,13 @@ func exit_vehicle() -> void:
 	_seq_to = end
 	_seq_time = 0.0
 	visual.travel("car_exit")
+
+
+## Player root transform that puts the drive pose's hips on the vehicle seat.
+func _seat_root(v: Vehicle) -> Transform3D:
+	var s := v.seat_transform()
+	s.origin -= s.basis.y * visual.clip_hip_height("drive")
+	return s
 
 
 func _sequence(delta: float) -> void:
@@ -222,7 +229,7 @@ func _on_action_finished(anim: StringName) -> void:
 
 func _driving() -> void:
 	global_transform = vehicle.global_transform * _seat_local
-	if Input.is_action_just_pressed("interact") and vehicle.linear_velocity.length() < 6.0:
+	if Input.is_action_just_pressed("interact") and vehicle.linear_velocity.length() < 2.5:
 		exit_vehicle()
 
 
@@ -248,8 +255,8 @@ func debug_seat_in(v: Vehicle) -> void:
 	collision_layer = 0
 	collision_mask = 0
 	v.reserve(self)
-	_seat_local = v.global_transform.affine_inverse() * v.seat_transform()
-	global_transform = v.seat_transform()
+	_seat_local = v.global_transform.affine_inverse() * _seat_root(v)
+	global_transform = _seat_root(v)
 	visual.jump_to("drive")
 	v.set_driver(self)
 	cam.mode = CameraRig.Mode.VEHICLE

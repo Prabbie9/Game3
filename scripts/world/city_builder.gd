@@ -81,9 +81,10 @@ func _road_mat(width: float, length: float, lanes: int, cw_start: bool, cw_end: 
 
 # ---------------------------------------------------------------- geometry helpers
 
-## Quad with UVs given per corner; corners counter-clockwise seen from the normal side.
+## Quad with UVs given per corner; corners counter-clockwise seen from the normal side
+## (emitted clockwise, which is Godot's front-face winding).
 static func quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2) -> void:
-	for v in [[a, ua], [b, ub], [c, uc], [a, ua], [c, uc], [d, ud]]:
+	for v in [[a, ua], [c, uc], [b, ub], [a, ua], [d, ud], [c, uc]]:
 		st.set_uv(v[1])
 		st.add_vertex(v[0])
 
@@ -420,23 +421,73 @@ func _prop(name: String, pos: Vector3, yaw: float, scale := 1.0) -> Node3D:
 	return n
 
 
+var _trunk_mesh: Mesh
+
+
+## Mature California fan palm: tall slender trunk (fan-palm trunk textures) crowned with the fan-palm
+## model's fronds; every third tree is a date palm for variety.
 func _palm(pos: Vector3, i: int) -> void:
-	var fan := (i + int(pos.x)) % 3 != 0
-	var ps: PackedScene = load("res://assets/models/sketchfab/fan_palm/scene.gltf" if fan else "res://assets/models/sketchfab/date_palm/scene.gltf")
-	var n: Node3D = ps.instantiate()
-	n.position = pos
-	n.rotation.y = rng.randf() * TAU
-	# the fan palm model is authored at ~3.8 m; California fan palms on boulevards are 12-18 m
-	var s := rng.randf_range(3.4, 4.4) if fan else rng.randf_range(0.9, 1.15)
-	n.scale = Vector3.ONE * s
-	props_root.add_child(n)
+	var date := (i + int(pos.x)) % 3 == 0
+	if date:
+		var d: Node3D = (load("res://assets/models/sketchfab/date_palm/scene.gltf") as PackedScene).instantiate()
+		d.position = pos
+		d.rotation.y = rng.randf() * TAU
+		d.scale = Vector3.ONE * rng.randf_range(0.95, 1.2)
+		props_root.add_child(d)
+	else:
+		var h := rng.randf_range(11.0, 16.0)
+		var tree := Node3D.new()
+		tree.position = pos
+		tree.rotation = Vector3(rng.randf_range(-0.04, 0.04), rng.randf() * TAU, rng.randf_range(-0.04, 0.04))
+		props_root.add_child(tree)
+		var trunk := MeshInstance3D.new()
+		trunk.mesh = _palm_trunk()
+		trunk.scale = Vector3(1, h, 1)
+		tree.add_child(trunk)
+		var crown: Node3D = (load("res://assets/models/sketchfab/fan_palm/scene.gltf") as PackedScene).instantiate()
+		crown.scale = Vector3.ONE * rng.randf_range(1.15, 1.4)
+		crown.position = Vector3(0, h - 1.6 * crown.scale.y, 0)
+		crown.rotation.y = rng.randf() * TAU
+		tree.add_child(crown)
 	var cs := CollisionShape3D.new()
 	var cyl := CylinderShape3D.new()
-	cyl.radius = 0.25 if fan else 0.35
+	cyl.radius = 0.25 if not date else 0.35
 	cyl.height = 4.0
 	cs.shape = cyl
 	cs.position = pos + Vector3(0, 2.0, 0)
 	_static.add_child(cs)
+
+
+func _palm_trunk() -> Mesh:
+	if _trunk_mesh:
+		return _trunk_mesh
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.17
+	cm.bottom_radius = 0.26
+	cm.height = 1.0
+	cm.radial_segments = 10
+	cm.rings = 1
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load("res://assets/models/sketchfab/fan_palm/textures/Wash_trunk_baseColor.png")
+	m.normal_enabled = true
+	m.normal_texture = load("res://assets/models/sketchfab/fan_palm/textures/Wash_trunk_normal.png")
+	m.roughness = 0.9
+	m.uv1_scale = Vector3(1.0, 6.0, 1.0)
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	cm.material = m
+	# pivot at the base
+	var st := SurfaceTool.new()
+	st.create_from(cm, 0)
+	var arr := st.commit_to_arrays()
+	var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	for k in verts.size():
+		verts[k].y += 0.5
+	arr[Mesh.ARRAY_VERTEX] = verts
+	var am := ArrayMesh.new()
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	am.surface_set_material(0, m)
+	_trunk_mesh = am
+	return am
 
 
 func _build_outer_ring() -> void:

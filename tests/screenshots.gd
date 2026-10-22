@@ -74,9 +74,33 @@ func _run() -> void:
 		await _snap("aerial")
 		c.queue_free()
 		p.cam.camera.make_current()
+	if _want("enter"):
+		var v: Vehicle = world.get_tree().get_nodes_in_group("vehicles")[0]
+		p.global_position = v.driver_door_position() + v.global_basis.x * -0.8
+		await _frames(5)
+		p.visual.tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		p.enter_vehicle(v)
+		await _frames(12)
+		var c := Camera3D.new()
+		world.add_child(c)
+		var door := v.driver_door_position()
+		c.look_at_from_position(door - v.global_basis.x * 5.5 + v.global_basis.z * 0.6 + Vector3(0, 1.5, 0), door + Vector3(0, 0.9, 0) + v.global_basis.x * 0.8)
+		c.fov = 55
+		c.make_current()
+		var prev := 0.0
+		for t in [0.6, 2.0, 3.4, 5.6]:
+			p.visual.tree.advance(t - prev)
+			prev = t
+			await _frames(3)
+			await _snap("enter_%02d" % int(t * 10))
+		p.visual.tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_IDLE
+		await _frames(10)
+		c.queue_free()
+		p.cam.camera.make_current()
 	if _want("car"):
 		var v: Vehicle = world.get_tree().get_nodes_in_group("vehicles")[0]
-		p.debug_seat_in(v)
+		if p.state != Player.State.DRIVING:
+			p.debug_seat_in(v)
 		p.cam.yaw = v.rotation.y + deg_to_rad(150)
 		p.cam.pitch = -0.12
 		await _frames(30)

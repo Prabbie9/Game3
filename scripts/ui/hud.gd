@@ -183,7 +183,7 @@ func _process(_delta: float) -> void:
 	var hint := ""
 	if _player.state == Player.State.ON_FOOT and _player._nearest_vehicle():
 		hint = "%s  Enter vehicle" % InputPrompts.prompt("interact")
-	elif _player.state == Player.State.DRIVING and _player.vehicle.linear_velocity.length() < 6.0:
+	elif _player.state == Player.State.DRIVING and _player.vehicle.linear_velocity.length() < 2.5:
 		hint = "%s  Exit vehicle" % InputPrompts.prompt("interact")
 	_hint.text = hint
 

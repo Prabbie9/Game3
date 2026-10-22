@@ -5,8 +5,8 @@ Run before `godot --import`; idempotent."""
 import glob, os, re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIRS = ["assets/textures/**/*.jpg", "assets/textures/**/*.png", "assets/models/**/*.png", "assets/models/**/*.jpg"]
-LIMIT = {"assets/models/sketchfab/pistol": 1024}
+DIRS = ["assets/textures/**/*.jpg", "assets/textures/**/*.png", "assets/models/**/*.png", "assets/models/**/*.jpg", "assets/source/mixamo/characters/*.png"]
+LIMIT = {"assets/models/sketchfab/pistol": 1024, "assets/source/mixamo/characters": 2048}
 
 
 def params(path):
@@ -28,6 +28,8 @@ def main():
         for f in glob.glob(os.path.join(ROOT, pat), recursive=True):
             imp = f + ".import"
             want = params(f)
+            if "mixamo" in f:
+                want = {"process/size_limit": want["process/size_limit"]}
             if os.path.exists(imp):
                 text = open(imp).read()
                 changed = False

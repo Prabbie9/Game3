@@ -1,28 +1,6 @@
 {
  "characters": [
-  "Brute.fbx",
-  "Ch01_nonPBR.fbx",
-  "Ch02_nonPBR.fbx",
-  "Ch06_nonPBR.fbx",
-  "Ch07_nonPBR.fbx",
-  "Ch08_nonPBR.fbx",
-  "Ch12_nonPBR.fbx",
-  "Ch13_nonPBR.fbx",
-  "Ch21_nonPBR.fbx",
-  "Ch22_nonPBR.fbx",
-  "Ch23_nonPBR.fbx",
-  "Ch26_nonPBR.fbx",
-  "Ch27_nonPBR.fbx",
-  "Ch28_nonPBR.fbx",
-  "Ch31_nonPBR.fbx",
-  "Ch33_nonPBR.fbx",
-  "Ch36_nonPBR.fbx",
-  "Ch37_nonPBR.fbx",
-  "Ch38_nonPBR.fbx",
-  "Ch41_nonPBR.fbx",
-  "Ch42_nonPBR.fbx",
-  "Ch47_nonPBR.fbx",
-  "Remy.fbx"
+  "Ch08_nonPBR.fbx"
  ],
  "animations": [
   "Breathing Idle.fbx",

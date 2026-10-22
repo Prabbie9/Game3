@@ -41,23 +41,47 @@ vec3 room(vec2 p, vec3 r, vec2 id, out float lit) {
 	vec3 rd = normalize(vec3(r.xy, max(r.z, 0.05)));
 	float tx = rd.x > 0.0 ? (1.0 - rp.x) / rd.x : -rp.x / rd.x;
 	float ty = rd.y > 0.0 ? (1.0 - rp.y) / rd.y : -rp.y / rd.y;
-	float tz = room_depth / rd.z;
+	float depth = id.y < -0.5 ? room_depth * 1.8 : room_depth;
+	float tz = depth / rd.z;
 	float t = min(min(tx, ty), tz);
 	vec3 hit = rp + rd * t;
 	vec3 wallc = mix(vec3(0.62, 0.58, 0.52), vec3(0.45, 0.5, 0.52), h2);
+	bool shop = id.y < -0.5;
 	vec3 c;
 	if (t == tz) {
 		c = wallc * 0.9;
-		// furniture silhouettes / curtains on the back wall
-		float shelf = step(0.2, hit.y) * step(hit.y, 0.55) * step(0.15 + h * 0.3, hit.x) * step(hit.x, 0.5 + h * 0.4);
-		c = mix(c, vec3(0.2, 0.16, 0.13), shelf * 0.8);
+		if (shop) {
+			// shelving with rows of coloured products
+			float rows = step(0.12, hit.y) * step(hit.y, 0.78);
+			float shelf_line = step(fract(hit.y * 5.0), 0.12);
+			vec2 cell = floor(vec2(hit.x * 14.0, hit.y * 5.0));
+			vec3 product = 0.35 + 0.55 * vec3(hash(cell), hash(cell + 3.1), hash(cell + 7.7));
+			c = mix(c, mix(product, vec3(0.75, 0.74, 0.72), shelf_line), rows);
+		} else {
+			// furniture silhouettes / curtains on the back wall
+			float shelf = step(0.2, hit.y) * step(hit.y, 0.55) * step(0.15 + h * 0.3, hit.x) * step(hit.x, 0.5 + h * 0.4);
+			c = mix(c, vec3(0.2, 0.16, 0.13), shelf * 0.8);
+		}
 	} else if (t == ty) {
-		c = rd.y > 0.0 ? vec3(0.82, 0.8, 0.76) : mix(vec3(0.32, 0.24, 0.18), vec3(0.4, 0.4, 0.42), h2);
+		if (rd.y > 0.0) {
+			c = vec3(0.82, 0.8, 0.76);
+			if (shop) c += vec3(1.4) * step(fract(hit.z * 3.0), 0.18) * step(abs(hit.x - 0.5), 0.35); // light strips
+		} else {
+			c = shop ? mix(vec3(0.7, 0.68, 0.64), vec3(0.55, 0.56, 0.58), step(0.5, fract(hit.x * 4.0 + floor(hit.z * 4.0) * 0.5))) : mix(vec3(0.32, 0.24, 0.18), vec3(0.4, 0.4, 0.42), h2);
+		}
 	} else {
 		c = wallc;
 	}
+	if (shop) {
+		// counter / display table in the middle of the shop
+		float counter = step(abs(hit.x - 0.35 - h * 0.3), 0.18) * step(hit.y, 0.32) * step(0.25, hit.z / depth);
+		c = mix(c, vec3(0.3, 0.22, 0.16), counter * step(t, tz) * 0.0 + counter * 0.6);
+		c *= mix(1.0, 0.7, clamp(hit.z / depth, 0.0, 1.0));
+		lit = 1.0;
+		return c * mix(0.42, 0.3, night) + c * vec3(1.0, 0.9, 0.75) * night * 1.2;
+	}
 	// depth darkening
-	c *= mix(1.0, 0.55, clamp(hit.z / room_depth, 0.0, 1.0));
+	c *= mix(1.0, 0.55, clamp(hit.z / depth, 0.0, 1.0));
 	lit = step(1.0 - mix(0.12, 0.45, night), h) * night;
 	vec3 lamp = mix(vec3(1.0, 0.78, 0.5), vec3(0.85, 0.9, 1.0), step(0.7, h2));
 	float ceiling_glow = 0.6 + 0.4 * smoothstep(0.0, 1.0, hit.y);
@@ -106,7 +130,7 @@ void fragment() {
 					float lit;
 					vec3 r = room(p, into, vec2(bay, -1.0), lit);
 					col = r * glass_tint * 0.9; rough = 0.04; is_glass = 1.0;
-					emit = r * lit * 0.6 + vec3(1.0, 0.85, 0.6) * night * 0.25;
+					emit = r * (0.06 + 0.55 * night);
 				}
 			} else if (m.y <= 0.45) {
 				col = vec3(0.32, 0.31, 0.3) * (0.8 + 0.3 * macro); rough = 0.8;
