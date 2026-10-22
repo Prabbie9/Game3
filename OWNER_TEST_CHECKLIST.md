@@ -8,8 +8,8 @@ reply whenever convenient and the next session will act on it.
   branch `claude/tmp-push-test` (*Code → Branches*). The session's proxy does not allow changing the default branch or
   deleting branches.
 
-## v0.1.0 — Milestone 1 vertical slice
-Download `PortSolano-v0.1.0-windows-x86_64.zip` from the GitHub Releases page, unzip, run `PortSolano.exe`.
+## v0.1.1 — Milestone 1 vertical slice (use v0.1.1, not v0.1.0: v0.1.0 has an untextured player)
+Download `PortSolano-v0.1.1-windows-x86_64.zip` from the GitHub Releases page, unzip, run `PortSolano.exe`.
 
 1. **Benchmark (most important):** main menu → *Graphics* until it says **HIGH** → *Benchmark*. It flies through the
    city for ~75 s, then writes `benchmark_<date>.txt` next to the exe. Please paste that file's contents back.

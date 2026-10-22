@@ -67,9 +67,12 @@ def write_import(fbx, kind):
             f'"retarget/bone_map": Resource("{bm}"),',
             '"retarget/bone_renamer/unique_node/skeleton_name": "GeneralSkeleton"',
             '}', '}', '}',
-            "fbx/importer=0", "fbx/allow_geometry_helper_nodes=false", "fbx/embedded_image_handling=1", "fbx/naming_version=2", ""]
+            "fbx/importer=0", "fbx/allow_geometry_helper_nodes=false",
+            # embed textures (Basis Universal) instead of extracting PNGs: extraction does not happen on a fresh
+            # checkout (CI), which shipped an untextured player in v0.1.0
+            f"fbx/embedded_image_handling={0 if is_anim else 2}", "fbx/naming_version=2", ""]
     new = "\n".join(out)
-    if not os.path.exists(imp) or "retarget/bone_map" not in open(imp).read():
+    if not os.path.exists(imp) or "retarget/bone_map" not in open(imp).read() or "embedded_image_handling=1" in open(imp).read():
         open(imp, "w").write(new)
         return True
     return False

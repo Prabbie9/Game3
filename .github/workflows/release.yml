@@ -83,6 +83,12 @@ jobs:
           $GODOT --headless --import --path . || true
           $GODOT --headless --import --path .
 
+      - name: Asset check (fails the build if anything is missing or untextured)
+        run: |
+          GODOT=~/godot/Godot_v${GODOT_VERSION}_linux.x86_64
+          $GODOT --headless --path . res://tests/runner.tscn -- res://tests/asset_check.gd 2>&1 | tee asset_check.log
+          grep -q "ASSET CHECK: PASS" asset_check.log
+
       - name: Export Windows build
         run: |
           GODOT=~/godot/Godot_v${GODOT_VERSION}_linux.x86_64

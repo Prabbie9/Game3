@@ -21,10 +21,13 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   as `PortSolano.x86_64` next to a symlink of `build/PortSolano/PortSolano.pck` and run
   `xvfb-run -a ./PortSolano.x86_64 -- --smoke` (must print `SMOKE TEST PASSED`, exit 0). Wine 9 crashes on start-up
   in this container (page fault inside ntdll), so the Linux template + same .pck is the boot check.
+- `... -- res://tests/asset_check.gd` — characters textured, all clips resolve (also runs in CI before export).
+- After a release: download the zip (`gh api repos/Prabbie9/Game3/releases/tags/vX`), smoke-test its pck, and compare
+  `tools/pck_list.py` against the local build.
 - Never use `pkill -f <pattern>` in the same shell command line that contains the pattern (kills itself); use `pat[t]ern`.
 
 ## Status
-**Milestone 1 — Playable vertical slice: DONE (v0.1.0)**
+**Milestone 1 — Playable vertical slice: DONE (v0.1.1; v0.1.0 shipped an untextured player — fixed by embedding character textures)**
 - Player: Mixamo Ch08 retargeted to SkeletonProfileHumanoid; AnimationTree (locomotion blendspace at native clip speeds,
   pistol aim strafe 2D, jump/fall/land with timed windows, car enter/drive/exit). Walk 1.0, run 4.2, sprint 6.4 m/s.
 - Camera rig (on-foot / aim / vehicle, collision, shoulder swap Q).
@@ -52,4 +55,5 @@ turn-in-place, crouch, vault/climb, swimming, ragdoll, cover, melee; more camera
 ### Builds
 | Tag | Milestone | Where |
 |---|---|---|
-| v0.1.0 | 1 — vertical slice | GitHub Release (Actions workflow on tag) |
+| v0.1.0 | 1 — vertical slice (player untextured — superseded) | GitHub Release |
+| v0.1.1 | 1 — vertical slice hotfix | GitHub Release (workflow runs on release.txt change) |
