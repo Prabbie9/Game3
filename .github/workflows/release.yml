@@ -66,12 +66,14 @@ jobs:
           unzip -q /tmp/tpl.tpz -d /tmp/tpl
           mv /tmp/tpl/templates/* ~/.local/share/godot/export_templates/$GODOT_TPL/
 
+      # Cache only the FBX files: caching the folder would also restore stale *.import settings over the
+      # committed ones (that shipped an untextured player in v0.1.0).
       - name: Cache Mixamo sources
         uses: actions/cache@v4
         with:
-          path: assets/source/mixamo
-          key: mixamo-${{ hashFiles('assets/mixamo_manifest.json') }}
-          restore-keys: mixamo-
+          path: assets/source/mixamo/**/*.fbx
+          key: mixamo-fbx-${{ hashFiles('assets/mixamo_manifest.json') }}
+          restore-keys: mixamo-fbx-
 
       - name: Fetch Mixamo sources (owner's shared Drive link; never committed)
         run: python3 tools/fetch_mixamo.py

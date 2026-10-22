@@ -185,6 +185,25 @@ func clip_length(clip: String) -> float:
 	return a.length if a else 0.0
 
 
+## Left-hand support grip: a TwoBoneIK3D on the left arm reaching for `target` (e.g. a marker on a pistol).
+func install_hand_ik(target: Node3D) -> TwoBoneIK3D:
+	var ik := TwoBoneIK3D.new()
+	ik.name = "LeftHandIK"
+	skeleton.add_child(ik)
+	ik.setting_count = 1
+	ik.set_root_bone_name(0, "LeftUpperArm")
+	ik.set_middle_bone_name(0, "LeftLowerArm")
+	ik.set_end_bone_name(0, "LeftHand")
+	ik.set_target_node(0, ik.get_path_to(target))
+	var pole := Marker3D.new()
+	pole.name = "ElbowPole"
+	target.add_child(pole)
+	pole.position = Vector3(-0.35, -0.45, 0.25)  # elbow down and out, like a two-handed grip
+	ik.set_pole_node(0, ik.get_path_to(pole))
+	ik.influence = 0.0
+	return ik
+
+
 func bone_global(bone: String) -> Transform3D:
 	var i := skeleton.find_bone(bone)
 	return skeleton.global_transform * skeleton.get_bone_global_pose(i) if i >= 0 else global_transform

@@ -25,6 +25,8 @@ var _muzzle: Node3D
 var _flash: OmniLight3D
 var _flash_mesh: MeshInstance3D
 var _flash_time := 0.0
+var _support: Marker3D
+var _hand_ik: TwoBoneIK3D
 
 
 func setup(player: Player, visual: HumanoidVisual, cam: CameraRig) -> void:
@@ -41,6 +43,11 @@ func setup(player: Player, visual: HumanoidVisual, cam: CameraRig) -> void:
 	_muzzle = Node3D.new()
 	_model.add_child(_muzzle)
 	_muzzle.position = built[1]
+	_support = Marker3D.new()
+	_support.name = "SupportGrip"
+	_model.add_child(_support)
+	_support.transform = WeaponMounts.PISTOL_SUPPORT
+	_hand_ik = visual.install_hand_ik(_support)
 	_flash = OmniLight3D.new()
 	_flash.light_color = Color(1.0, 0.75, 0.4)
 	_flash.omni_range = 6.0
@@ -70,6 +77,8 @@ func _process(delta: float) -> void:
 		_flash_mesh.visible = _flash_time > 0.02
 	if _model:
 		_model.visible = _player.state == Player.State.ON_FOOT
+	if _hand_ik:
+		_hand_ik.influence = clampf((_player.aim_weight - 0.3) / 0.7, 0.0, 1.0) if _model.visible and _reloading <= 0.0 else 0.0
 	if _reloading > 0.0:
 		_reloading -= delta
 		if _reloading <= 0.0:

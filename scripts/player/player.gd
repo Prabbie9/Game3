@@ -28,6 +28,7 @@ var _seq_time := 0.0
 var _seq_from := Transform3D()
 var _seq_to := Transform3D()
 var _seat_local := Transform3D()
+var foot_ik: FootIK
 
 @onready var visual: HumanoidVisual = $Visual
 @onready var cam: CameraRig = $CameraRig
@@ -41,6 +42,7 @@ func _ready() -> void:
 	cam.yaw = rotation.y
 	visual.action_finished.connect(_on_action_finished)
 	weapon.setup(self, visual, cam)
+	foot_ik = FootIK.install(visual.skeleton, self)
 
 
 func _physics_process(delta: float) -> void:
@@ -121,6 +123,8 @@ func _on_foot(delta: float) -> void:
 
 	var speed := Vector2(velocity.x, velocity.z).length()
 	visual.set_locomotion(speed if on_floor else 0.0)
+	# feet adapt to the ground when grounded; lighter while sprinting so strides stay natural
+	foot_ik.weight = clampf(1.0 - (speed - visual.run_speed) / 3.0, 0.4, 1.0) if on_floor and _jump_timer < 0.0 else 0.0
 	var local := global_basis.inverse() * velocity
 	visual.set_aim(Vector2(local.x, -local.z), aim_weight)
 	cam.mode = CameraRig.Mode.AIM if aiming else CameraRig.Mode.ON_FOOT
@@ -151,6 +155,7 @@ func enter_vehicle(v: Vehicle) -> void:
 	collision_mask = 0
 	velocity = Vector3.ZERO
 	aim_weight = 0.0
+	foot_ik.weight = 0.0
 	visual.set_aim(Vector2.ZERO, 0.0)
 	weapon.holster(true)
 	v.reserve(self)
@@ -254,6 +259,7 @@ func debug_seat_in(v: Vehicle) -> void:
 	state = State.DRIVING
 	collision_layer = 0
 	collision_mask = 0
+	foot_ik.weight = 0.0
 	v.reserve(self)
 	_seat_local = v.global_transform.affine_inverse() * _seat_root(v)
 	global_transform = _seat_root(v)

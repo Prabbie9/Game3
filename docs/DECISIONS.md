@@ -11,4 +11,4 @@
 - 2026-10-22 — Wine can't run the Windows build in this container; smoke tests run the identical .pck on the Linux release template.
 - 2026-10-22 — Only the player character is shipped until pedestrians (M6) to keep the pck small (345 MB); character textures capped at 2K.
 - 2026-10-22 — The proxy returns 403 for tag pushes, so releases are cut by committing release.txt on main; the workflow tags and publishes with GITHUB_TOKEN.
-- 2026-10-22 — Mixamo character textures are embedded at import (Basis Universal) instead of extracted PNGs: extraction doesn't run on a fresh checkout, which shipped an untextured player in v0.1.0.
+- 2026-10-22 — v0.1.0 shipped an untextured player: the CI cache of assets/source/mixamo restored stale *.import files over the committed ones. CI now caches only *.fbx. Character textures are also embedded at import (Basis Universal) rather than extracted to PNGs, which is simpler and reproducible.
