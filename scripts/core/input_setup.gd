@@ -5,19 +5,19 @@ extends RefCounted
 const KEYS := {
 	"move_forward": [KEY_W], "move_back": [KEY_S], "move_left": [KEY_A], "move_right": [KEY_D],
 	"sprint": [KEY_SHIFT], "jump": [KEY_SPACE], "crouch": [KEY_C], "walk_toggle": [KEY_ALT],
-	"interact": [KEY_F], "reload": [KEY_R], "shoulder_swap": [KEY_Q],
+	"interact": [KEY_F], "reload": [KEY_R], "cover": [KEY_Q], "shoulder_swap": [],
 	"accelerate": [KEY_W], "brake": [KEY_S], "steer_left": [KEY_A], "steer_right": [KEY_D],
 	"handbrake": [KEY_SPACE], "horn": [KEY_H], "headlights": [KEY_L], "camera_mode": [KEY_V],
 	"pause": [KEY_ESCAPE], "perf_overlay": [KEY_F3], "map": [KEY_M],
 	"weapon_next": [], "weapon_prev": [],
 }
 const MOUSE := {
-	"fire": [MOUSE_BUTTON_LEFT], "aim": [MOUSE_BUTTON_RIGHT],
+	"fire": [MOUSE_BUTTON_LEFT], "aim": [MOUSE_BUTTON_RIGHT], "shoulder_swap": [MOUSE_BUTTON_MIDDLE],
 	"weapon_next": [MOUSE_BUTTON_WHEEL_DOWN], "weapon_prev": [MOUSE_BUTTON_WHEEL_UP],
 }
 const PAD_BUTTONS := {
 	"jump": [JOY_BUTTON_A], "sprint": [JOY_BUTTON_A], "crouch": [JOY_BUTTON_LEFT_STICK],
-	"interact": [JOY_BUTTON_Y], "reload": [JOY_BUTTON_B], "shoulder_swap": [JOY_BUTTON_RIGHT_STICK],
+	"interact": [JOY_BUTTON_Y], "reload": [JOY_BUTTON_B], "shoulder_swap": [JOY_BUTTON_RIGHT_STICK], "cover": [JOY_BUTTON_RIGHT_SHOULDER],
 	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "headlights": [JOY_BUTTON_DPAD_LEFT],
 	"camera_mode": [JOY_BUTTON_BACK], "pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],
 	"weapon_next": [JOY_BUTTON_DPAD_RIGHT], "weapon_prev": [JOY_BUTTON_LEFT_SHOULDER],

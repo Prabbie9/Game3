@@ -19,6 +19,7 @@ var shoulder := 1.0
 var vehicle_distance := 6.5
 var vehicle_height := 1.7
 var shake := 0.0
+var crouch := false
 
 var _dist := 3.4
 var _height := 1.55
@@ -86,7 +87,7 @@ func _process(delta: float) -> void:
 
 	var k := 1.0 - exp(-delta * 10.0)
 	_dist = lerpf(_dist, p.dist, k)
-	_height = lerpf(_height, p.height, k)
+	_height = lerpf(_height, p.height - (0.45 if crouch and mode != Mode.VEHICLE else 0.0), k)
 	_side = lerpf(_side, p.side * shoulder, k)
 	camera.fov = lerpf(camera.fov, p.fov, k)
 

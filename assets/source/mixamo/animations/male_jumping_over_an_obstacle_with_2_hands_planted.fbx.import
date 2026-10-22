@@ -3,13 +3,13 @@
 importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
-uid="uid://bijlaehsc45u5"
-path="res://.godot/imported/swimming_breastroke_to_edge_of_pool.fbx-2de01a5155f63ec7796ad301b6767936.res"
+uid="uid://bu0wqtqle5cqs"
+path="res://.godot/imported/male_jumping_over_an_obstacle_with_2_hands_planted.fbx-11907ae9ac7c6d493eba6f65b1e009d2.res"
 
 [deps]
 
-source_file="res://assets/source/mixamo/animations/swimming_breastroke_to_edge_of_pool.fbx"
-dest_files=["res://.godot/imported/swimming_breastroke_to_edge_of_pool.fbx-2de01a5155f63ec7796ad301b6767936.res"]
+source_file="res://assets/source/mixamo/animations/male_jumping_over_an_obstacle_with_2_hands_planted.fbx"
+dest_files=["res://.godot/imported/male_jumping_over_an_obstacle_with_2_hands_planted.fbx-11907ae9ac7c6d493eba6f65b1e009d2.res"]
 
 [params]
 

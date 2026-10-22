@@ -3,13 +3,13 @@
 importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
-uid="uid://ci8046i7xjh8v"
-path="res://.godot/imported/climbing_up_a_wall.fbx-9ca9a2ac04e872a93ef22fc0a40ce568.res"
+uid="uid://bq22jyowq1f1n"
+path="res://.godot/imported/jump_to_a_braced_hang_from_standing_idle.fbx-7cd8563dc5d8fc9f89cd1adfffd6daf4.res"
 
 [deps]
 
-source_file="res://assets/source/mixamo/animations/climbing_up_a_wall.fbx"
-dest_files=["res://.godot/imported/climbing_up_a_wall.fbx-9ca9a2ac04e872a93ef22fc0a40ce568.res"]
+source_file="res://assets/source/mixamo/animations/jump_to_a_braced_hang_from_standing_idle.fbx"
+dest_files=["res://.godot/imported/jump_to_a_braced_hang_from_standing_idle.fbx-7cd8563dc5d8fc9f89cd1adfffd6daf4.res"]
 
 [params]
 

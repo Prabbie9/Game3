@@ -3,13 +3,13 @@
 importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
-uid="uid://bbrb0t5tidgce"
-path="res://.godot/imported/crouch_idle.fbx-e054f8151c3a7d914b41cd125ecabbce.res"
+uid="uid://c7nxcgtpadqk"
+path="res://.godot/imported/climb_wall_from_braced_hang_to_crouch.fbx-91220217fa01ad266bc9531cfc8ba8d4.res"
 
 [deps]
 
-source_file="res://assets/source/mixamo/animations/crouch_idle.fbx"
-dest_files=["res://.godot/imported/crouch_idle.fbx-e054f8151c3a7d914b41cd125ecabbce.res"]
+source_file="res://assets/source/mixamo/animations/climb_wall_from_braced_hang_to_crouch.fbx"
+dest_files=["res://.godot/imported/climb_wall_from_braced_hang_to_crouch.fbx-91220217fa01ad266bc9531cfc8ba8d4.res"]
 
 [params]
 

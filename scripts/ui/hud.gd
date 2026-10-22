@@ -169,6 +169,9 @@ func _process(_delta: float) -> void:
 	if not _player and Game.player:
 		_player = Game.player as Player
 		_player.weapon.ammo_changed.connect(func(a, r): _ammo.text = "%d  /  %d" % [a, r])
+		_player.weapon.weapon_changed.connect(func(n):
+			_weapon.text = n
+			_ammo.visible = n != "FISTS")
 		_player.health_changed.connect(_on_health)
 		_player.vehicle_changed.connect(_on_vehicle)
 		_ammo.text = "%d  /  %d" % [_player.weapon.in_mag, _player.weapon.reserve]

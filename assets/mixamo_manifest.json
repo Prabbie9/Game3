@@ -25,16 +25,12 @@
   "Entering Into The Driverside Of A Car.fbx",
   "Exiting Out Of The Driverside Of A Car.fbx",
   "Male Driving A Car.fbx",
-  "Crouch Idle.fbx",
   "Crouched Walk.fbx",
   "Crouched Cover Sneaking Left.fbx",
   "Crouched Cover Sneaking Right.fbx",
   "Getting Up From Back.fbx",
   "Getting Up From Stomach.fbx",
   "Male Jumping Over An Obstacle With 1 Hand Planted.fbx",
-  "Climbing Up A Wall.fbx",
-  "Pulling Up To A Ledge.fbx",
-  "Swimming Breastroke To Edge Of Pool.fbx",
   "Swimming Underwater.fbx",
   "Floating.fbx",
   "Standing Cover Against Object.fbx",
@@ -51,6 +47,10 @@
   "Fast Stop From Full Run.fbx",
   "Mid-Air Falling To A Hard Landing.fbx",
   "Receiving A Big Hit From A Right Punch.fbx",
-  "Receive Punch To The Body.fbx"
+  "Receive Punch To The Body.fbx",
+  "Jump To A Braced Hang From Standing Idle.fbx",
+  "Climb Wall From Braced Hang To Crouch.fbx",
+  "Crouch Idle (1).fbx",
+  "Male Jumping Over An Obstacle With 2 Hands Planted.fbx"
  ]
 }

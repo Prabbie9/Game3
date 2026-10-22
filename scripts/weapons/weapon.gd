@@ -5,6 +5,10 @@ extends Node3D
 
 signal ammo_changed(in_mag: int, reserve: int)
 signal fired
+signal weapon_changed(name: String)
+
+## Equipped slot: 0 = fists, 1 = pistol (the weapon wheel in Milestone 5 extends this).
+var slot := 1
 
 const PISTOL := {
 	"name": "Pistol", "damage": 34.0, "interval": 0.22, "mag": 12, "reload": 1.4,
@@ -59,7 +63,20 @@ func setup(player: Player, visual: HumanoidVisual, cam: CameraRig) -> void:
 
 
 func has_weapon() -> bool:
-	return _model != null
+	return _model != null and slot == 1
+
+
+func is_fists() -> bool:
+	return slot == 0
+
+
+func weapon_name() -> String:
+	return "FISTS" if slot == 0 else String(data.name).to_upper()
+
+
+func select(new_slot: int) -> void:
+	slot = clampi(new_slot, 0, 1)
+	weapon_changed.emit(weapon_name())
 
 
 func holster(on: bool) -> void:
@@ -75,8 +92,12 @@ func _process(delta: float) -> void:
 		_flash_time -= delta
 		_flash.light_energy = maxf(0.0, _flash_time / 0.05) * 3.0
 		_flash_mesh.visible = _flash_time > 0.02
+	if Game.controls_enabled and _player.state == Player.State.ON_FOOT:
+		if Input.is_action_just_pressed("weapon_next") or Input.is_action_just_pressed("weapon_prev"):
+			select(1 - slot)
 	if _model:
-		_model.visible = _player.state == Player.State.ON_FOOT
+		_model.visible = slot == 1 and (_player.state in [Player.State.ON_FOOT, Player.State.COVER] \
+				or (_player.state == Player.State.ACTION and not _player.hands_busy()))
 	if _hand_ik:
 		_hand_ik.influence = clampf((_player.aim_weight - 0.3) / 0.7, 0.0, 1.0) if _model.visible and _reloading <= 0.0 else 0.0
 	if _reloading > 0.0:

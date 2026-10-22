@@ -3,7 +3,7 @@ extends RefCounted
 ## Button prompt text for the active input device (keyboard/mouse or gamepad).
 
 const PAD := {"interact": "Y", "jump": "A", "sprint": "A", "aim": "LT", "fire": "RT", "reload": "B",
-	"accelerate": "RT", "brake": "LT", "handbrake": "RB", "pause": "START", "map": "D-PAD DOWN"}
+	"accelerate": "RT", "brake": "LT", "handbrake": "RB", "pause": "START", "map": "D-PAD DOWN", "cover": "RB", "crouch": "L3"}
 
 
 static func prompt(action: String) -> String:

@@ -3,13 +3,13 @@
 importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
-uid="uid://dov8wcbo5k0qh"
-path="res://.godot/imported/pulling_up_to_a_ledge.fbx-6272dddf30e222123768f0c4fd913f87.res"
+uid="uid://ct7kun7quuxix"
+path="res://.godot/imported/crouch_idle_1.fbx-f4f25918d3fc9baa8c2c620a17b41529.res"
 
 [deps]
 
-source_file="res://assets/source/mixamo/animations/pulling_up_to_a_ledge.fbx"
-dest_files=["res://.godot/imported/pulling_up_to_a_ledge.fbx-6272dddf30e222123768f0c4fd913f87.res"]
+source_file="res://assets/source/mixamo/animations/crouch_idle_1.fbx"
+dest_files=["res://.godot/imported/crouch_idle_1.fbx-f4f25918d3fc9baa8c2c620a17b41529.res"]
 
 [params]
 
