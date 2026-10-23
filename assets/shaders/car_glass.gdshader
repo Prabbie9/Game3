@@ -4,6 +4,8 @@ render_mode depth_prepass_alpha, cull_disabled;
 // a shattered pane (shatter = 1) loses most of its glass.
 #include "res://assets/shaders/car_dents.gdshaderinc"
 
+uniform sampler2D albedo_tex : source_color, hint_default_white;
+uniform vec4 tint : source_color = vec4(0.0, 0.0, 0.0, 0.68);
 uniform vec4 glass_hits[4];   // xyz car-frame point, w radius of the cracked area
 uniform float shatter = 0.0;
 uniform float burnt = 0.0;
@@ -38,9 +40,10 @@ void fragment() {
 		float scale = mix(6.0, 22.0, k);
 		crack = max(crack, (1.0 - smoothstep(0.0, 0.06, cracks(v_car * scale))) * smoothstep(0.0, 0.35, k));
 	}
-	ALBEDO = mix(vec3(0.0), vec3(0.8, 0.82, 0.8), crack);
+	vec4 g = texture(albedo_tex, UV) * tint;
+	ALBEDO = mix(g.rgb, vec3(0.8, 0.82, 0.8), crack);
 	ROUGHNESS = mix(0.02, 0.5, crack);
 	METALLIC = 0.0;
 	SPECULAR = 0.6;
-	ALPHA = mix(0.68, 0.92, crack) * (1.0 - shatter * 0.85) * (1.0 - burnt);
+	ALPHA = mix(g.a, 0.92, crack) * (1.0 - shatter * 0.85) * (1.0 - burnt);
 }

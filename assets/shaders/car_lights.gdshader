@@ -18,9 +18,11 @@ uniform vec2 broken = vec2(0.0);
 uniform float burnt = 0.0;
 
 varying vec3 lp;
+varying float v_role;   // vertex alpha: 1 = classify by texture colour; 0.1 head, 0.3 tail/brake, 0.5 blinker, 0.7 reverse
 
 void vertex() {
 	lp = VERTEX;
+	v_role = COLOR.a;
 	apply_dents(VERTEX);
 }
 
@@ -30,6 +32,14 @@ void fragment() {
 	float amber = (s.r > 0.45 && s.g > 0.32 * s.r && s.g < 0.78 * s.r && s.b < 0.55 * s.g) ? 1.0 : 0.0;
 	float red = step(c.g * 1.5 + 0.05, c.r) * (1.0 - amber);
 	float bright = smoothstep(0.35, 0.8, max(c.r, max(c.g, c.b)));
+	if (v_role < 0.95) {
+		// lamps named by role in the model: the texture only tints them
+		amber = step(0.4, v_role) * step(v_role, 0.6);
+		red = step(0.2, v_role) * step(v_role, 0.4);
+		bright = (step(v_role, 0.2) + step(0.6, v_role)) * 0.9;
+		if (red > 0.5) { c = max(c, vec3(0.35, 0.02, 0.02)); }
+		if (amber > 0.5) { c = max(c, vec3(0.45, 0.2, 0.02)); }
+	}
 	vec3 e = vec3(0.0);
 	float ind = lp.x < 0.0 ? ind_left : ind_right;
 	float zone = has_amber ? amber : step(outer_x, abs(lp.x));

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mid poly dirt bike
+* source:	https://sketchfab.com/3d-models/mid-poly-dirt-bike-3009c80ec6cc47fcaad27cf96f2a0822
+* author:	danilloribeiro (https://sketchfab.com/danilloribeiro)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mid poly dirt bike" (https://sketchfab.com/3d-models/mid-poly-dirt-bike-3009c80ec6cc47fcaad27cf96f2a0822) by danilloribeiro (https://sketchfab.com/danilloribeiro) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

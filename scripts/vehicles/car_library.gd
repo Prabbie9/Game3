@@ -1,7 +1,9 @@
 class_name CarLibrary
 extends RefCounted
-## Splits the "Generic passenger car pack" (Sketchfab, CC-BY) into individual cars at runtime.
-## Each model is returned in a normalized car frame: origin on the ground between the axles, forward = -Z.
+## Vehicle meshes in a normalized car frame: origin on the ground between the axles, forward = -Z, metres.
+## The "Generic passenger car pack" (Sketchfab, CC-BY) is split into individual cars; other vehicles come one per
+## glTF (SINGLE). Each surface is tagged with a kind (paint / body / cutout / glass / beacon) so Vehicle can give
+## it a dentable shader, and light meshes are merged into front/rear "optics" with a role per vertex.
 ## Mesh resources are shared between all instances of a model (cheap to spawn many).
 
 const PACK := "res://assets/models/sketchfab/generic_cars/scene.gltf"
@@ -34,6 +36,27 @@ const PAINTS := [
 	[Color(0.08, 0.2, 0.12), 3], [Color(0.32, 0.5, 0.66), 3], [Color(0.85, 0.55, 0.1), 1], [Color(0.9, 0.78, 0.15), 1],
 ]
 
+const DIR := "res://assets/models/sketchfab/"
+## One glTF per vehicle. scale: to metres. forward: the nose direction in the file (or taken from the FL/FR wheel
+## node names). Wheels by node-name substring, by mesh name (+ axle hubs that spin with them), or cut out of a
+## merged mesh: [length, height, radius, inner |x|] cylinders in the mesh's own coordinates, one per axle.
+## paint: material-name substring of the paintable body ("" = livery, keep it). beacons: node-name substring of
+## an emergency light bar; beacon_boxes: light bar boxes to add (car frame) when the model has none.
+const SINGLE := {
+	"muscle": {"file": DIR + "muscle_phoenix/scene.gltf", "wheel_nodes": "WheelStock", "paint": "Bodymat"},
+	"police": {"file": DIR + "police_cruiser/scene.gltf", "wheel_nodes": "WheelStamp", "paint": "", "beacons": "Lightbar"},
+	"van": {"file": DIR + "van_shvan/scene.gltf", "wheel_nodes": "WheelStock", "paint": "bodymat"},
+	"ambulance": {"file": DIR + "ambulance_shvan/scene.gltf", "wheel_nodes": "WheelStock", "paint": "", "beacons": "Lightbar"},
+	"boxtruck": {"file": DIR + "truck_lct/scene.gltf", "wheel_nodes": "WheelStock", "paint": "Bodymat"},
+	"bus": {"file": DIR + "town_bus/scene.gltf", "scale": 0.092, "forward": Vector3(1, 0, 0),
+		"wheel_meshes": ["Object_10", "Object_11", "Object_12", "Object_14"], "hub_meshes": ["Object_13", "Object_15"], "paint": ""},
+	"firetruck": {"file": DIR + "fire_truck/scene.gltf", "scale": 4.4, "forward": Vector3(0, 0, 1),
+		"cut_wheels": [[-0.522, -0.277, 0.124, 0.14], [0.415, -0.278, 0.124, 0.035]], "paint": "",
+		"beacon_boxes": [[Vector3(-0.85, 3.02, -3.05), Vector3(0.5, 0.16, 0.22)], [Vector3(0.85, 3.02, -3.05), Vector3(0.5, 0.16, 0.22)]]},
+}
+## light mesh roles by node name (checked in order), stored in the optics' vertex alpha for car_lights.gdshader
+const ROLES := [["Blinker", 0.5], ["Reverse", 0.7], ["Brakelight", 0.3], ["Taillight", 0.3], ["Headlight", 0.1]]
+
 static var _cache := {}
 
 
@@ -56,7 +79,11 @@ static func paint_ref(tex: Texture2D) -> Color:
 
 
 static func get_model(model: String) -> Dictionary:
-	if _cache.is_empty():
+	if SINGLE.has(model):
+		if not _cache.has(model):
+			_cache[model] = _extract_single(model)
+		return _cache[model]
+	if not _cache.has("sedan"):
 		# Extract every model in one pass and free the pack right away: keeping an out-of-tree node
 		# tree in a static var outlives the RenderingServer and crashes the game on exit.
 		var pack: Node3D = (load(PACK) as PackedScene).instantiate()
@@ -136,6 +163,7 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 		var xf := inv * _gxf(mi)
 		var mesh: Mesh = mi.mesh
 		var keep := ArrayMesh.new()
+		var kinds: Array[String] = []
 		for s in mesh.get_surface_count():
 			var mat := mesh.surface_get_material(s)
 			if mat and String(mat.resource_name).begins_with("Optics"):
@@ -145,7 +173,9 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 				continue
 			keep.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh.surface_get_arrays(s))
 			keep.surface_set_material(keep.get_surface_count() - 1, mat)
-		parts.append([keep, xf])
+			var mname := String(mat.resource_name) if mat else ""
+			kinds.append("paint" if mname.begins_with("Body") else ("glass" if mname.begins_with("Glass") else "body"))
+		parts.append([keep, xf, kinds])
 	var optic_meshes := {}
 	for k: String in optics:
 		var st: SurfaceTool = optics[k]
@@ -231,3 +261,240 @@ static func _gxf(n: Node) -> Transform3D:
 		t = (n as Node3D).transform * t
 		n = n.get_parent()
 	return t
+
+
+# ------------------------------------------------------------------------------------------------ single models
+
+static func _extract_single(model: String) -> Dictionary:
+	var cfg: Dictionary = SINGLE[model]
+	var root: Node3D = (load(cfg.file) as PackedScene).instantiate()
+	var sc: float = cfg.get("scale", 1.0)
+	var all: Array[MeshInstance3D] = []
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		all.append(mi)
+	var used := {}
+	var groups := []          # {parts: [[mesh, pack xf]], center, aabb, name}
+	var replaced := {}        # MeshInstance3D -> ArrayMesh left after cutting the wheels out
+	if cfg.has("wheel_nodes"):
+		for n in root.find_children("*" + String(cfg.wheel_nodes) + "*", "Node3D", true, false):
+			if n is MeshInstance3D:
+				continue
+			var ms: Array[MeshInstance3D] = []
+			for mi in n.find_children("*", "MeshInstance3D", true, false):
+				ms.append(mi)
+				used[mi] = true
+			if ms.is_empty():
+				continue
+			var a := _global_aabb(ms)
+			groups.append({"parts": ms.map(func(m): return [m.mesh, _gxf(m)]), "center": a.get_center(), "aabb": a, "name": String(n.name)})
+	elif cfg.has("wheel_meshes"):
+		for nm: String in cfg.wheel_meshes:
+			var mi: MeshInstance3D = root.find_child(nm, true, false)
+			used[mi] = true
+			var a := _gxf(mi) * mi.get_aabb()
+			groups.append({"parts": [[mi.mesh, _gxf(mi)]], "center": a.get_center(), "aabb": a, "name": nm})
+	elif cfg.has("cut_wheels"):
+		var mi: MeshInstance3D = all[0]
+		var cut := _cut_wheels(mi, cfg.cut_wheels)
+		replaced[mi] = cut[0]
+		for g: Dictionary in cut[1]:
+			groups.append(g)
+	# nose direction and the axles
+	var fwd: Vector3 = cfg.get("forward", Vector3.ZERO)
+	if fwd == Vector3.ZERO:
+		var fm := Vector3.ZERO
+		var rm := Vector3.ZERO
+		var nf := 0
+		for g: Dictionary in groups:
+			if g.name.contains("_F"):
+				fm += g.center
+				nf += 1
+			else:
+				rm += g.center
+		fwd = fm / maxf(nf, 1) - rm / maxf(groups.size() - nf, 1)
+	fwd.y = 0
+	fwd = fwd.normalized()
+	var along := groups.map(func(g): return (g.center as Vector3).dot(fwd))
+	var lo: float = along.min()
+	var hi: float = along.max()
+	var mid := Vector3.ZERO
+	var ground_y := INF
+	for g: Dictionary in groups:
+		mid += g.center
+		ground_y = minf(ground_y, (g.aabb as AABB).position.y)
+	mid /= groups.size()
+	# origin halfway between the front and rear axles (not the wheel centroid: buses have more wheels behind)
+	mid += fwd * ((lo + hi) * 0.5 - mid.dot(fwd))
+	var z := -fwd
+	var x := Vector3.UP.cross(z).normalized()
+	var frame := Transform3D(Basis(x, Vector3.UP, z), Vector3(mid.x, ground_y, mid.z))
+	var car := Transform3D(Basis.from_scale(Vector3.ONE * sc), Vector3.ZERO) * frame.affine_inverse()
+	# hubs ride with the nearest wheel
+	for nm: String in cfg.get("hub_meshes", []):
+		var mi: MeshInstance3D = root.find_child(nm, true, false)
+		used[mi] = true
+		var c := (_gxf(mi) * mi.get_aabb()).get_center()
+		var best: Dictionary = groups[0]
+		for g: Dictionary in groups:
+			if absf((g.center - c).dot(fwd)) < absf((best.center - c).dot(fwd)):
+				best = g
+		best.parts.append([mi.mesh, _gxf(mi)])
+
+	var parts := []
+	var optics := {"front": SurfaceTool.new(), "rear": SurfaceTool.new()}
+	var optics_mat: Material = null
+	for st: SurfaceTool in optics.values():
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var paint_key: String = cfg.get("paint", "")
+	var beacon_key: String = cfg.get("beacons", "")
+	var body_aabb := AABB()
+	var first := true
+	for mi in all:
+		if used.has(mi):
+			continue
+		var xf := car * _gxf(mi)
+		var mesh: Mesh = replaced.get(mi, mi.mesh)
+		var path := _path_name(mi)
+		var role := -1.0
+		# the mesh instance itself is named after its material ("..._Lights_and_Glass_0"): judge by its parents
+		if not _path_name(mi.get_parent()).to_lower().contains("glass"):
+			for r: Array in ROLES:
+				if path.contains(r[0]):
+					role = r[1]
+					break
+		var keep := ArrayMesh.new()
+		var kinds: Array[String] = []
+		for si in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(si)
+			var arr := _clean(mesh.surface_get_arrays(si))
+			if role >= 0.0:
+				optics_mat = mat
+				_add_role_tris(arr, xf, optics, role)
+				continue
+			var mname := String(mat.resource_name).to_lower() if mat else ""
+			var kind := "body"
+			if beacon_key != "" and path.contains(beacon_key):
+				kind = "beacon"
+			elif mname.contains("glass") or mname.contains("transperent") or mname.contains("transparent"):
+				kind = "glass"
+			elif paint_key != "" and mname.contains(paint_key.to_lower()):
+				kind = "paint"
+			elif mat is BaseMaterial3D and (mat as BaseMaterial3D).transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				kind = "cutout"
+			keep.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			keep.surface_set_material(keep.get_surface_count() - 1, mat)
+			kinds.append(kind)
+		if keep.get_surface_count() > 0:
+			parts.append([keep, xf, kinds])
+			var a := xf * keep.get_aabb()
+			body_aabb = a if first else body_aabb.merge(a)
+			first = false
+	var optic_meshes := {}
+	for k: String in optics:
+		var st: SurfaceTool = optics[k]
+		st.generate_normals()
+		var m := st.commit()
+		if m.get_surface_count() > 0:
+			optic_meshes[k] = m
+	var wheel_data := []
+	for g: Dictionary in groups:
+		var c := car * (g.center as Vector3)
+		var wparts := []
+		for pp: Array in g.parts:
+			wparts.append([pp[0], Transform3D(Basis.IDENTITY, -c) * car * (pp[1] as Transform3D)])
+		wheel_data.append({"pos": c, "radius": (g.aabb as AABB).size.y * 0.5 * sc, "parts": wparts})
+	root.free()
+	return {"parts": parts, "wheels": wheel_data, "aabb": body_aabb, "optics": optic_meshes, "optics_mat": optics_mat,
+		"amber": {"front": true, "rear": true}, "roles": true, "beacon_boxes": cfg.get("beacon_boxes", [])}
+
+
+## Surface arrays without the custom channels and skinning some files carry (not needed, and they'd need
+## matching format flags to be re-added).
+static func _clean(arr: Array) -> Array:
+	for i in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3, Mesh.ARRAY_BONES, Mesh.ARRAY_WEIGHTS]:
+		arr[i] = null
+	return arr
+
+
+## Names of a node and its ancestors (light meshes are named on their parent nodes in these files).
+static func _path_name(n: Node) -> String:
+	var out := ""
+	while n:
+		out += String(n.name) + "/"
+		n = n.get_parent()
+	return out
+
+
+## Light triangles into front/rear SurfaceTools with their role in the vertex alpha.
+static func _add_role_tris(arr: Array, xf: Transform3D, out: Dictionary, role: float) -> void:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] else PackedVector2Array()
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] else PackedInt32Array(range(v.size()))
+	for t in range(0, idx.size(), 3):
+		var a := xf * v[idx[t]]
+		var b := xf * v[idx[t + 1]]
+		var c := xf * v[idx[t + 2]]
+		var st: SurfaceTool = out["front" if (a.z + b.z + c.z) < 0.0 else "rear"]
+		for k in 3:
+			st.set_color(Color(1, 1, 1, role))
+			if uv.size() > 0:
+				st.set_uv(uv[idx[t + k]])
+			st.add_vertex([a, b, c][k])
+
+
+## Split the wheels out of a merged mesh: triangles inside each axle's cylinder (left and right of the centre
+## line, beyond the inner |x|) become a wheel. Returns [remaining body mesh, wheel groups].
+static func _cut_wheels(mi: MeshInstance3D, specs: Array) -> Array:
+	var gx := _gxf(mi)
+	var body := ArrayMesh.new()
+	var groups := []
+	var mesh := mi.mesh
+	for si in mesh.get_surface_count():
+		var arr := _clean(mesh.surface_get_arrays(si))
+		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] else PackedInt32Array(range(v.size()))
+		var keep := PackedInt32Array()
+		var wheel_idx := []
+		for i in specs.size() * 2:
+			wheel_idx.append([])  # plain Arrays: packed arrays are copied on access
+		for t in range(0, idx.size(), 3):
+			var hit := -1
+			for wi in specs.size():
+				var sp: Array = specs[wi]
+				var inside := 0
+				var side := 0.0
+				for k in 3:
+					var p := v[idx[t + k]]
+					if Vector2(p.y - sp[0], p.z - sp[1]).length() < sp[2] * 1.06 and absf(p.x) > sp[3]:
+						inside += 1
+						side += p.x
+				if inside == 3:
+					hit = wi * 2 + (0 if side < 0.0 else 1)
+					break
+			if hit < 0:
+				keep.append_array([idx[t], idx[t + 1], idx[t + 2]])
+			else:
+				(wheel_idx[hit] as Array).append_array([idx[t], idx[t + 1], idx[t + 2]])
+		var mat := mesh.surface_get_material(si)
+		var a2 := arr.duplicate()
+		a2[Mesh.ARRAY_INDEX] = keep
+		body.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a2)
+		body.surface_set_material(body.get_surface_count() - 1, mat)
+		for wi in wheel_idx.size():
+			var ids := PackedInt32Array(wheel_idx[wi])
+			if ids.is_empty():
+				continue
+			var sp: Array = specs[wi / 2]
+			var wm := ArrayMesh.new()
+			var a3 := arr.duplicate()
+			a3[Mesh.ARRAY_INDEX] = ids
+			wm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a3)
+			wm.surface_set_material(0, mat)
+			var sx := 0.0
+			for i in ids:
+				sx += v[i].x
+			var local := Vector3(sx / ids.size(), sp[0], sp[1])
+			var r: float = sp[2]
+			var bb := AABB(gx * (local - Vector3(0.05, r, r)), Vector3.ZERO).expand(gx * (local + Vector3(0.05, r, r)))
+			groups.append({"parts": [[wm, gx]], "center": gx * local, "aabb": bb, "name": "cut%d" % wi})
+	return [body, groups]

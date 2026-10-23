@@ -18,6 +18,7 @@ var _refs: Array[float] = []
 var _squeal: AudioStreamPlayer3D
 var _horn: AudioStreamPlayer3D
 var _tick: AudioStreamPlayer3D
+var _siren: AudioStreamPlayer3D
 var _level := 0.0           # engine master fade 0..1 (start-up / shut-down)
 var _start_delay := 0.0
 
@@ -36,6 +37,9 @@ func setup(v: Vehicle, engine_pitch: float, sound_kind: String) -> void:
 	_horn = _player(Audio.stream("vehicles/horn.wav", true), 10.0, 160.0)
 	_horn.position = Vector3(0, 0.5, v._size.z * -0.4)
 	_tick = _player(Audio.stream("vehicles/indicator.wav"), 1.5, 8.0)
+	if Vehicle.SPECS.get(v.model, {}).get("siren", false):
+		_siren = _player(Audio.stream("vehicles/siren_loop.ogg", true), 14.0, 320.0)
+		_siren.position = Vector3(0, v._size.y, v._size.z * -0.2)
 
 
 func _player(s: AudioStream, unit: float, range_m: float) -> AudioStreamPlayer3D:
@@ -109,6 +113,11 @@ func _process(delta: float) -> void:
 		_squeal.volume_db -= delta * 60.0
 		if _squeal.volume_db < -40.0:
 			_squeal.stop()
+	if _siren:
+		if vehicle.siren_on and not _siren.playing:
+			_siren.play(randf() * 4.0)
+		elif not vehicle.siren_on and _siren.playing:
+			_siren.stop()
 	# horn
 	var honk: bool = vehicle.horn_on
 	if honk and not _horn.playing:

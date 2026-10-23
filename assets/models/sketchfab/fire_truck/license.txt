@@ -1,0 +1,11 @@
+Model Information:
+* title:	Red fire truck with ladder
+* source:	https://sketchfab.com/3d-models/red-fire-truck-with-ladder-5c8d876d997f4eaa939a4778cedcfbfa
+* author:	Chenzoss (https://sketchfab.com/Chenzoss)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Red fire truck with ladder" (https://sketchfab.com/3d-models/red-fire-truck-with-ladder-5c8d876d997f4eaa939a4778cedcfbfa) by Chenzoss (https://sketchfab.com/Chenzoss) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

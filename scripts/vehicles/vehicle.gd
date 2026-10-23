@@ -18,10 +18,21 @@ const SPECS := {
 	"minivan": {"mass": 1860, "force": 6600, "top": 46.0, "steer": 0.52, "grip": 2.45, "stiff": 36.0, "travel": 0.24, "drive": "fwd", "name": "Ferro Family"},
 	"pickup": {"mass": 1920, "force": 7800, "top": 50.0, "steer": 0.5, "grip": 2.5, "stiff": 40.0, "travel": 0.26, "drive": "rwd", "name": "Hauler 1500"},
 	"offroad": {"mass": 1820, "force": 7600, "top": 48.0, "steer": 0.54, "grip": 2.7, "stiff": 32.0, "travel": 0.34, "drive": "awd", "name": "Mesa Trailhound"},
+	"muscle": {"mass": 1560, "force": 9400, "top": 62.0, "steer": 0.52, "grip": 2.7, "stiff": 44.0, "travel": 0.2, "drive": "rwd", "name": "Phoenix 455"},
+	"police": {"mass": 1720, "force": 8600, "top": 60.0, "steer": 0.53, "grip": 2.8, "stiff": 46.0, "travel": 0.2, "drive": "rwd", "name": "Fairheaven Interceptor", "siren": true},
+	"van": {"mass": 1950, "force": 6500, "top": 44.0, "steer": 0.5, "grip": 2.45, "stiff": 38.0, "travel": 0.24, "drive": "rwd", "name": "Shvan Van"},
+	"ambulance": {"mass": 2400, "force": 7600, "top": 46.0, "steer": 0.5, "grip": 2.45, "stiff": 40.0, "travel": 0.24, "drive": "rwd", "name": "Shvan Ambulance", "siren": true},
+	"boxtruck": {"mass": 4300, "force": 11500, "top": 34.0, "steer": 0.48, "grip": 2.4, "stiff": 46.0, "travel": 0.25, "drive": "rwd", "name": "LCT 3000",
+		"sound": "heavy", "seat_z": 1.15, "seat_y": 0.4},
+	"bus": {"mass": 11500, "force": 27000, "top": 26.0, "steer": 0.5, "grip": 2.3, "stiff": 50.0, "travel": 0.22, "drive": "rwd", "name": "Town Bus",
+		"sound": "heavy", "seat_z": 1.45, "seat_y": 0.33},
+	"firetruck": {"mass": 13500, "force": 31000, "top": 30.0, "steer": 0.48, "grip": 2.35, "stiff": 50.0, "travel": 0.24, "drive": "rwd", "name": "Fire Engine",
+		"sound": "heavy", "seat_z": 1.35, "seat_y": 0.37, "siren": true},
 }
 ## Engine sound character per body (small engines rev higher); heavy vehicles use the diesel loops.
 const ENGINE_PITCH := {"compact": 1.18, "hatchback": 1.12, "sedan": 0.96, "wagon": 0.94, "coupe": 1.05, "sport": 1.08,
-	"suv": 0.86, "minivan": 0.92, "pickup": 0.8, "offroad": 0.84}
+	"suv": 0.86, "minivan": 0.92, "pickup": 0.8, "offroad": 0.84, "muscle": 0.8, "police": 0.86, "van": 0.85, "ambulance": 0.86,
+	"boxtruck": 1.0, "bus": 0.92, "firetruck": 0.96}
 const GEARS := [0.2, 0.36, 0.53, 0.7, 0.86, 1.0]   # top speed fraction reached at the redline in each gear
 const GEAR_PULL := [1.55, 1.25, 1.05, 0.9, 0.78, 0.68]
 const IDLE_RPM := 850.0
@@ -66,6 +77,11 @@ var _smoke: Array[GPUParticles3D] = []
 var _last_mark := {}      # wheel -> last skid point
 var _driven := 2.0
 var _idle := false
+var _beacons: Array[ShaderMaterial] = []
+var siren_on := false
+var _beacon_lights: Array[OmniLight3D] = []
+var _beacon_phase := 0.0
+var _horn_t := -1.0
 var _idle_time := 0.0
 var _put_to_sleep := false
 var damage: VehicleDamage
@@ -85,6 +101,7 @@ func _ready() -> void:
 	max_engine_force = spec.force
 	top_speed = spec.top
 	max_steer = spec.steer
+	max_brake *= clampf(float(spec.mass) / 1450.0, 1.0, 10.0)
 	if display_name == "" or display_name == "Calder Sedan":
 		display_name = spec.name
 	mass = vehicle_mass
@@ -107,22 +124,34 @@ func _build() -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = p[0]
 		mi.transform = p[1]
+		var kinds: Array = p[2] if p.size() > 2 else []
 		for s in mi.mesh.get_surface_count():
 			var m := mi.mesh.surface_get_material(s)
-			var mname := String(m.resource_name) if m else ""
-			if mname.begins_with("Body"):
-				var pm := _paint_material((m as BaseMaterial3D).albedo_texture)
-				pm.set_shader_parameter("part_xf", Projection(p[1]))
-				damage.materials.append(pm)
-				mi.set_surface_override_material(s, pm)
-			elif mname.begins_with("Glass"):
-				var gm := ShaderMaterial.new()
-				gm.shader = preload("res://assets/shaders/car_glass.gdshader")
-				gm.set_shader_parameter("part_xf", Projection(p[1]))
-				damage.materials.append(gm)
-				damage.glass.append(gm)
-				mi.set_surface_override_material(s, gm)
+			var kind: String = kinds[s] if s < kinds.size() else "body"
+			var sm: ShaderMaterial
+			match kind:
+				"glass":
+					sm = _glass_material(m)
+					damage.glass.append(sm)
+				"beacon":
+					sm = _beacon_material(m)
+				_:
+					sm = _paint_material(m, kind == "paint", kind == "cutout")
+			sm.set_shader_parameter("part_xf", Projection(p[1]))
+			damage.materials.append(sm)
+			mi.set_surface_override_material(s, sm)
 		add_child(mi)
+	for bb: Array in data.get("beacon_boxes", []):
+		var bm := MeshInstance3D.new()
+		var box_mesh := BoxMesh.new()
+		box_mesh.size = bb[1]
+		bm.mesh = box_mesh
+		bm.position = bb[0]
+		var sm := _beacon_material(null)
+		sm.set_shader_parameter("part_xf", Projection(Transform3D(Basis.IDENTITY, bb[0])))
+		bm.material_override = sm
+		damage.materials.append(sm)
+		add_child(bm)
 	# collision: convex hull of the body (one per mesh part is overkill; use the main body part)
 	var hull := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -162,15 +191,20 @@ func _build() -> void:
 		add_child(wheel)
 		_wheels.append(wheel)
 
-	camera_distance = clampf(_size.z * 1.35, 5.0, 11.0)
-	camera_height = clampf(_size.y * 1.05, 1.5, 3.0)
+	camera_distance = clampf(_size.z * 1.35, 5.0, 17.0)
+	camera_height = clampf(_size.y * 1.05, 1.5, 4.6)
 	# driver sits left of centre (US layout), a bit behind the front axle
 	var wheelbase_front := 0.0
 	for w in data.wheels:
 		wheelbase_front = minf(wheelbase_front, w.pos.z)
 	# seat = where the driver's hips sit (Player offsets its root by the drive clip's hip height)
-	_seat = Transform3D(Basis.IDENTITY, Vector3(-_size.x * 0.21, aabb.position.y + _size.y * 0.3, wheelbase_front * 0.18))
-	_door = Vector3(-_size.x * 0.5 - 0.55, 0.0, wheelbase_front * 0.2)
+	var spec_s: Dictionary = SPECS.get(model, SPECS.sedan)
+	var seat_z: float = aabb.position.z + spec_s.seat_z if spec_s.has("seat_z") else wheelbase_front * 0.18
+	var seat_y: float = aabb.position.y + _size.y * float(spec_s.get("seat_y", 0.3))
+	_seat = Transform3D(Basis.IDENTITY, Vector3(-_size.x * 0.21, seat_y, seat_z))
+	_door = Vector3(-_size.x * 0.5 - 0.55, 0.0, seat_z + 0.02)
+	if spec_s.get("siren", false):
+		_build_beacon_lights(data)
 	_build_lights(aabb)
 	_build_optics(data)
 	_driven = 0.0
@@ -268,15 +302,55 @@ static func _soft_dot() -> Texture2D:
 	return _dot
 
 
-func _paint_material(tex: Texture2D) -> ShaderMaterial:
+## Dentable stand-in for a model material: paint surfaces take the car's colour, other surfaces keep their look.
+func _paint_material(src: Material, paint_surface: bool, cutout := false) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
-	m.shader = preload("res://assets/shaders/car_paint.gdshader")
-	m.set_shader_parameter("albedo_tex", tex)
-	var ref := CarLibrary.paint_ref(tex)
-	if paint.a > 0.0 and ref.a > 0.0:
-		m.set_shader_parameter("repaint", true)
-		m.set_shader_parameter("ref_color", ref)
-		m.set_shader_parameter("paint", paint)
+	m.shader = preload("res://assets/shaders/car_paint_cutout.gdshader") if cutout else preload("res://assets/shaders/car_paint.gdshader")
+	var b := src as BaseMaterial3D
+	var tex: Texture2D = b.albedo_texture if b else null
+	if tex:
+		m.set_shader_parameter("albedo_tex", tex)
+	m.set_shader_parameter("base_color", b.albedo_color if b else Color.WHITE)
+	m.set_shader_parameter("is_paint", paint_surface)
+	if paint_surface:
+		if tex == null:
+			m.set_shader_parameter("solid", true)
+			m.set_shader_parameter("paint", paint if paint.a > 0.0 else (b.albedo_color if b else Color.GRAY))
+		else:
+			var ref := CarLibrary.paint_ref(tex)
+			if paint.a > 0.0 and ref.a > 0.0:
+				m.set_shader_parameter("repaint", true)
+				m.set_shader_parameter("ref_color", ref)
+				m.set_shader_parameter("paint", paint)
+	elif b:
+		# glTF factors multiply a metal/roughness map we don't sample: use neutral values when there is one
+		m.set_shader_parameter("base_metallic", 0.3 if b.metallic_texture else b.metallic)
+		m.set_shader_parameter("base_roughness", 0.6 if b.roughness_texture else b.roughness)
+	return m
+
+
+func _glass_material(src: Material) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = preload("res://assets/shaders/car_glass.gdshader")
+	var b := src as BaseMaterial3D
+	if b:
+		if b.albedo_texture:
+			m.set_shader_parameter("albedo_tex", b.albedo_texture)
+		m.set_shader_parameter("tint", b.albedo_color)
+	return m
+
+
+func _beacon_material(src: Material) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = preload("res://assets/shaders/car_beacon.gdshader")
+	var b := src as BaseMaterial3D
+	if b:
+		if b.albedo_texture:
+			m.set_shader_parameter("albedo_tex", b.albedo_texture)
+		m.set_shader_parameter("base_color", b.albedo_color)
+	else:
+		m.set_shader_parameter("base_color", Color(0.85, 0.85, 0.85))
+	_beacons.append(m)
 	return m
 
 
@@ -295,6 +369,59 @@ func _build_lights(aabb: AABB) -> void:
 		l.visible = false
 		add_child(l)
 		_lights.append(l)
+
+
+func set_siren(on: bool) -> void:
+	siren_on = on and not damage.wrecked and SPECS.get(model, {}).get("siren", false)
+	if not siren_on:
+		for m in _beacons:
+			m.set_shader_parameter("on", 0.0)
+		for l in _beacon_lights:
+			l.visible = false
+
+
+func _build_beacon_lights(data: Dictionary) -> void:
+	# where the light bar is: the beacon parts or boxes, else on the roof above the windscreen
+	var c := Vector3(0, (data.aabb as AABB).end.y + 0.1, (data.aabb as AABB).position.z + _size.z * 0.4)
+	var boxes: Array = data.get("beacon_boxes", [])
+	if not boxes.is_empty():
+		c = (boxes[0][0] + boxes[-1][0]) * 0.5
+	else:
+		var got := false
+		var bb := AABB()
+		for p in data.parts:
+			var kinds: Array = p[2] if p.size() > 2 else []
+			if "beacon" in kinds:
+				var a: AABB = (p[1] as Transform3D) * (p[0] as Mesh).get_aabb()
+				bb = a if not got else bb.merge(a)
+				got = true
+		if got:
+			c = bb.get_center()
+	for side: float in [-1.0, 1.0]:
+		var l := OmniLight3D.new()
+		l.light_color = Color(1.0, 0.08, 0.05) if side < 0.0 else Color(0.1, 0.25, 1.0)
+		l.omni_range = 16.0
+		l.light_energy = 0.0
+		l.shadow_enabled = false
+		l.position = c + Vector3(side * 0.5, 0.25, 0)
+		l.visible = false
+		add_child(l)
+		_beacon_lights.append(l)
+
+
+func _process(delta: float) -> void:
+	if not siren_on:
+		return
+	_beacon_phase = fmod(_beacon_phase + delta * 1.5, 1.0)
+	for m in _beacons:
+		m.set_shader_parameter("on", 1.0)
+		m.set_shader_parameter("phase", _beacon_phase)
+	var night: float = Game.world.night if Game.world else 0.0
+	for i in _beacon_lights.size():
+		var ph := fmod(_beacon_phase + (0.0 if i == 0 else 0.5), 1.0)
+		var flash := ph < 0.12 or (ph > 0.2 and ph < 0.32)
+		_beacon_lights[i].visible = flash
+		_beacon_lights[i].light_energy = lerpf(1.5, 5.0, night)
 
 
 func set_indicator(sig: Blinker) -> void:
@@ -382,6 +509,7 @@ func _on_engine_dead() -> void:
 
 func _on_wrecked() -> void:
 	engine_dead = true
+	set_siren(false)
 	# tyres burnt off, rims blackened
 	var charred := StandardMaterial3D.new()
 	charred.albedo_color = Color(0.025, 0.024, 0.023)
@@ -439,7 +567,7 @@ func set_driver(who: Node) -> void:
 			audio = VehicleAudio.new()
 			audio.name = "Audio"
 			add_child(audio)
-			audio.setup(self, ENGINE_PITCH.get(model, 1.0), "car")
+			audio.setup(self, ENGINE_PITCH.get(model, 1.0), SPECS.get(model, SPECS.sedan).get("sound", "car"))
 		audio.start()
 	driver_changed.emit(who)
 
@@ -490,7 +618,17 @@ func _physics_process(delta: float) -> void:
 		brake_in = Input.get_action_strength("brake")
 		steer_in = Input.get_action_strength("steer_left") - Input.get_action_strength("steer_right")
 		handbrake = Input.is_action_pressed("handbrake")
-		horn_on = Input.is_action_pressed("horn")
+		# emergency vehicles: a tap of the horn toggles siren + lights, holding it sounds the horn
+		var emergency: bool = SPECS.get(model, {}).get("siren", false)
+		if Input.is_action_just_pressed("horn"):
+			_horn_t = 0.0
+		if Input.is_action_pressed("horn") and _horn_t >= 0.0:
+			_horn_t += delta
+		elif _horn_t >= 0.0:
+			if emergency and _horn_t < 0.25:
+				set_siren(not siren_on)
+			_horn_t = -1.0
+		horn_on = _horn_t > (0.25 if emergency else 0.0)
 		if Input.is_action_just_pressed("headlights"):
 			set_headlights(not headlights_on)
 		if Input.is_action_just_pressed("indicator_left"):

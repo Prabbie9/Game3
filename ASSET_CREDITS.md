@@ -65,3 +65,14 @@ Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) 
 | crash_1.ogg, crash_2.ogg, explosion_1.ogg, splash.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
 | siren_loop.ogg | aquinn | CC0 | https://opengameart.org/content/sirens-and-alarm-noise |
 | tyre_squeal.wav | qubodup | CC-BY 3.0 | https://opengameart.org/content/car-tire-squeal-skid-loop |
+| Phoenix 455 '71 - Low poly model (Sketchfab) | muscle_car | Daniel Zhabotinsky (DanielZhabotinsky) | https://sketchfab.com/3d-models/phoenix-455-71-low-poly-model-955edc733c6d44fabc0ad7c246a15896 | CC-BY 4.0 |
+| Fairheaven LT '80 Cop Cruiser - Low poly model (Sketchfab) | police_car | Daniel Zhabotinsky (DanielZhabotinsky) | https://sketchfab.com/3d-models/fairheaven-lt-80-cop-cruiser-low-poly-model-61766c1e6e1e4b2b803c174f33433a74 | CC-BY 4.0 |
+| Shvan '92 - Low poly model (Sketchfab) | van | Daniel Zhabotinsky (DanielZhabotinsky) | https://sketchfab.com/3d-models/shvan-92-low-poly-model-09d718c9cf72401b8534d265a06a803f | CC-BY 4.0 |
+| Shvan '92 Ambulance - Low Poly model (Sketchfab) | ambulance | Daniel Zhabotinsky (DanielZhabotinsky) | https://sketchfab.com/3d-models/shvan-92-ambulance-low-poly-model-2856dd3c61f940909dced9a5c0379484 | CC-BY 4.0 |
+| LCT 3000 '95 - Low poly model (Sketchfab) | box_truck | Daniel Zhabotinsky (DanielZhabotinsky) | https://sketchfab.com/3d-models/lct-3000-95-low-poly-model-663a0953c038434a918cb85725c88ffa | CC-BY 4.0 |
+| Generic Town Bus (Sketchfab) | bus | own.guest (own.guest) | https://sketchfab.com/3d-models/generic-town-bus-14fe03d792914d51b6c6250b393c44fd | CC-BY 4.0 |
+| Red fire truck with ladder (Sketchfab) | fire_truck | Chenzoss (Chenzoss) | https://sketchfab.com/3d-models/red-fire-truck-with-ladder-5c8d876d997f4eaa939a4778cedcfbfa | CC-BY 4.0 |
+| Mid poly dirt bike (Sketchfab) | motorbike | danilloribeiro (danilloribeiro) | https://sketchfab.com/3d-models/mid-poly-dirt-bike-3009c80ec6cc47fcaad27cf96f2a0822 | CC-BY 4.0 |
+| Yellow bicycle (Sketchfab) | bicycle | Tatyana Volkova (volkovatatyana) | https://sketchfab.com/3d-models/yellow-bicycle-4cc719f387cb4cb4aea6e12a27e06e2e | CC-BY 4.0 |
+| SpeedBoat (Sketchfab) | boat | hsinpa (hsinpa) | https://sketchfab.com/3d-models/speedboat-df5db2118b1944e0915441012c89527c | CC-BY 4.0 |
+| Police Helicopter 1 (Unity3D) (Sketchfab) | helicopter | r34maxpro (unitygtt34) | https://sketchfab.com/3d-models/police-helicopter-1-unity3d-1413af2d442c4b729d7ba2ec3500872e | CC-BY 4.0 |
