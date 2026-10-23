@@ -249,20 +249,44 @@ func _on_foot(delta: float) -> void:
 			enter_vehicle(v)
 
 
+## Nearest door we can use: an empty vehicle (either door) or one with someone at the wheel (carjack, driver
+## door only). Sets _enter_side: 0 driver door, 1 passenger door.
 func _nearest_vehicle() -> Vehicle:
 	var best: Vehicle = null
 	var best_d := 4.5
 	for v: Vehicle in get_tree().get_nodes_in_group("vehicles"):
+		var npc := v.driver is NPCDriver and (v.driver as NPCDriver).state == NPCDriver.State.SEATED
+		if v.driver != null and not npc:
+			continue
 		var d := global_position.distance_to(v.driver_door_position())
-		if d < best_d and v.driver == null:
+		if d < best_d:
 			best = v
 			best_d = d
+			_enter_side = 0
+		if v.has_passenger_door() and not npc:
+			var dp := global_position.distance_to(v.passenger_door_position())
+			if dp < best_d - 0.3:
+				best = v
+				best_d = dp
+				_enter_side = 1
 	return best
 
 
 # --- vehicle entry / exit -------------------------------------------------
 
+var _enter_side := 0
+var _enter_clip := "car_enter"
+var _shuffle_t := -1.0
+
+
 func enter_vehicle(v: Vehicle) -> void:
+	if v is Bike:
+		_mount(v)
+		return
+	var jack := v.driver is NPCDriver
+	_enter_clip = "carjack" if jack and AnimLib.get_library().has_animation("carjack") else ("car_enter_r" if _enter_side == 1 and not jack else "car_enter")
+	if jack:
+		(v.driver as NPCDriver).pull_out(self)
 	vehicle = v
 	state = State.ENTERING
 	collision_layer = 0
@@ -275,17 +299,17 @@ func enter_vehicle(v: Vehicle) -> void:
 	v.reserve(self)
 	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
 	# Place the character so the root-motion clip ends with the hips at the seat.
-	var seat := _seat_root(v)
-	var turn := visual.clip_yaw("car_enter")
+	var seat := _seat_root(v) if _enter_clip != "car_enter_r" else _passenger_root(v)
+	var turn := visual.clip_yaw(_enter_clip)
 	var start_basis := seat.basis * Basis(Vector3.UP, -turn)
-	var d := visual.clip_displacement("car_enter")
+	var d := visual.clip_displacement(_enter_clip)
 	var start := Transform3D(start_basis, seat.origin - start_basis * Vector3(d.x, 0, d.z))
 	start.origin.y = v.ground_height_at(start.origin)
 	_seq_from = global_transform
 	_seq_to = start
 	_seq_time = 0.0
 	_seat_local = v.global_transform.affine_inverse() * seat
-	visual.travel("car_enter")
+	visual.travel(_enter_clip)
 	cam.mode = CameraRig.Mode.VEHICLE
 	cam.target = v
 	cam.vehicle_distance = v.camera_distance
@@ -294,6 +318,9 @@ func enter_vehicle(v: Vehicle) -> void:
 
 func exit_vehicle() -> void:
 	if not vehicle:
+		return
+	if vehicle is Bike:
+		_dismount()
 		return
 	state = State.EXITING
 	vehicle.set_driver_input_enabled(false)
@@ -318,12 +345,20 @@ func _seat_root(v: Vehicle) -> Transform3D:
 	return s
 
 
+func _passenger_root(v: Vehicle) -> Transform3D:
+	var s := v.passenger_seat_transform()
+	s.origin -= s.basis.y * visual.clip_hip_height("passenger")
+	return s
+
+
 ## Seated pose for a vehicle: hands on the cyclic and collective in a helicopter, on the wheel otherwise.
 func _seat_clip(v: Vehicle) -> String:
 	return "pilot" if v is Helicopter and AnimLib.get_library().has_animation("pilot") else "drive"
 
 
 func _sequence(delta: float) -> void:
+	if vehicle is Bike or _shuffle_t >= 0.0:
+		return  # mounting a bike and the seat shuffle are driven from _process
 	_seq_time += delta
 	if state == State.ENTERING:
 		# quick blend to the door start pose, then the clip carries the body into the seat
@@ -335,7 +370,12 @@ func _sequence(delta: float) -> void:
 
 
 func _on_action_finished(anim: StringName) -> void:
-	if anim == &"car_enter" and state == State.ENTERING:
+	if anim == &"car_enter_r" and state == State.ENTERING:
+		# in through the passenger door: slide across to the wheel
+		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.passenger_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
+		_shuffle_t = 0.0
+		return
+	if (anim == &"car_enter" or anim == &"carjack") and state == State.ENTERING:
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		if _seat_clip(vehicle) != "drive":
 			visual.travel(_seat_clip(vehicle))
@@ -364,6 +404,25 @@ func _driving() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _shuffle_t >= 0.0 and vehicle and state == State.ENTERING:
+		_shuffle_t += _delta
+		var k := clampf(_shuffle_t / 0.8, 0.0, 1.0)
+		var vx := vehicle.global_transform.affine_inverse()
+		var from := vx * _passenger_root(vehicle)
+		var to := vx * _seat_root(vehicle)
+		_seat_local = from.interpolate_with(to, k * k * (3.0 - 2.0 * k))
+		global_transform = vehicle.get_global_transform_interpolated() * _seat_local
+		if k >= 1.0:
+			_shuffle_t = -1.0
+			visual.travel(_seat_clip(vehicle))
+			state = State.DRIVING
+			vehicle.set_driver(self)
+			vehicle_changed.emit(vehicle)
+		return
+	if vehicle is Bike:
+		_ride_pose(_delta)
+		if state == State.ENTERING:
+			return
 	if state == State.DRIVING or state == State.EXITING:
 		# follow the car with the interpolated transform so the driver never jitters
 		global_transform = vehicle.get_global_transform_interpolated() * _seat_local
@@ -810,10 +869,103 @@ func _on_step(_foot: int, pos: Vector3, col: Object) -> void:
 	Audio.play_at(Audio.pick("player/step_" + kind + "_%d.ogg", STEP_SETS[kind]), pos, vol, randf_range(0.92, 1.08), &"SFX", 35.0)
 
 
+# --- bikes: swing a leg over (a short blend onto the seat), arms and legs reach the bars and pegs by IK ---------
+
+var _arms: Dictionary = {}
+var _mount_t := -1.0
+
+
+func _mount(v: Vehicle) -> void:
+	vehicle = v
+	state = State.ENTERING
+	collision_layer = 0
+	collision_mask = 0
+	velocity = Vector3.ZERO
+	aim_weight = 0.0
+	visual.set_aim(Vector2.ZERO, 0.0)
+	weapon.holster(true)
+	v.reserve(self)
+	_seq_from = global_transform
+	_seat_local = v.global_transform.affine_inverse() * _seat_root(v)
+	_mount_t = 0.0
+	visual.travel("drive")
+	cam.mode = CameraRig.Mode.VEHICLE
+	cam.target = v
+	cam.vehicle_distance = maxf(v.camera_distance, 4.5)
+	cam.vehicle_height = maxf(v.camera_height, 1.6)
+
+
+func _dismount() -> void:
+	var v := vehicle
+	var side := v.global_transform * Vector3(-0.9, 0.0, 0.2)
+	side.y = v.ground_height_at(side)
+	vehicle = null
+	v.set_driver(null)
+	_mount_t = -1.0
+	global_position = side
+	rotation = Vector3(0, v.global_rotation.y, 0)
+	collision_layer = 2
+	collision_mask = MASK_ON_FOOT
+	state = State.ON_FOOT
+	cam.mode = CameraRig.Mode.ON_FOOT
+	cam.target = self
+	visual.jump_to("ground")
+	foot_ik.override = []
+	if _arms:
+		_arms.ik.influence = 0.0
+	vehicle_changed.emit(null)
+
+
+## Rider pose on a bike: feet on the pegs (or pedals going round), hands on the grips.
+func _ride_pose(delta: float) -> void:
+	var v := vehicle
+	if not (v is Bike) or state == State.ON_FOOT:
+		return
+	var r: Dictionary = Vehicle.SPECS.get(v.model, {}).get("rider", {})
+	var vx := v.get_global_transform_interpolated()
+	if _arms.is_empty():
+		_arms = visual.install_arm_ik()
+	var w := 1.0
+	if state == State.ENTERING:
+		_mount_t += delta
+		var k := clampf(_mount_t / 0.45, 0.0, 1.0)
+		w = k
+		global_transform = _seq_from.interpolate_with(vx * _seat_local, k * k * (3.0 - 2.0 * k))
+		if _mount_t >= 0.45:
+			state = State.DRIVING
+			v.set_driver(self)
+			vehicle_changed.emit(v)
+	(_arms.ik as TwoBoneIK3D).influence = w
+	var fwd := -vx.basis.z
+	for i in 2:
+		var sx := -1.0 if i == 0 else 1.0
+		var g: Vector3 = r.get("grip", Vector3(0.3, 1.1, -0.4))
+		(_arms.targets[i] as Marker3D).global_transform = Transform3D(vx.basis, vx * Vector3(g.x * sx, g.y, g.z))
+		(_arms.poles[i] as Marker3D).global_position = vx * Vector3(g.x * sx * 2.2, g.y - 0.5, g.z + 0.35)
+	var feet := []
+	if r.has("crank"):
+		var b := v as Bike
+		for i in 2:
+			var a: float = b.crank + (0.0 if i == 0 else PI)
+			var c: Vector3 = r.crank
+			var px: float = r.get("pedal_x", 0.12) * (-1.0 if i == 0 else 1.0)
+			feet.append(Transform3D(vx.basis, vx * Vector3(px, c.y + sin(a) * r.crank_r + 0.06, c.z - cos(a) * r.crank_r)))
+	else:
+		var pg: Vector3 = r.get("peg", Vector3(0.2, 0.4, 0.15))
+		for i in 2:
+			feet.append(Transform3D(vx.basis, vx * Vector3(pg.x * (-1.0 if i == 0 else 1.0), pg.y + 0.07, pg.z)))
+	foot_ik.override = feet
+	foot_ik.override_pole_dir = fwd
+	foot_ik.weight = w
+
+
 ## The vehicle we're in blew up: out of the seat and thrown clear.
 func bail_out(v: Vehicle) -> void:
 	if vehicle != v:
 		return
+	foot_ik.override = []
+	if _arms:
+		_arms.ik.influence = 0.0
 	var out := v.driver_door_position() + Vector3(0, 0.6, 0)
 	var away := (out - v.global_position)
 	away.y = 0
@@ -836,6 +988,9 @@ func bail_out(v: Vehicle) -> void:
 func thrown_off(v: Vehicle, vel: Vector3) -> void:
 	if vehicle != v:
 		return
+	foot_ik.override = []
+	if _arms:
+		_arms.ik.influence = 0.0
 	vehicle = null
 	v.set_driver(null)
 	global_position = v.global_position + Vector3(0, 1.1, 0)

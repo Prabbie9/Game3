@@ -96,6 +96,13 @@ func _spawn_vehicles() -> void:
 		v.position = s[1]
 		v.rotation.y = s[2]
 		add_child(v)
+	# a dirt bike and a bicycle on the pavement by the start
+	for b: Array in [["dirtbike", Vector3(30.0, CityCell.CURB_H + 0.05, 9.4), PI * 0.5], ["bicycle", Vector3(19.0, CityCell.CURB_H + 0.05, 9.4), PI * 0.5]]:
+		var bike := Bike.new()
+		bike.model = b[0]
+		bike.position = b[1]
+		bike.rotation.y = b[2]
+		add_child(bike)
 	# a police helicopter at the end of the south car park, a speedboat moored beside the pier
 	var pad := Vector3(215.0, 0.0, -447.0)
 	pad.y = data.height_at(pad.x, pad.z) + CityCell.CURB_H + 0.05

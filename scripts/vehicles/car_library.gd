@@ -60,7 +60,7 @@ const SINGLE := {
 	# two-wheelers. root_node: use only that subtree (the dirt bike file holds seven bikes). wheel_groups: node names
 	# (dots become underscores in Godot) whose meshes spin as one wheel, the first group is the front wheel.
 	"dirtbike": {"file": DIR + "dirt_bikes/scene.gltf", "root_node": "dirt_bike red", "paint": "",
-		"wheel_groups": [["front_wheel_003"], ["rear_wheel_003"]]},
+		"wheel_groups": [["front_003"], ["rear_003"]]},  # the importer turns "*_wheel" nodes into VehicleWheel3Ds named front_003 etc.
 	"bicycle": {"file": DIR + "bicycle_yellow/scene.gltf", "scale": 0.0036, "paint": "",
 		"wheel_groups": [["Cylinder_018", "Circle_015", "Cylinder_038", "Cylinder_039", "Cylinder_040", "Cylinder_041", "Cylinder_042",
 			"Cylinder_043", "Cylinder_044", "Cylinder_045", "Cylinder_046", "Cylinder_047", "Cylinder_048", "Cylinder_049", "Cylinder_050"],

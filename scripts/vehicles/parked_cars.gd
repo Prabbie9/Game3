@@ -10,6 +10,8 @@ const DESPAWN_R := 150.0
 const LOOSE_R := 320.0         # moved cars are freed beyond this
 const IN_VIEW_MIN := 95.0      # don't pop cars in closer than this while the camera looks at the slot
 const GRID := 64.0
+const MAX_OCCUPIED := 3        # cars waiting with a driver inside, at most this many around
+const OCCUPIED_PCT := 6
 const KERB_GAP := 6.6          # kerbside slot pitch (m)
 const KERB_ODDS := {"street": 0.42, "residential": 0.3}
 const LOT_ODDS := {"parking": 0.55, "mall": 0.5, "gas_station": 0.25, "industrial": 0.35, "port_sheds": 0.3, "container_yard": 0.15}
@@ -174,7 +176,8 @@ func _refresh(focus: Vector3) -> void:
 			_active.erase(id)
 			continue
 		var slot: Vector3 = _slots[id][0]
-		if v.driver != null or Vector2(v.global_position.x - slot.x, v.global_position.z - slot.z).length() > 1.5:
+		var used: bool = v.driver != null and not v.driver is NPCDriver
+		if used or Vector2(v.global_position.x - slot.x, v.global_position.z - slot.z).length() > 1.5:
 			_active.erase(id)
 			_taken[id] = v
 		elif slot.distance_to(focus) > DESPAWN_R:
@@ -188,7 +191,7 @@ func _refresh(focus: Vector3) -> void:
 			if slot.distance_to(focus) > DESPAWN_R:
 				_taken.erase(id)
 			continue
-		var in_use: bool = v.driver != null or (player and player.get("vehicle") == v)
+		var in_use: bool = (v.driver != null and not v.driver is NPCDriver) or (player and player.get("vehicle") == v)
 		if not in_use and v.global_position.distance_to(focus) > LOOSE_R:
 			v.queue_free()
 		elif slot.distance_to(focus) > DESPAWN_R and v.global_position.distance_to(slot) > 20.0:
@@ -250,4 +253,15 @@ func _spawn(id: int) -> bool:
 	v.add_to_group("parked")
 	add_child(v)
 	_active[id] = v
+	# now and then someone waits at the wheel with the engine running (carjackable)
+	if _occupied() < MAX_OCCUPIED and hash(id * 31 + 7) % 100 < OCCUPIED_PCT and v.has_passenger_door():
+		NPCDriver.seat_in(v, NPCDriver.CHARACTERS[hash(id) % NPCDriver.CHARACTERS.size()])
 	return true
+
+
+func _occupied() -> int:
+	var n := 0
+	for v: Vehicle in _active.values():
+		if is_instance_valid(v) and v.driver is NPCDriver:
+			n += 1
+	return n

@@ -12,6 +12,7 @@ var pedal := false             # bicycle: rider-powered, no engine
 var down := false              # lying on its side after a crash
 var crank := 0.0               # pedal angle (rider IK)
 var _down_t := 0.0
+var _wheelbase := 1.4
 
 
 func _ready() -> void:
@@ -19,6 +20,8 @@ func _ready() -> void:
 	pedal = model == "bicycle"
 	for w in _wheels:
 		w.wheel_roll_influence = 0.0
+	if _wheels.size() == 2:
+		_wheelbase = absf(_wheels[0].position.z - _wheels[1].position.z)
 	angular_damp = 0.4
 	center_of_mass = Vector3(0, _size.y * 0.32, 0)
 	# narrow tyres: a thin hull so it can lie on its side
@@ -28,9 +31,9 @@ func _ready() -> void:
 func _make_collision(aabb: AABB) -> void:
 	var cs := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(aabb.size.x * 0.5, aabb.size.y * 0.45, aabb.size.z * 0.82)
+	box.size = Vector3(aabb.size.x * 0.4, aabb.size.y * 0.36, aabb.size.z * 0.8)
 	cs.shape = box
-	cs.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.12, 0)
+	cs.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.18, 0)
 	add_child(cs)
 
 
@@ -44,7 +47,7 @@ func _stabilize(delta: float, grounded: int, fwd_speed: float) -> void:
 			global_rotation = Vector3(0, global_rotation.y, 0)
 			global_position += Vector3(0, 0.3, 0)
 		return
-	if absf(roll) > FALL_AT or (grounded == 0 and absf(roll) > 0.7):
+	if absf(roll) > FALL_AT or (grounded == 0 and absf(roll) > 0.95):
 		down = true
 		_down_t = 0.0
 		return
@@ -53,19 +56,44 @@ func _stabilize(delta: float, grounded: int, fwd_speed: float) -> void:
 	if driver == null and spd < 1.0:
 		want = STAND_LEAN
 	elif spd > 0.5:
-		var steer_k := _steer / maxf(max_steer, 0.01)
-		want = clampf(steer_k * LEAN_MAX * clampf(spd / 9.0, 0.0, 1.0) * clampf(spd / 4.0, 0.3, 1.0), -LEAN_MAX, LEAN_MAX)
+		# balance for the turn the steering asks for: yaw rate = v tan(steer) / wheelbase, tan(lean) = v * yaw / g.
+		# (Not the measured yaw rate: a leaned bike turns, and that would hold the lean forever.)
+		var yaw := fwd_speed * tan(_steer) / maxf(_wheelbase, 0.5)
+		want = clampf(atan(fwd_speed * yaw / 9.8), -LEAN_MAX, LEAN_MAX)
 	# roll rate toward the target (rotation about +Z raises the right side, i.e. leans left)
 	var roll_rate := angular_velocity.dot(global_basis.z)
 	var want_rate := (want - roll) * 6.0
-	angular_velocity += global_basis.z * (want_rate - roll_rate) * (1.0 - exp(-delta * 12.0))
+	_spin_by(global_basis.z * (want_rate - roll_rate) * (1.0 - exp(-delta * 12.0)))
 	if grounded >= 1:
 		# light pitch hold (no wheelies or stoppies from the arcade model)
+		# about the level right axis: the bike's own X tilts with the lean and would damp the yaw of the turn
+		var right := Vector3(global_basis.x.x, 0.0, global_basis.x.z).normalized()
 		var pitch := asin(clampf(-global_basis.z.y, -1.0, 1.0))
-		var pitch_rate := angular_velocity.dot(global_basis.x)
-		angular_velocity += global_basis.x * (-pitch * 3.0 - pitch_rate) * (1.0 - exp(-delta * 4.0)) * 0.5
+		var pitch_rate := angular_velocity.dot(right)
+		_spin_by(right * (-pitch * 3.0 - pitch_rate) * (1.0 - exp(-delta * 4.0)) * 0.5)
 	if pedal:
 		crank = fmod(crank + fwd_speed / 0.34 * 0.36 * delta, TAU)  # crank turns ~0.36x the wheel (gearing)
+
+
+func _physics_process(delta: float) -> void:
+	# parked: settle onto the side stand before going to sleep
+	if driver == null and not down and linear_velocity.length() < 0.5:
+		var roll := asin(clampf(global_basis.x.y, -1.0, 1.0))
+		if absf(roll - STAND_LEAN) > 0.02:
+			sleeping = false
+			var roll_rate := angular_velocity.dot(global_basis.z)
+			_spin_by(global_basis.z * ((STAND_LEAN - roll) * 3.0 - roll_rate) * (1.0 - exp(-delta * 10.0)))
+			_detect_impact(delta)
+			return
+	super._physics_process(delta)
+
+
+## Change the angular velocity by dw with a torque impulse. (Assigning angular_velocity would overwrite the tyre
+## friction impulses VehicleBody3D applies in its state callback, and with them the yaw of every turn.)
+func _spin_by(dw: Vector3) -> void:
+	var st := PhysicsServer3D.body_get_direct_state(get_rid())
+	if st:
+		st.apply_torque_impulse(st.inverse_inertia_tensor.inverse() * dw)
 
 
 ## Thrown off in a crash: the bike falls, the rider goes flying.

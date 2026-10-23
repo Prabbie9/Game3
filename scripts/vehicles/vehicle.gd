@@ -28,10 +28,12 @@ const SPECS := {
 		"sound": "heavy", "seat_z": 1.45, "seat_y": 0.33},
 	"firetruck": {"mass": 13500, "force": 31000, "top": 30.0, "steer": 0.48, "grip": 2.35, "stiff": 50.0, "travel": 0.24, "drive": "rwd", "name": "Fire Engine",
 		"sound": "heavy", "seat_z": 1.35, "seat_y": 0.37, "siren": true},
-	"dirtbike": {"mass": 165, "force": 1350, "top": 42.0, "steer": 0.5, "grip": 2.9, "stiff": 30.0, "travel": 0.22, "drive": "rwd",
-		"name": "Ridgeback 450", "seat_z": 1.0, "seat_y": 0.72},
-	"bicycle": {"mass": 22, "force": 120, "top": 11.0, "steer": 0.55, "grip": 2.6, "stiff": 30.0, "travel": 0.08, "drive": "rwd",
-		"name": "Seaside Cruiser", "seat_z": 0.9, "seat_y": 0.78, "sound": "none"},
+	"dirtbike": {"mass": 165, "force": 1350, "top": 37.0, "steer": 0.5, "grip": 2.9, "stiff": 70.0, "travel": 0.22, "drive": "rwd",
+		"name": "Ridgeback 450", "seat_z": 1.3, "seat_y": 0.72,
+		"rider": {"seat": Vector3(0, 1.0, 0.3), "grip": Vector3(0.34, 1.12, -0.42), "peg": Vector3(0.19, 0.42, 0.16)}},
+	"bicycle": {"mass": 22, "force": 120, "top": 11.0, "steer": 0.55, "grip": 2.6, "stiff": 110.0, "travel": 0.1, "drive": "rwd",
+		"name": "Seaside Cruiser", "seat_z": 0.9, "seat_y": 0.78, "sound": "none",
+		"rider": {"seat": Vector3(0, 0.88, 0.42), "grip": Vector3(0.3, 1.12, -0.22), "crank": Vector3(0, 0.33, 0.08), "crank_r": 0.17, "pedal_x": 0.12}},
 	"heli": {"mass": 2600, "force": 0, "top": 60.0, "steer": 0.0, "grip": 1.0, "stiff": 40.0, "travel": 0.2, "drive": "rwd",
 		"name": "Skywatch Police Helicopter", "seat_z": 3.1, "seat_y": 0.28},
 	"speedboat": {"mass": 1800, "force": 0, "top": 24.0, "steer": 0.0, "grip": 1.0, "stiff": 40.0, "travel": 0.2, "drive": "rwd",
@@ -559,8 +561,25 @@ func driver_door_position() -> Vector3:
 	return global_transform * _door
 
 
+func passenger_door_position() -> Vector3:
+	return global_transform * Vector3(-_door.x, _door.y, _door.z)
+
+
+## Hips target on the passenger seat (mirror of the driver's).
+func passenger_seat_transform() -> Transform3D:
+	return global_transform * Transform3D(Basis.IDENTITY, Vector3(-_seat.origin.x, _seat.origin.y, _seat.origin.z))
+
+
+## Cars with doors on both sides (not bikes, boats or the helicopter).
+func has_passenger_door() -> bool:
+	return _wheels.size() >= 4
+
+
 ## Driver hips target (on the seat cushion), facing forward.
 func seat_transform() -> Transform3D:
+	var r: Dictionary = SPECS.get(model, {}).get("rider", {})
+	if r.has("seat"):
+		return global_transform * Transform3D(Basis.IDENTITY, r.seat)
 	return global_transform * _seat
 
 
@@ -709,7 +728,7 @@ func _physics_process(delta: float) -> void:
 	# engine_force is applied at every driven wheel: normalise so AWD isn't twice as strong as RWD
 	# a badly damaged engine loses power
 	var health_k := 1.0 if damage.health > 300.0 else 0.55 + 0.45 * damage.health / 300.0
-	engine_force = -_throttle * max_engine_force * health_k * pull * torque * (0.5 + 0.5 * speed_factor) / GEAR_PULL[2] * 2.0 / maxf(_driven, 1.0)
+	engine_force = -_throttle * max_engine_force * health_k * pull * torque * (0.5 + 0.5 * speed_factor) * clampf(speed_factor * 8.0, 0.0, 1.0) / GEAR_PULL[2] * 2.0 / maxf(_driven, 1.0)
 	braking_now = braking > 0.05 or (handbrake and v > 1.0)
 	reversing = _throttle < -0.05
 	# nobody at the controls (parked, or a driver getting in/out): hold the car firmly

@@ -1,6 +1,9 @@
 {
  "characters": [
-  "Ch08_nonPBR.fbx"
+  "Ch08_nonPBR.fbx",
+  "Ch02_nonPBR.fbx",
+  "Ch21_nonPBR.fbx",
+  "Ch33_nonPBR.fbx"
  ],
  "animations": [
   "Breathing Idle.fbx",

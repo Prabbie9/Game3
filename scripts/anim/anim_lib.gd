@@ -67,6 +67,9 @@ const CLIPS := {
 	"thrown": ["being_thrown_to_the_side", false, Root.EXTRACT],
 }
 
+## Clips played faster than authored (the Mixamo carjack takes its time settling into the seat).
+const RETIME := {"carjack": 1.6, "jacked": 1.3}
+
 ## Mirror images (left/right swapped) of clips: passenger-side entry and exit from the driver-side ones.
 const MIRRORS := {"car_enter_r": "car_enter", "car_exit_r": "car_exit", "carjack_r": "carjack", "jacked_r": "jacked"}
 
@@ -129,6 +132,8 @@ static func get_library() -> AnimationLibrary:
 			continue
 		var anim: Animation = src.get_animation(src.get_animation_list()[0]).duplicate(true)
 		anim.loop_mode = Animation.LOOP_LINEAR if c[1] else Animation.LOOP_NONE
+		if RETIME.has(clip_name):
+			_retime(anim, RETIME[clip_name])
 		_process_root(clip_name, anim, c[2])
 		_lib.add_animation(clip_name, anim)
 	for m: String in MIRRORS:
@@ -142,6 +147,16 @@ static func get_library() -> AnimationLibrary:
 				yaw_change[m] = -float(yaw_change[src_name])
 			hip_height[m] = hip_height.get(src_name, 0.98)
 	return _lib
+
+
+static func _retime(a: Animation, speed: float) -> void:
+	for t in a.get_track_count():
+		for k in range(a.track_get_key_count(t) - 1, -1, -1):
+			var value: Variant = a.track_get_key_value(t, k)
+			var time := a.track_get_key_time(t, k) / speed
+			a.track_remove_key(t, k)
+			a.track_insert_key(t, time, value)
+	a.length /= speed
 
 
 ## Left/right mirror of a humanoid clip (reflection across the character's YZ plane): Left*/Right* bone tracks

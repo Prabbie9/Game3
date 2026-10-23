@@ -19,6 +19,9 @@ var targets: Array[Node3D] = []
 var poles: Array[Node3D] = []
 var ik: TwoBoneIK3D
 var ground_normals: Array[Vector3] = [Vector3.UP, Vector3.UP]
+## Riding: world transforms the feet must reach (footpegs, pedals) instead of the ground; empty = normal.
+var override: Array = []
+var override_pole_dir := Vector3.ZERO
 var ray_mask := 1 | 8 | 16
 
 var _w := 0.0
@@ -42,6 +45,15 @@ func _process_modification_with_delta(delta: float) -> void:
 			_knees[i] = sk.find_bone(KNEES[i])
 	_w = move_toward(_w, weight, delta * 6.0)
 	ik.influence = _w
+	if override.size() == 2:
+		_pelvis = 0.0
+		for i in 2:
+			targets[i].global_transform = override[i]
+			var knee := (sk.global_transform * sk.get_bone_global_pose(_knees[i])).origin
+			var side := body.global_basis.x * (-1.0 if i == 0 else 1.0)
+			poles[i].global_position = knee + override_pole_dir * 0.6 + side * 0.25
+			ground_normals[i] = Vector3.UP
+		return
 	if _w <= 0.001:
 		_pelvis = 0.0
 		return

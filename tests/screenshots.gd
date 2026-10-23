@@ -171,6 +171,28 @@ func _run() -> void:
 		world.time_of_day = 16.9
 		world._update_sun()
 		p.cam.camera.make_current()
+	if _want("bike"):
+		# riding: dirt bike from the side, then pedalling the bicycle
+		for model: String in ["dirtbike", "bicycle"]:
+			var bike: Bike = null
+			for v in world.get_tree().get_nodes_in_group("vehicles"):
+				if v is Bike and v.model == model:
+					bike = v
+			p.global_position = bike.global_transform * Vector3(-1.2, 0, 0.3)
+			p.enter_vehicle(bike)
+			await _frames(40)
+			if model == "bicycle":
+				bike.crank = 1.1
+			var c := Camera3D.new()
+			world.add_child(c)
+			c.look_at_from_position(bike.global_transform * Vector3(-3.4, 1.3, -0.6), bike.global_position + Vector3(0, 0.9, 0))
+			c.make_current()
+			await _frames(6)
+			await _snap("ride_" + model)
+			c.queue_free()
+			p.cam.camera.make_current()
+			p.exit_vehicle()
+			await _frames(10)
 	if _want("pool"):
 		var pl: Array = world.data.pool
 		var pr := Rect2(pl[0], pl[1], pl[2] - pl[0], pl[3] - pl[1])

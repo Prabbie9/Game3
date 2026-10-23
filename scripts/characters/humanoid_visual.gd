@@ -335,6 +335,33 @@ func install_hand_ik(target: Node3D) -> TwoBoneIK3D:
 	return ik
 
 
+## Both arms reaching for targets (handlebar grips). Returns {ik, targets: [L, R], poles: [L, R]}; influence 0.
+func install_arm_ik() -> Dictionary:
+	var ik := TwoBoneIK3D.new()
+	ik.name = "ArmIK"
+	skeleton.add_child(ik)
+	ik.setting_count = 2
+	var targets: Array[Marker3D] = []
+	var poles: Array[Marker3D] = []
+	for i in 2:
+		var side: String = ["Left", "Right"][i]
+		var t := Marker3D.new()
+		t.top_level = true
+		ik.add_child(t)
+		var p := Marker3D.new()
+		p.top_level = true
+		ik.add_child(p)
+		ik.set_root_bone_name(i, side + "UpperArm")
+		ik.set_middle_bone_name(i, side + "LowerArm")
+		ik.set_end_bone_name(i, side + "Hand")
+		ik.set_target_node(i, ik.get_path_to(t))
+		ik.set_pole_node(i, ik.get_path_to(p))
+		targets.append(t)
+		poles.append(p)
+	ik.influence = 0.0
+	return {"ik": ik, "targets": targets, "poles": poles}
+
+
 func bone_global(bone: String) -> Transform3D:
 	var i := skeleton.find_bone(bone)
 	return skeleton.global_transform * skeleton.get_bone_global_pose(i) if i >= 0 else global_transform
