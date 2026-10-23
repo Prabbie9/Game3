@@ -27,6 +27,11 @@ static var display := {"fov": 70.0, "vsync": false, "max_fps": 0, "window_mode":
 static var _loaded := false
 
 
+## How many parked cars are kept around the player.
+static func parked_cars() -> int:
+	return [16, 22, 30, 38][mini(preset, 3)] if preset != Preset.CUSTOM else 30
+
+
 static func ensure_loaded() -> void:
 	if _loaded:
 		return
@@ -85,6 +90,8 @@ static func apply_to(world: Node) -> void:
 		# street lights that cast real light scale with the preset
 		if world.street_lights:
 			world.street_lights.set_count([12, 20, 32, 48][mini(preset, 3)])
+		if world.get("parked"):
+			world.parked.max_active = parked_cars()
 	var cam := vp.get_camera_3d()
 	if cam:
 		cam.fov = display.fov

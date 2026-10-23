@@ -111,6 +111,39 @@ func _run() -> void:
 			c.queue_free()
 		p.cam.camera.make_current()
 		world.warm_up(p.global_position)
+	if _want("parked"):
+		# behind a parked car on a kerbside street near the spawn, then over a car park
+		var slots: Array = world.parked._slots
+		var picks := {"parked_street": [Vector3(60, 0, 40), false], "parked_lot": [Vector3(0, 0, 0), true]}
+		for name: String in picks:
+			var best := -1
+			var bd := INF
+			for i in slots.size():
+				var sp: Vector3 = slots[i][0]
+				var in_lot := absf(sp.y - CityCell.CURB_H) < 0.001
+				if in_lot != picks[name][1]:
+					continue
+				var d := sp.distance_to(picks[name][0])
+				if d < bd:
+					bd = d
+					best = i
+			var s: Array = slots[best]
+			var fwd := Vector3(-sin(s[1]), 0, -cos(s[1]))
+			var rgt := Vector3(-fwd.z, 0, fwd.x)
+			var c := Camera3D.new()
+			world.add_child(c)
+			var at: Vector3 = s[0]
+			if picks[name][1]:
+				c.look_at_from_position(at + Vector3(-14, 9, 22), at + Vector3(0, 0, 6))
+			else:
+				c.look_at_from_position(at - fwd * 9.0 - rgt * 2.2 + Vector3(0, 1.7, 0), at + fwd * 25.0 + Vector3(0, 0.6, 0))
+			c.make_current()
+			world.warm_up(at)
+			await _frames(30)
+			await _snap(name)
+			c.queue_free()
+		p.cam.camera.make_current()
+		world.warm_up(p.global_position)
 	if _want("pool"):
 		var pl: Array = world.data.pool
 		var pr := Rect2(pl[0], pl[1], pl[2] - pl[0], pl[3] - pl[1])

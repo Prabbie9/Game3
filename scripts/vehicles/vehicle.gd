@@ -26,7 +26,8 @@ const RED_RPM := 6800.0
 
 @export var model := "sedan"
 @export var display_name := "Calder Sedan"
-@export var paint := Color(0.55, 0.08, 0.06)
+## Body colour; transparent keeps the model's factory colour.
+@export var paint := Color(0, 0, 0, 0)
 @export var max_engine_force := 5200.0
 @export var max_brake := 90.0
 @export var top_speed := 52.0  # m/s (~187 km/h)
@@ -57,6 +58,8 @@ var _rear_light: ShaderMaterial
 var _smoke: Array[GPUParticles3D] = []
 var _last_mark := {}      # wheel -> last skid point
 var _driven := 2.0
+var _idle := false
+var _idle_time := 0.0
 
 
 func _ready() -> void:
@@ -80,7 +83,6 @@ func _build() -> void:
 	var data := CarLibrary.get_model(model)
 	var aabb: AABB = data.aabb
 	_size = aabb.size
-	var body_mat := _paint_material()
 	for p in data.parts:
 		var mi := MeshInstance3D.new()
 		mi.mesh = p[0]
@@ -88,9 +90,7 @@ func _build() -> void:
 		for s in mi.mesh.get_surface_count():
 			var m := mi.mesh.surface_get_material(s)
 			if m and String(m.resource_name).begins_with("Body"):
-				var bm: StandardMaterial3D = body_mat.duplicate()
-				bm.albedo_texture = (m as BaseMaterial3D).albedo_texture
-				mi.set_surface_override_material(s, bm)
+				mi.set_surface_override_material(s, _paint_material((m as BaseMaterial3D).albedo_texture))
 		add_child(mi)
 	# collision: convex hull of the body (one per mesh part is overkill; use the main body part)
 	var hull := CollisionShape3D.new()
@@ -147,6 +147,10 @@ func _build() -> void:
 		if w.use_as_traction:
 			_driven += 1.0
 	set_meta("hood_cam", Vector3(0, aabb.position.y + _size.y * 0.78, aabb.position.z + _size.z * 0.36))
+
+
+## Tyre smoke behind the rear wheels, created the first time this car slides (most cars never do).
+func _add_smoke() -> void:
 	for w in _wheels:
 		if not w.use_as_steering:
 			var sm := _smoke_emitter()
@@ -229,14 +233,15 @@ static func _soft_dot() -> Texture2D:
 	return _dot
 
 
-func _paint_material() -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(1, 1, 1)
-	m.metallic = 0.55
-	m.roughness = 0.28
-	m.clearcoat_enabled = true
-	m.clearcoat = 1.0
-	m.clearcoat_roughness = 0.08
+func _paint_material(tex: Texture2D) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = preload("res://assets/shaders/car_paint.gdshader")
+	m.set_shader_parameter("albedo_tex", tex)
+	var ref := CarLibrary.paint_ref(tex)
+	if paint.a > 0.0 and ref.a > 0.0:
+		m.set_shader_parameter("repaint", true)
+		m.set_shader_parameter("ref_color", ref)
+		m.set_shader_parameter("paint", paint)
 	return m
 
 
@@ -280,12 +285,14 @@ func ground_height_at(p: Vector3) -> float:
 
 func reserve(who: Node) -> void:
 	driver = who
+	sleeping = false
 	brake = max_brake
 	engine_force = 0.0
 
 
 func set_driver(who: Node) -> void:
 	driver = who
+	sleeping = false
 	input_enabled = who != null
 	if who == null:
 		engine_force = 0.0
@@ -306,6 +313,16 @@ func speed_kmh() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	# parked and at rest: apply no forces at all so the physics engine can put the body to sleep
+	if driver == null and linear_velocity.length_squared() < 0.0625 and angular_velocity.length_squared() < 0.01:
+		if not _idle:
+			_go_idle()
+		_idle_time += delta
+		if _idle_time > 0.5 and not sleeping:
+			sleeping = true  # the suspension keeps nudging the body, so it never dozes off on its own
+		return
+	_idle = false
+	_idle_time = 0.0
 	var fwd_speed := -global_basis.z.dot(linear_velocity)
 	var throttle := 0.0
 	var brake_in := 0.0
@@ -388,6 +405,21 @@ func _physics_process(delta: float) -> void:
 	_update_lights()
 
 
+func _go_idle() -> void:
+	_idle = true
+	engine_force = 0.0
+	brake = max_brake
+	_throttle = 0.0
+	rpm = IDLE_RPM
+	braking_now = false
+	reversing = false
+	skidding = 0.0
+	_last_mark.clear()
+	for sm in _smoke:
+		sm.emitting = false
+	_update_lights()
+
+
 ## Skid marks and smoke when the tyres slide (handbrake, wheelspin, hard cornering).
 func _update_tyres(v: float, handbrake: bool) -> void:
 	var slide := 0.0
@@ -413,6 +445,8 @@ func _update_tyres(v: float, handbrake: bool) -> void:
 			else:
 				_last_mark.erase(w)
 	skidding = lerpf(skidding, slide, 0.2)
+	if skidding > 0.45 and _smoke.is_empty():
+		_add_smoke()
 	for sm in _smoke:
 		sm.emitting = skidding > 0.45
 		sm.amount_ratio = clampf(skidding, 0.2, 1.0)

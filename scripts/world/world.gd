@@ -19,6 +19,7 @@ var terrain: Terrain
 var ocean: Ocean
 var city: City
 var player: Player
+var parked: ParkedCars
 
 
 func _ready() -> void:
@@ -49,6 +50,11 @@ func _ready() -> void:
 		time_scale = 0.0
 		weather.auto_change = false
 	var spawn := Vector3(26.0, CityCell.CURB_H + 0.05, 9.0)
+	parked = ParkedCars.new()
+	parked.name = "ParkedCars"
+	add_child(parked)
+	parked.setup(data, city.net)
+	parked.max_active = GraphicsSettings.parked_cars()
 	warm_up(spawn)
 	_spawn_vehicles()
 	player = PLAYER_SCENE.instantiate()
@@ -176,6 +182,8 @@ func warm_up(focus: Vector3) -> void:
 			break
 		OS.delay_msec(10)
 	city.flush()
+	if parked:
+		parked.request_fill()
 
 
 var _freeze_timer := 0.0

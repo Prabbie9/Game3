@@ -20,7 +20,39 @@ const MODELS := {
 	"wagon": {"node": "Wagon Body", "flip": true},
 }
 
+## Authored paint colour of each body texture (sRGB, measured from the textures; see car_paint.gdshader).
+## Body_7 is a black car whose paint can't be told from its black trim, so it keeps its texture.
+const PAINT_REF := {
+	"Body_baseColor": Color8(0, 234, 254), "Body_0_baseColor": Color8(0, 70, 231), "Body_1_baseColor": Color8(255, 255, 0),
+	"Body_2_baseColor": Color8(94, 0, 0), "Body_3_baseColor": Color8(31, 47, 0), "Body_4_baseColor": Color8(0, 102, 45),
+	"Body_5_baseColor": Color8(159, 140, 43), "Body_6_baseColor": Color8(246, 0, 0), "Body_8_baseColor": Color8(92, 149, 159),
+}
+## Common real-world car colours, weighted roughly by how often they're seen on the road.
+const PAINTS := [
+	[Color(0.86, 0.86, 0.84), 22], [Color(0.03, 0.03, 0.035), 17], [Color(0.32, 0.33, 0.35), 15], [Color(0.62, 0.63, 0.65), 13],
+	[Color(0.06, 0.13, 0.32), 9], [Color(0.55, 0.05, 0.04), 8], [Color(0.3, 0.03, 0.05), 4], [Color(0.62, 0.56, 0.44), 4],
+	[Color(0.08, 0.2, 0.12), 3], [Color(0.32, 0.5, 0.66), 3], [Color(0.85, 0.55, 0.1), 1], [Color(0.9, 0.78, 0.15), 1],
+]
+
 static var _cache := {}
+
+
+static func random_paint(rng: RandomNumberGenerator) -> Color:
+	var total := 0
+	for p in PAINTS:
+		total += p[1]
+	var pick := rng.randi() % total
+	for p in PAINTS:
+		pick -= p[1]
+		if pick < 0:
+			return p[0]
+	return PAINTS[0][0]
+
+
+static func paint_ref(tex: Texture2D) -> Color:
+	if tex == null:
+		return Color(0, 0, 0, 0)
+	return PAINT_REF.get(tex.resource_path.get_file().get_basename(), Color(0, 0, 0, 0))
 
 
 static func get_model(model: String) -> Dictionary:
