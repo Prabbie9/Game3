@@ -4,12 +4,12 @@ extends CanvasLayer
 const CONTROLS := [
 	["ON FOOT", ""],
 	["Move / sprint", "move_forward|sprint"], ["Jump, vault, climb", "jump"], ["Crouch", "crouch"], ["Take cover", "cover"],
-	["Aim / shoot", "aim|fire"], ["Reload", "reload"], ["Fists / pistol", "weapon_next"], ["Swap shoulder", "shoulder_swap"],
-	["Enter vehicle", "interact"],
+	["Aim / shoot", "aim|fire"], ["Reload", "reload"], ["Weapon wheel (hold)", "weapon_wheel"], ["Next / previous weapon", "weapon_next|weapon_prev"],
+	["Swap shoulder", "shoulder_swap"], ["Enter vehicle / use", "interact"],
 	["VEHICLE", ""],
 	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
 	["Indicators / hazards", "indicator_left|indicator_right|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
-	["Exit vehicle", "interact"],
+	["Shoot from the window", "aim|fire"], ["Exit vehicle", "interact"],
 ]
 
 var _root: Control

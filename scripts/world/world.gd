@@ -58,6 +58,7 @@ func _ready() -> void:
 	parked.max_active = GraphicsSettings.parked_cars()
 	warm_up(spawn)
 	_spawn_vehicles()
+	_spawn_places()
 	player = PLAYER_SCENE.instantiate()
 	player.position = spawn
 	player.rotation.y = deg_to_rad(90)
@@ -65,6 +66,9 @@ func _ready() -> void:
 	var hud: CanvasLayer = preload("res://scripts/ui/hud.gd").new()
 	hud.name = "HUD"
 	add_child(hud)
+	var wheel := WeaponWheel.new()
+	wheel.name = "WeaponWheel"
+	add_child(wheel)
 	full_map = FullMap.new()
 	full_map.name = "FullMap"
 	add_child(full_map)
@@ -75,6 +79,50 @@ func _ready() -> void:
 		add_child(preload("res://scripts/core/benchmark.gd").new())
 	GraphicsSettings.apply_to(self)
 	_update_sun()
+
+
+## Hand-placed places and things: the gun shop, weapon/health/armour/cash pickups around the map, and a
+## few people hanging around the plaza.
+func _spawn_places() -> void:
+	var shop := GunShop.new()
+	shop.name = "GunShop"
+	add_child(shop)
+	var W := Pickup.Kind.WEAPON
+	var spots := [
+		[W, "smg", Vector3(40.5, 0, 57.0)], [W, "bat", Vector3(128.0, 0, -112.0)], [W, "knife", Vector3(-850.0, 0, -706.0)],
+		[W, "shotgun", Vector3(-265.0, 0, -447.0)], [W, "rifle", Vector3(175.0, 0, 735.0)], [W, "sniper", Vector3(846.0, 0, -846.0)],
+		[W, "launcher", Vector3(-1045.0, 0, 2.0)], [W, "grenade", Vector3(-120.0, 0, 524.0)],
+		[Pickup.Kind.HEALTH, "", Vector3(-189.0, 0, 209.0)], [Pickup.Kind.HEALTH, "", Vector3(-15.0, 0, 15.0)],
+		[Pickup.Kind.HEALTH, "", Vector3(600.0, 0, 700.0)], [Pickup.Kind.ARMOR, "", Vector3(40.5, 0, -57.0)],
+		[Pickup.Kind.ARMOR, "", Vector3(150.0, 0, -420.0)], [Pickup.Kind.CASH, "", Vector3(-40.5, 0, -57.0)],
+		[Pickup.Kind.CASH, "", Vector3(-120.5, 0, 57.0)], [Pickup.Kind.CASH, "", Vector3(120.5, 0, 120.0)],
+		[Pickup.Kind.CASH, "", Vector3(-760.0, 0, -620.0)], [Pickup.Kind.CASH, "", Vector3(520.0, 0, -690.0)],
+	]
+	for sp: Array in spots:
+		var pk := Pickup.make(sp[0], sp[1], 250 if sp[0] == Pickup.Kind.CASH else 0)
+		var at: Vector3 = sp[2]
+		at.y = data.height_at(at.x, at.z) + CityCell.CURB_H + 0.6
+		pk.position = at
+		add_child(pk)
+	_plaza_people = [[Vector3(-30.0, 0, 9.0), PI * 0.5, "ch02_nonpbr"], [Vector3(-31.2, 0, 8.6), -PI * 0.5, "ch33_nonpbr"],
+		[Vector3(-52.0, 0, 9.2), 0.3, "ch21_nonpbr"]]
+
+
+var _plaza_people := []
+
+
+## The plaza regulars appear once their characters have finished loading in the background.
+func _place_people() -> void:
+	for i in range(_plaza_people.size() - 1, -1, -1):
+		var e: Array = _plaza_people[i]
+		if not NPCDriver.is_ready(e[2]):
+			continue
+		var ped := Pedestrian.new()
+		ped.character_file = e[2]
+		ped.position = Vector3(e[0].x, CityCell.CURB_H + 0.02, e[0].z)
+		ped.rotation.y = e[1]
+		add_child(ped)
+		_plaza_people.remove_at(i)
 
 
 func _spawn_vehicles() -> void:
@@ -235,6 +283,8 @@ func focus_point() -> Vector3:
 
 
 func _process(delta: float) -> void:
+	if not _plaza_people.is_empty():
+		_place_people()
 	var f := focus_point()
 	# whatever the camera does, the ground under the player stays solid
 	var a := player.global_position if player else Vector3.INF

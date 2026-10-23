@@ -6,6 +6,8 @@ var _money: Label
 var _ammo: Label
 var _weapon: Label
 var _crosshair: Control
+var _scope: Control
+var _hit_marker := 0.0
 var _speed: Label
 var _speed_unit: Label
 var _toast: Label
@@ -89,11 +91,17 @@ func _ready() -> void:
 	# crosshair
 	_crosshair = Control.new()
 	_crosshair.set_anchors_preset(Control.PRESET_CENTER)
-	_crosshair.draw.connect(func():
-		_crosshair.draw_circle(Vector2.ZERO, 3.2, Color(0, 0, 0, 0.5))
-		_crosshair.draw_circle(Vector2.ZERO, 2.0, Color(1, 1, 1, 0.95)))
+	_crosshair.draw.connect(_draw_crosshair)
 	_crosshair.visible = false
 	root.add_child(_crosshair)
+	# sniper scope: black surround with a thin reticle
+	_scope = Control.new()
+	_scope.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_scope.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scope.draw.connect(_draw_scope)
+	_scope.visible = false
+	root.add_child(_scope)
+	root.move_child(_scope, 0)
 
 	# speedometer (bottom-right)
 	var sp := VBoxContainer.new()
@@ -168,27 +176,92 @@ func _fmt_money(m: int) -> String:
 func _process(_delta: float) -> void:
 	if not _player and Game.player:
 		_player = Game.player as Player
-		_player.weapon.ammo_changed.connect(func(a, r): _ammo.text = "%d  /  %d" % [a, r])
+		_player.weapon.ammo_changed.connect(func(a, r): _ammo.text = ("x %d" % a) if r < 0 else "%d  /  %d" % [a, r])
 		_player.weapon.weapon_changed.connect(func(n):
 			_weapon.text = n
-			_ammo.visible = n != "FISTS")
+			_ammo.visible = not _player.weapon.is_melee())
+		_weapon.text = _player.weapon.weapon_name()
 		_player.health_changed.connect(_on_health)
 		_player.vehicle_changed.connect(_on_vehicle)
 		_ammo.text = "%d  /  %d" % [_player.weapon.in_mag, _player.weapon.reserve]
 	if not _player:
 		return
-	_crosshair.visible = _player.aiming and _player.aim_weight > 0.5
+	var scoped := _player.weapon.scoped()
+	_scope.visible = scoped
+	_crosshair.visible = _player.aiming and _player.aim_weight > 0.5 and not scoped
 	_crosshair.queue_redraw()
+	if scoped:
+		_scope.queue_redraw()
+	_hit_marker = maxf(0.0, _hit_marker - _delta)
 	var box: Control = _speed.get_meta("box")
 	box.visible = _player.vehicle != null and _player.state == Player.State.DRIVING
 	if box.visible:
 		_speed.text = str(int(round(_player.vehicle.speed_kmh())))
 	var hint := ""
-	if _player.state == Player.State.ON_FOOT and _player._nearest_vehicle():
+	var it: Node = _player.nearest_interactable() if _player.state == Player.State.ON_FOOT else null
+	if it:
+		hint = "%s  %s" % [InputPrompts.prompt("interact"), it.interact_prompt(_player)]
+	elif _player.state == Player.State.ON_FOOT and _player._nearest_vehicle():
 		hint = "%s  Enter vehicle" % InputPrompts.prompt("interact")
 	elif _player.state == Player.State.DRIVING and _player.vehicle.linear_velocity.length() < 2.5:
 		hint = "%s  Exit vehicle" % InputPrompts.prompt("interact")
 	_hint.text = hint
+
+
+## Crosshair: a dot, plus four ticks that open with the current spread (guns) and a hit marker.
+func _draw_crosshair() -> void:
+	_crosshair.draw_circle(Vector2.ZERO, 3.2, Color(0, 0, 0, 0.5))
+	_crosshair.draw_circle(Vector2.ZERO, 2.0, Color(1, 1, 1, 0.95))
+	if not _player:
+		return
+	var w := _player.weapon
+	if w.data.kind == "gun" or w.data.kind == "launcher":
+		var cam := get_viewport().get_camera_3d()
+		var px := 6.0
+		if cam:
+			px += tan(w.spread()) / tan(deg_to_rad(cam.fov * 0.5)) * get_viewport().get_visible_rect().size.y * 0.5
+		px = clampf(px, 6.0, 80.0)
+		for d: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+			_crosshair.draw_line(d * px, d * (px + 7.0), Color(0, 0, 0, 0.5), 3.5)
+			_crosshair.draw_line(d * px, d * (px + 7.0), Color(1, 1, 1, 0.9), 1.6)
+	if _hit_marker > 0.0:
+		var a := clampf(_hit_marker / 0.25, 0.0, 1.0)
+		var c := Color(1.0, 0.35, 0.3, a) if _hit_kill else Color(1, 1, 1, a)
+		for d: Vector2 in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+			_crosshair.draw_line(d.normalized() * 9.0, d.normalized() * 17.0, c, 2.2)
+
+
+var _hit_kill := false
+
+
+## A shot connected with a character (from NPCs): flashes the hit marker, red on a kill.
+func hit_marker(kill: bool) -> void:
+	_hit_marker = 0.25
+	_hit_kill = kill
+
+
+func _draw_scope() -> void:
+	var sz := _scope.size
+	var c := sz * 0.5
+	var r := minf(sz.x, sz.y) * 0.46
+	var black := Color(0, 0, 0, 1)
+	# surround: four rects plus a ring of thick arcs to round the opening
+	_scope.draw_rect(Rect2(0, 0, c.x - r, sz.y), black)
+	_scope.draw_rect(Rect2(c.x + r, 0, sz.x - c.x - r, sz.y), black)
+	_scope.draw_rect(Rect2(c.x - r, 0, r * 2, c.y - r), black)
+	_scope.draw_rect(Rect2(c.x - r, c.y + r, r * 2, sz.y - c.y - r), black)
+	var thick := r * 0.45
+	_scope.draw_arc(c, r + thick * 0.5, 0, TAU, 96, black, thick, true)
+	_scope.draw_arc(c, r, 0, TAU, 96, Color(0.05, 0.05, 0.05, 0.9), 3.0, true)
+	var lc := Color(0.02, 0.02, 0.02, 0.9)
+	_scope.draw_line(Vector2(c.x - r, c.y), Vector2(c.x - 12, c.y), lc, 2.0)
+	_scope.draw_line(Vector2(c.x + 12, c.y), Vector2(c.x + r, c.y), lc, 2.0)
+	_scope.draw_line(Vector2(c.x, c.y - r), Vector2(c.x, c.y - 12), lc, 2.0)
+	_scope.draw_line(Vector2(c.x, c.y + 12), Vector2(c.x, c.y + r), lc, 2.0)
+	for i in range(1, 5):
+		var y := c.y + i * r * 0.12
+		_scope.draw_line(Vector2(c.x - 8 + i, y), Vector2(c.x + 8 - i, y), lc, 1.5)
+	_scope.draw_circle(c, 1.6, Color(0.85, 0.1, 0.1))
 
 
 func _on_health(h: float, a: float) -> void:

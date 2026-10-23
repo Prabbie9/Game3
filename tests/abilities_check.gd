@@ -233,7 +233,7 @@ func _run() -> void:
 
 	# punch a crate with fists
 	await _place(Vector3(40, 0.1, 0.0), 0.0)
-	p.weapon.select(0)
+	p.weapon.select("fists")
 	p.cam.yaw = 0.0
 	var c0 := crate.global_position
 	await _tap("fire")
@@ -241,7 +241,7 @@ func _run() -> void:
 	await _shot("punch")
 	await _phys(36)
 	_check("punch moves crate", crate.global_position.distance_to(c0) > 0.05 or crate.linear_velocity.length() > 0.1, "moved %.2f" % crate.global_position.distance_to(c0))
-	p.weapon.select(1)
+	p.weapon.select("pistol")
 
 	# fall from 12 m -> ragdoll -> get up
 	await _place(Vector3(60, 12.0, 0))

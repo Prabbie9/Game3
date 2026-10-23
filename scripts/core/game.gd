@@ -3,6 +3,8 @@ extends Node
 
 signal money_changed(amount: int)
 signal notify(text: String)
+## Something loud happened (gunfire, explosions): pedestrians and police react within `radius` metres.
+signal noise_made(pos: Vector3, radius: float, source: Node)
 
 var player: Node3D
 var world: Node3D
@@ -17,6 +19,9 @@ var mouse_sensitivity := 0.0025
 var gamepad_sensitivity := 3.0
 var invert_y := false
 var using_gamepad := false
+## Gameplay options (settings menu): gamepad aim assist, blood effects.
+var aim_assist := true
+var blood := true
 
 
 func _ready() -> void:
@@ -69,6 +74,11 @@ func _exit_tree() -> void:
 	Audio.release()
 	VehicleDamage.release()
 	NPCDriver.release()
+	Explosion.release()
+
+
+func noise(pos: Vector3, radius: float, source: Node = null) -> void:
+	noise_made.emit(pos, radius, source)
 
 
 func message(text: String) -> void:

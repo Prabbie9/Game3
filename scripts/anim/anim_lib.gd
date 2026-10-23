@@ -65,6 +65,28 @@ const CLIPS := {
 	"carjack": ["pull_pilot_out_of_seat_and_take_the_controls", false, Root.KEEP],
 	"jacked": ["pulled_out_of_pilot_seat", false, Root.KEEP],
 	"thrown": ["being_thrown_to_the_side", false, Root.EXTRACT],
+	# Milestone 5: long guns (aim strafe set + relaxed carry), reloads, throws, melee weapons, hits
+	"rifle_idle": ["rifle_standing_aiming_idle", true, Root.IN_PLACE],
+	"rifle_fwd": ["rifle_walk_forward", true, Root.IN_PLACE],
+	"rifle_back": ["rifle_walk_backward", true, Root.IN_PLACE],
+	"rifle_left": ["rifle_walk_left", true, Root.IN_PLACE],
+	"rifle_right": ["rifle_walk_right", true, Root.IN_PLACE],
+	"rifle_run": ["running_with_rifle_aimed", true, Root.IN_PLACE],
+	"rifle_run_back": ["rifle_run_backward", true, Root.IN_PLACE],
+	"rifle_hold": ["rifle_standing_idle", true, Root.IN_PLACE],
+	"rifle_walk": ["walking_with_rifle_at_waist_level", true, Root.IN_PLACE],
+	"rifle_sprint": ["rifle_sprint_forward", true, Root.IN_PLACE],
+	"rifle_reload": ["reloading_rifle_while_standing", false, Root.IN_PLACE],
+	"pistol_reload": ["gun_reload_while_walking", false, Root.IN_PLACE],
+	"throw": ["throwing_an_object_from_a_standard_pose", false, Root.IN_PLACE],
+	"knife_stab": ["male_knife_stab_with_the_rear_hand_and_fore_grip", false, Root.IN_PLACE],
+	"knife_stab2": ["male_knife_stab_with_lead_hand_and_fore_grip", false, Root.IN_PLACE],
+	"bat_swing": ["two_handed_heavy_weapon_swing", false, Root.IN_PLACE],
+	"bat_swing2": ["baseball_swinging_strike", false, Root.IN_PLACE],
+	"hit_small": ["small_hit_reaction_from_the_front", false, Root.IN_PLACE],
+	"hit_react": ["hit_reaction", false, Root.IN_PLACE],
+	"death_back": ["death_falling_backwards", false, Root.EXTRACT],
+	"death_head": ["dying_shot_to_the_head_falling_on_two_knees", false, Root.EXTRACT],
 }
 
 ## Clips played faster than authored (the Mixamo carjack takes its time settling into the seat).

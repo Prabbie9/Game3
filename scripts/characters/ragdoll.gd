@@ -85,6 +85,15 @@ func start(velocity: Vector3, impulse := Vector3.ZERO) -> void:
 		_hips.apply_central_impulse(impulse)
 
 
+## Shove one body part (the bone a bullet hit), e.g. the head on a head shot.
+func push(bone: String, impulse: Vector3) -> void:
+	var pb := sim.get_node_or_null("PB_" + bone) as PhysicalBone3D
+	if pb == null:
+		pb = _hips
+	if pb:
+		pb.apply_central_impulse(impulse)
+
+
 func stop() -> void:
 	active = false
 	sim.physical_bones_stop_simulation()

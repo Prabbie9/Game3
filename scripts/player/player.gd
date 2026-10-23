@@ -61,6 +61,7 @@ var _cover_low := false
 # melee
 var _combo := 0
 var _combo_window := 0.0
+var _melee_at := 0.0  # fraction of the current action at which the swing connects (0 = not a swing)
 # ragdoll
 var _rag_time := 0.0
 var _respawn_timer := -1.0
@@ -122,8 +123,8 @@ func _on_foot(delta: float) -> void:
 	if _water_depth() > SWIM_DEPTH:
 		_enter_swim()
 		return
-	if Game.controls_enabled and weapon.is_fists() and Input.is_action_just_pressed("fire") and is_on_floor():
-		_punch()
+	if Game.controls_enabled and weapon.is_melee() and Input.is_action_just_pressed("fire") and is_on_floor() and not WeaponWheel.open:
+		_melee_attack()
 		return
 	if Game.controls_enabled and Input.is_action_just_pressed("cover") and is_on_floor() and _try_cover():
 		return
@@ -240,13 +241,31 @@ func _on_foot(delta: float) -> void:
 	var local := global_basis.inverse() * velocity
 	visual.set_aim(Vector2(local.x, -local.z), aim_weight)
 	cam.mode = CameraRig.Mode.AIM if aiming else CameraRig.Mode.ON_FOOT
+	cam.zoom_fov = weapon.zoom_fov() if aiming else 0.0
 	cam.crouch = crouched
 	cam.sprinting = speed > visual.run_speed * 1.1
 
 	if Game.controls_enabled and Input.is_action_just_pressed("interact"):
+		var it := nearest_interactable()
+		if it:
+			it.interact(self)
+			return
 		var v := _nearest_vehicle()
 		if v:
 			enter_vehicle(v)
+
+
+## Something usable within reach (the gun shop counter, later doors, ATMs...): group "interactables" with
+## interact_point(), interact_range(), interact_prompt(player) ("" = not now) and interact(player).
+func nearest_interactable() -> Node:
+	var best: Node = null
+	var bd := INF
+	for n: Node in get_tree().get_nodes_in_group("interactables"):
+		var d := global_position.distance_to(n.interact_point())
+		if d < float(n.interact_range()) and d < bd and n.interact_prompt(self) != "":
+			best = n
+			bd = d
+	return best
 
 
 ## Nearest door we can use: an empty vehicle (either door) or one with someone at the wheel (carjack, driver
@@ -399,6 +418,8 @@ func _on_action_finished(anim: StringName) -> void:
 
 func _driving() -> void:
 	global_transform = vehicle.global_transform * _seat_local
+	aiming = weapon.drive_by
+	aim_weight = 1.0 if weapon.drive_by else 0.0
 	if Input.is_action_just_pressed("interact") and vehicle.linear_velocity.length() < 2.5:
 		exit_vehicle()
 
@@ -521,10 +542,10 @@ func _action(delta: float) -> void:
 			global_basis = xf.basis
 		else:
 			global_transform = xf
-	if _act.begins_with("punch") and not _act_hit_done and _act_t > _act_len * 0.38:
+	if _melee_at > 0.0 and not _act_hit_done and _act_t > _act_len * _melee_at:
 		_act_hit_done = true
 		_melee_hit()
-	foot_ik.weight = 1.0 if _act.begins_with("turn") or _act.begins_with("punch") or _act.begins_with("hit") else 0.0
+	foot_ik.weight = 1.0 if _act.begins_with("turn") or _melee_at > 0.0 or _act.begins_with("hit") else 0.0
 	if _act_t >= _act_len:
 		if _act_next != "":
 			# continue straight into the chained clip from the same pose: back to the un-shifted frame, no blend
@@ -548,8 +569,9 @@ func _end_action() -> void:
 	if hit:
 		global_position.y = hit.position.y
 	rotation = Vector3(0, rotation.y, 0)
-	if _act.begins_with("punch"):
+	if _melee_at > 0.0:
 		_combo_window = 0.45
+	_melee_at = 0.0
 	visual.travel("crouch" if crouched else "ground")
 	_act = ""
 
@@ -571,12 +593,26 @@ func _try_traverse() -> bool:
 
 # --- melee -------------------------------------------------------------------
 
-func _punch() -> void:
-	var chain := ["punch_jab", "punch_cross", "punch_hook"]
-	_combo = (_combo + 1) % 3 if _combo_window > 0.0 else 0
-	# face where the camera looks so punches land on what the player is looking at
+## Fists: a jab-cross-hook combo; knife and bat alternate their two swings. Hits land partway through.
+func _melee_attack() -> void:
+	var d := weapon.data
+	var chain: Array = d.get("clips", ["punch_jab", "punch_cross", "punch_hook"])
+	_combo = (_combo + 1) % chain.size() if _combo_window > 0.0 else 0
+	# face where the camera looks so swings land on what the player is looking at
 	rotation.y = cam.yaw
 	_start_action(chain[_combo], true)
+	_melee_at = float(d.get("hit_at", 0.38))
+	if weapon.current != "fists":
+		Audio.play_at(Audio.pick("weapons/swing_%d.ogg", 3), global_position + Vector3(0, 1.3, 0), -6.0, randf_range(0.9, 1.1) * (0.85 if weapon.current == "bat" else 1.15))
+
+
+func current_action() -> String:
+	return _act if state == State.ACTION else ""
+
+
+## Turn to face where the camera looks (throws, swings).
+func face_camera() -> void:
+	rotation.y = cam.yaw
 
 
 func _melee_hit() -> void:
@@ -586,18 +622,39 @@ func _melee_hit() -> void:
 	shape.height = 1.4
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = shape
-	q.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, 1.05, 0) - global_basis.z * 0.7)
-	q.collision_mask = 4 | 8 | 16
+	var d := weapon.data
+	var reach := float(d.get("reach", 0.7))
+	q.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, 1.05, 0) - global_basis.z * reach)
+	q.collision_mask = 4 | 8 | 16 | 32
 	q.exclude = [get_rid()]
 	var hits := get_world_3d().direct_space_state.intersect_shape(q, 8)
-	if not hits.is_empty():
-		Audio.play_at(Audio.pick("player/punch_%d.ogg", 3), global_position + Vector3(0, 1.3, 0) - global_basis.z * 0.6, -2.0 if _combo >= 2 else -5.0, randf_range(0.92, 1.08))
+	var fists := weapon.current == "fists"
+	var dmg := float(d.damage) * (1.0 if not fists or _combo < 2 else 1.8)
+	var at := global_position + Vector3(0, 1.3, 0) - global_basis.z * 0.6
+	var done := {}
+	var landed := false
 	for r in hits:
 		var c: Object = r.collider
-		if c and c.has_method("take_damage"):
-			c.take_damage(12.0 if _combo < 2 else 22.0, self)
+		var who: Object = c.get_meta("owner") if c is Node and (c as Node).has_meta("owner") else c
+		if done.has(who):
+			continue
+		done[who] = true
+		if who and who.has_method("melee_hit"):
+			who.melee_hit(dmg, self, -global_basis.z)
+			landed = true
+		elif who and who.has_method("take_damage"):
+			who.take_damage(dmg, self)
+			landed = true
 		elif c is RigidBody3D:
 			(c as RigidBody3D).apply_impulse(-global_basis.z * 60.0 + Vector3(0, 15, 0))
+			landed = true
+	if landed:
+		if fists:
+			Audio.play_at(Audio.pick("player/punch_%d.ogg", 3), at, -2.0 if _combo >= 2 else -5.0, randf_range(0.92, 1.08))
+		else:
+			Audio.play_at(Audio.pick("weapons/bullet_flesh_%d.ogg", 2), at, -2.0, randf_range(0.7, 0.85) if weapon.current == "bat" else 1.1)
+			Audio.play_at(Audio.pick("player/punch_%d.ogg", 3), at, -4.0 if weapon.current == "bat" else -12.0, 0.8)
+		Game.noise(global_position, 15.0, self)
 	cam.shake = maxf(cam.shake, 0.25)
 
 
@@ -841,6 +898,16 @@ func _respawn() -> void:
 	Game.message("You woke up a little bruised.")
 
 
+func heal(amount: float) -> void:
+	health = minf(100.0, health + amount)
+	health_changed.emit(health, armor)
+
+
+func add_armor(amount: float) -> void:
+	armor = minf(100.0, armor + amount)
+	health_changed.emit(health, armor)
+
+
 func take_damage(amount: float, _from: Node = null) -> void:
 	if state == State.DEAD:
 		return
@@ -942,6 +1009,10 @@ func _ride_pose(delta: float) -> void:
 		var g: Vector3 = r.get("grip", Vector3(0.3, 1.1, -0.4))
 		(_arms.targets[i] as Marker3D).global_transform = Transform3D(vx.basis, vx * Vector3(g.x * sx, g.y, g.z))
 		(_arms.poles[i] as Marker3D).global_position = vx * Vector3(g.x * sx * 2.2, g.y - 0.5, g.z + 0.35)
+	if weapon.drive_by:
+		# shooting one-handed: the right hand leaves the bar for the gun
+		(_arms.targets[1] as Marker3D).global_transform = weapon.drive_by_hand
+		(_arms.poles[1] as Marker3D).global_position = weapon.drive_by_hand.origin + vx.basis.y * -0.5 + vx.basis.x * 0.4
 	var feet := []
 	if r.has("crank"):
 		var b := v as Bike
@@ -1004,6 +1075,12 @@ func thrown_off(v: Vehicle, vel: Vector3) -> void:
 	take_damage(clampf(vel.length() * 1.5, 5.0, 60.0), v)
 	if state != State.DEAD and state != State.RAGDOLL:
 		go_ragdoll(vel + Vector3.UP * 2.0)
+
+
+## Shooting from the seat starts/stops (the Weapon drives the arm; the camera stays the vehicle camera).
+func set_drive_by(on: bool) -> void:
+	aiming = on
+	aim_weight = 1.0 if on else 0.0
 
 
 ## Test/screenshot helper: put the player straight into the driver's seat (no entry animation).

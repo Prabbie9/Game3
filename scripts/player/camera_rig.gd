@@ -23,6 +23,8 @@ var crouch := false
 ## Extra framing from the player's state: widen the view when sprinting, pull back while ragdolled.
 var sprinting := false
 var ragdolled := false
+## Scoped weapons: field of view while aiming (0 = the normal aim view).
+var zoom_fov := 0.0
 ## Hidden when the camera is squeezed against the character (back to a wall, tight corners).
 var hide_when_close: Node3D
 ## Vehicle views cycled with camera_mode: 0 chase, 1 far chase, 2 hood, 3 cinematic.
@@ -55,7 +57,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sens := Game.mouse_sensitivity * (0.6 if mode == Mode.AIM else 1.0)
+		var sens := Game.mouse_sensitivity * (0.6 if mode == Mode.AIM else 1.0) * (zoom_fov / 50.0 if zoom_fov > 0.0 and mode == Mode.AIM else 1.0)
 		yaw -= event.relative.x * sens
 		pitch -= event.relative.y * sens * (-1.0 if Game.invert_y else 1.0)
 		_idle_look = 0.0
@@ -75,7 +77,7 @@ func _process(delta: float) -> void:
 		return
 	var look := Input.get_vector("look_left", "look_right", "look_up", "look_down")
 	if look.length() > 0.05:
-		var gs := Game.gamepad_sensitivity * (0.55 if mode == Mode.AIM else 1.0)
+		var gs := Game.gamepad_sensitivity * (0.55 if mode == Mode.AIM else 1.0) * (zoom_fov / 50.0 if zoom_fov > 0.0 and mode == Mode.AIM else 1.0)
 		yaw -= look.x * gs * delta
 		pitch -= look.y * gs * 0.7 * delta * (-1.0 if Game.invert_y else 1.0)
 		_idle_look = 0.0
@@ -109,6 +111,9 @@ func _process(delta: float) -> void:
 		p.fov = 72.0 + clampf(spd - 15.0, 0.0, 25.0) * 0.35
 	pitch = clampf(pitch, deg_to_rad(-70), deg_to_rad(55) if mode != Mode.VEHICLE else deg_to_rad(30))
 
+	if mode == Mode.AIM and zoom_fov > 0.0:
+		p = p.duplicate()
+		p.fov = zoom_fov
 	if mode == Mode.ON_FOOT:
 		p = p.duplicate()
 		if sprinting:
@@ -121,7 +126,7 @@ func _process(delta: float) -> void:
 	_dist = lerpf(_dist, p.dist, k)
 	_height = lerpf(_height, p.height - (0.45 if crouch and mode != Mode.VEHICLE else 0.0), k)
 	_side = lerpf(_side, p.side * shoulder, k)
-	camera.fov = lerpf(camera.fov, p.fov, k)
+	camera.fov = lerpf(camera.fov, p.fov, k if zoom_fov <= 0.0 else 1.0 - exp(-delta * 18.0))
 
 	# characters can supply a smoother anchor than their root (the pelvis during vaults, climbs, ragdoll)
 	var anchor := tgt_xf.origin

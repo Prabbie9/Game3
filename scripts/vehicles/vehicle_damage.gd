@@ -217,40 +217,10 @@ func explode() -> void:
 	on_fire = false
 	health = 0.0
 	var at := vehicle.global_transform * _engine_pos
-	Audio.play_at(Audio.stream("vehicles/explosion_0.ogg"), at, 6.0, randf_range(0.92, 1.05), &"SFX", 400.0)
-	Audio.play_at(Audio.stream("vehicles/explosion_1.ogg"), at, 2.0, 0.8, &"SFX", 200.0)
 	var scene := get_tree().current_scene if get_tree().current_scene else get_parent()
-	var boom := _make_explosion()
-	scene.add_child(boom)
-	boom.global_position = at
-	# shock wave
-	var space := vehicle.get_world_3d().direct_space_state
-	var q := PhysicsShapeQueryParameters3D.new()
-	var sph := SphereShape3D.new()
-	sph.radius = 9.0
-	q.shape = sph
-	q.transform = Transform3D(Basis.IDENTITY, at)
-	q.collision_mask = 2 | 4 | 8 | 16
-	for r: Dictionary in space.intersect_shape(q, 32):
-		var body: Object = r.collider
-		if body == vehicle:
-			continue
-		var bp: Vector3 = (body as Node3D).global_position
-		var k := clampf(1.0 - bp.distance_to(at) / 9.0, 0.0, 1.0)
-		if body is RigidBody3D:
-			var rb := body as RigidBody3D
-			rb.sleeping = false
-			rb.apply_impulse(((bp - at).normalized() + Vector3.UP * 0.6) * rb.mass * 7.0 * k, Vector3(randf() - 0.5, 0.3, randf() - 0.5))
-		if body.has_method("take_damage"):
-			body.take_damage(150.0 * k, vehicle)
-		if body.has_method("go_ragdoll") and k > 0.15:
-			body.go_ragdoll(((bp - at).normalized() + Vector3.UP) * 8.0 * k)
+	Explosion.blast(scene, at, 9.0, 150.0, vehicle, vehicle)
 	vehicle.sleeping = false
 	vehicle.apply_impulse(Vector3.UP * vehicle.mass * 5.0, Vector3(randf_range(-0.4, 0.4), 0, randf_range(-0.6, 0.6)))
-	var cam := get_viewport().get_camera_3d()
-	if cam and cam.get_parent() and cam.get_parent().get_parent() is CameraRig:
-		var rig := cam.get_parent().get_parent() as CameraRig
-		rig.shake = maxf(rig.shake, clampf(2.5 - cam.global_position.distance_to(at) / 20.0, 0.0, 2.5))
 	# charred wreck, still smouldering
 	for m in materials:
 		m.set_shader_parameter("burnt", 1.0)
@@ -387,56 +357,3 @@ func _make_fire() -> GPUParticles3D:
 
 
 ## Fireball + flash: a one-shot burst that frees itself.
-func _make_explosion() -> Node3D:
-	var root := Node3D.new()
-	var p := GPUParticles3D.new()
-	p.amount = 64
-	p.lifetime = 1.1
-	p.one_shot = true
-	p.explosiveness = 0.95
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 1, 0)
-	pm.spread = 80.0
-	pm.initial_velocity_min = 4.0
-	pm.initial_velocity_max = 11.0
-	pm.gravity = Vector3(0, 3.0, 0)
-	pm.damping_min = 6.0
-	pm.damping_max = 9.0
-	pm.scale_min = 1.6
-	pm.scale_max = 3.0
-	var curve := Curve.new()
-	curve.add_point(Vector2(0, 0.6))
-	curve.add_point(Vector2(0.3, 1.0))
-	curve.add_point(Vector2(1, 1.3))
-	var ct := CurveTexture.new()
-	ct.curve = curve
-	pm.scale_curve = ct
-	var g := Gradient.new()
-	g.set_color(0, Color(1.0, 0.95, 0.7, 1.0))
-	g.add_point(0.25, Color(1.0, 0.5, 0.1, 0.95))
-	g.add_point(0.6, Color(0.25, 0.1, 0.05, 0.6))
-	g.set_color(g.get_point_count() - 1, Color(0.05, 0.05, 0.05, 0.0))
-	var gt := GradientTexture1D.new()
-	gt.gradient = g
-	pm.color_ramp = gt
-	p.process_material = pm
-	if _fire_mat == null:
-		_fire_mat = _billboard(true)
-	var q := QuadMesh.new()
-	q.size = Vector2(1.6, 1.6)
-	q.material = _fire_mat
-	p.draw_pass_1 = q
-	p.visibility_aabb = AABB(Vector3(-12, -4, -12), Vector3(24, 24, 24))
-	p.emitting = true
-	root.add_child(p)
-	var flash := OmniLight3D.new()
-	flash.light_color = Color(1.0, 0.7, 0.35)
-	flash.omni_range = 26.0
-	flash.light_energy = 14.0
-	flash.position = Vector3(0, 1.5, 0)
-	root.add_child(flash)
-	var tw := root.create_tween()
-	tw.tween_property(flash, "light_energy", 0.0, 0.9).set_ease(Tween.EASE_OUT)
-	tw.tween_interval(1.0)
-	tw.tween_callback(root.queue_free)
-	return root

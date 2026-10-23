@@ -193,6 +193,34 @@ func _run() -> void:
 			p.cam.camera.make_current()
 			p.exit_vehicle()
 			await _frames(10)
+	if _want("weapons") or only.any(func(n): return String(n).begins_with("wpn_")):
+		# each weapon in the hands: relaxed and aimed, from the right side and from behind the shoulder
+		for id: String in WeaponDefs.ORDER:
+			if not (_want("weapons") or _want("wpn_" + id)):
+				continue
+			p.weapon.give(id)
+			p.weapon.select(id)
+			p.global_position = Vector3(58, 0.2, 30)
+			p.rotation.y = PI
+			p.cam.yaw = PI
+			p.cam.pitch = -0.05
+			for aim in [false, true]:
+				if aim:
+					Game.controls_enabled = true
+					Input.action_press("aim")
+				await _frames(14)
+				var c := Camera3D.new()
+				world.add_child(c)
+				c.fov = 40
+				c.look_at_from_position(p.global_transform * Vector3(2.3, 1.45, -0.9), p.global_transform * Vector3(0, 1.25, -0.25))
+				c.make_current()
+				await _frames(3)
+				await _snap("wpn_%s_%s" % [id, "aim" if aim else "idle"])
+				c.queue_free()
+				p.cam.camera.make_current()
+				Input.action_release("aim")
+				Game.controls_enabled = false
+			await _frames(6)
 	if _want("pool"):
 		var pl: Array = world.data.pool
 		var pr := Rect2(pl[0], pl[1], pl[2] - pl[0], pl[3] - pl[1])

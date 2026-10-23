@@ -24,12 +24,23 @@ var aim_walk_speed := 1.3
 var aim_run_speed := 3.2
 
 var _aim_points := {}
+var _ground: AnimationNodeBlendTree
+
+## Bones the upper-body layer drives (spine up, arms and fingers).
+const UPPER_BONES := ["Spine", "Chest", "UpperChest", "Neck", "Head", "LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+	"RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand",
+	"LeftThumbMetacarpal", "LeftThumbProximal", "LeftThumbDistal", "LeftIndexProximal", "LeftIndexIntermediate", "LeftIndexDistal",
+	"LeftMiddleProximal", "LeftMiddleIntermediate", "LeftMiddleDistal", "LeftRingProximal", "LeftRingIntermediate", "LeftRingDistal",
+	"LeftLittleProximal", "LeftLittleIntermediate", "LeftLittleDistal",
+	"RightThumbMetacarpal", "RightThumbProximal", "RightThumbDistal", "RightIndexProximal", "RightIndexIntermediate", "RightIndexDistal",
+	"RightMiddleProximal", "RightMiddleIntermediate", "RightMiddleDistal", "RightRingProximal", "RightRingIntermediate", "RightRingDistal",
+	"RightLittleProximal", "RightLittleIntermediate", "RightLittleDistal"]
 
 ## One-shot actions: clip -> playback speed (they return to "ground" when finished).
 const ACTIONS := {
 	"vault": 1.1, "vault_high": 1.1, "jump_hang": 1.25, "climb": 1.1, "get_up_back": 1.35, "get_up_front": 1.5, "turn_left": 1.35, "turn_right": 1.35,
 	"turn_180": 1.3, "run_stop": 1.3, "punch_jab": 1.25, "punch_cross": 1.2, "punch_hook": 1.2, "hit_head": 1.3,
-	"hit_body": 1.3, "hard_land": 1.0
+	"hit_body": 1.3, "hard_land": 1.0, "knife_stab": 1.25, "knife_stab2": 1.25, "bat_swing": 1.15, "bat_swing2": 1.2
 }
 ## Looping base states the player can sit in, each with its own 1D blend: state -> [[clip, position], ...]
 var crouch_speed := 1.4
@@ -109,9 +120,51 @@ func _build_tree() -> void:
 		aim.add_blend_point(_anim(clip), p, -1, StringName(clip))
 	ground.add_node("aim", aim, Vector2(0, 200))
 	ground.add_node("aim_blend", AnimationNodeBlend2.new(), Vector2(400, 100))
-	ground.connect_node("aim_blend", 0, "loco_ts")
-	ground.connect_node("aim_blend", 1, "aim")
-	ground.connect_node("output", 0, "aim_blend")
+	# long guns: relaxed carry locomotion and their own aim strafe set, mixed in by the stance weight
+	var rloco := AnimationNodeBlendSpace1D.new()
+	rloco.add_blend_point(_anim("rifle_hold"), 0.0, -1, &"rifle_hold")
+	rloco.add_blend_point(_anim("rifle_walk"), maxf(AnimLib.speed_of("rifle_walk", motion_scale), 0.5), -1, &"rifle_walk")
+	rloco.add_blend_point(_anim("rifle_sprint"), maxf(AnimLib.speed_of("rifle_sprint", motion_scale), 2.0), -1, &"rifle_sprint")
+	rloco.min_space = 0.0
+	rloco.max_space = sprint_speed * 1.5
+	rloco.sync = true
+	ground.add_node("rloco", rloco, Vector2(0, 400))
+	ground.add_node("rloco_ts", AnimationNodeTimeScale.new(), Vector2(200, 400))
+	ground.connect_node("rloco_ts", 0, "rloco")
+	var raim := AnimationNodeBlendSpace2D.new()
+	raim.min_space = Vector2(-5, -5)
+	raim.max_space = Vector2(5, 5)
+	raim.sync = true
+	for clip in ["rifle_idle", "rifle_fwd", "rifle_back", "rifle_left", "rifle_right", "rifle_run", "rifle_run_back"]:
+		var v: Vector3 = AnimLib.velocity.get(clip, Vector3.ZERO) * motion_scale
+		var p := Vector2(-v.x, v.z)
+		raim.add_blend_point(_anim(clip), p, -1, StringName(clip))
+	ground.add_node("raim", raim, Vector2(0, 600))
+	ground.add_node("stance_loco", AnimationNodeBlend2.new(), Vector2(400, 0))
+	ground.connect_node("stance_loco", 0, "loco_ts")
+	ground.connect_node("stance_loco", 1, "rloco_ts")
+	ground.add_node("stance_aim", AnimationNodeBlend2.new(), Vector2(400, 300))
+	ground.connect_node("stance_aim", 0, "aim")
+	ground.connect_node("stance_aim", 1, "raim")
+	ground.connect_node("aim_blend", 0, "stance_loco")
+	ground.connect_node("aim_blend", 1, "stance_aim")
+	# upper-body one-shots (reloads, throws, swings) over whatever the legs are doing
+	var upper := AnimationNodeOneShot.new()
+	upper.fadein_time = 0.12
+	upper.fadeout_time = 0.2
+	upper.filter_enabled = true
+	for b in UPPER_BONES:
+		upper.set_filter_path(NodePath("%GeneralSkeleton:" + b), true)
+	ground.add_node("upper", upper, Vector2(700, 100))
+	var uclip := AnimationNodeAnimation.new()
+	uclip.animation = "rifle_reload"
+	ground.add_node("upper_clip", uclip, Vector2(400, 700))
+	ground.add_node("upper_ts", AnimationNodeTimeScale.new(), Vector2(550, 700))
+	ground.connect_node("upper_ts", 0, "upper_clip")
+	ground.connect_node("upper", 0, "aim_blend")
+	ground.connect_node("upper", 1, "upper_ts")
+	ground.connect_node("output", 0, "upper")
+	_ground = ground
 
 	var sm := AnimationNodeStateMachine.new()
 	sm.add_node("ground", ground)
@@ -137,16 +190,17 @@ func _build_tree() -> void:
 		bt.connect_node("output", 0, "speed")
 		sm.add_node(act, bt)
 		for b in bases:
-			_link(sm, b, act, 0.12 if act.begins_with("punch") or act.begins_with("hit") else 0.2)
+			_link(sm, b, act, 0.12 if act.begins_with("punch") or act.begins_with("hit") or act.begins_with("knife") or act.begins_with("bat") else 0.2)
 		if act != "jump_hang":  # chains straight into the climb (the player starts it)
 			_link(sm, act, "ground", 0.2, true)
 		_link(sm, act, "ground", 0.2)
 		_link(sm, act, "crouch", 0.2)
 		_link(sm, act, "fall", 0.2)
-	for a in ["punch_jab", "punch_cross", "punch_hook"]:
-		for b in ["punch_jab", "punch_cross", "punch_hook"]:
-			if a != b:
-				_link(sm, a, b, 0.1)
+	for chain in [["punch_jab", "punch_cross", "punch_hook"], ["knife_stab", "knife_stab2"], ["bat_swing", "bat_swing2"]]:
+		for a in chain:
+			for b in chain:
+				if a != b:
+					_link(sm, a, b, 0.1)
 	_link(sm, "jump_hang", "climb", 0.0)  # both start/end in the same braced hang
 	for b in ["crouch", "cover", "cover_low", "swim"]:
 		_link(sm, "fall", b, 0.3)
@@ -276,12 +330,32 @@ func _link(sm: AnimationNodeStateMachine, from: String, to: String, xfade: float
 func set_locomotion(speed: float) -> void:
 	tree.set("parameters/ground/loco/blend_position", speed)
 	tree.set("parameters/ground/loco_ts/scale", maxf(1.0, speed / maxf(sprint_speed, 0.1)))
+	tree.set("parameters/ground/rloco/blend_position", speed)
+	tree.set("parameters/ground/rloco_ts/scale", maxf(1.0, speed / maxf(sprint_speed, 0.1)))
 
 
 ## Aim strafing: local velocity (x = right, y = forward) in m/s; weight 0..1 blends the aim set in.
 func set_aim(local_velocity: Vector2, weight: float) -> void:
 	tree.set("parameters/ground/aim/blend_position", local_velocity)
+	tree.set("parameters/ground/raim/blend_position", local_velocity)
 	tree.set("parameters/ground/aim_blend/blend_amount", weight)
+
+
+## 0 = empty hands / pistol, 1 = long gun (rifle carry and rifle aim sets).
+func set_stance(rifle: float) -> void:
+	tree.set("parameters/ground/stance_loco/blend_amount", rifle)
+	tree.set("parameters/ground/stance_aim/blend_amount", rifle)
+
+
+## Play a clip on the upper body only (reload, throw, swing) while the legs keep going.
+func play_upper(clip: String, speed := 1.0) -> void:
+	(_ground.get_node("upper_clip") as AnimationNodeAnimation).animation = clip
+	tree.set("parameters/ground/upper_ts/scale", speed)
+	tree.set("parameters/ground/upper/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+
+
+func upper_active() -> bool:
+	return bool(tree.get("parameters/ground/upper/active"))
 
 
 func travel(state: StringName) -> void:
@@ -332,6 +406,12 @@ func install_hand_ik(target: Node3D) -> TwoBoneIK3D:
 	pole.position = Vector3(-0.35, -0.45, 0.25)  # elbow down and out, like a two-handed grip
 	ik.set_pole_node(0, ik.get_path_to(pole))
 	ik.influence = 0.0
+	# and the wrist turned to the grip
+	var orient := BoneOrient.new()
+	orient.name = "LeftHandOrient"
+	orient.target = target
+	orient.ik = ik
+	skeleton.add_child(orient)
 	return ik
 
 

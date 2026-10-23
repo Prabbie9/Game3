@@ -19,6 +19,7 @@ static var _tracer_i := 0
 static var _hole_tex: Texture2D
 static var _spark_mat: StandardMaterial3D
 static var _dust_mat: StandardMaterial3D
+static var _blood_tex: Texture2D
 
 
 static func release() -> void:
@@ -29,6 +30,7 @@ static func release() -> void:
 	_hole_tex = null
 	_spark_mat = null
 	_dust_mat = null
+	_blood_tex = null
 
 
 static func surface_of(col: Object) -> int:
@@ -181,16 +183,19 @@ static func _make_emitter(surface: int) -> GPUParticles3D:
 			m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 			m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 		Surface.FLESH:
-			e.amount = 10
-			e.lifetime = 0.5
-			pm.spread = 35.0
-			pm.initial_velocity_min = 0.8
-			pm.initial_velocity_max = 2.0
+			e.amount = 18
+			e.lifetime = 0.55
+			pm.spread = 40.0
+			pm.initial_velocity_min = 1.2
+			pm.initial_velocity_max = 3.6
 			pm.gravity = Vector3(0, -9, 0)
-			pm.color = Color(0.42, 0.02, 0.02, 0.9)
-			pm.scale_min = 0.6
-			pm.scale_max = 1.4
-			q.size = Vector2(0.05, 0.05)
+			pm.damping_min = 1.0
+			pm.damping_max = 2.0
+			pm.color = Color(0.45, 0.02, 0.02, 0.95)
+			pm.scale_min = 0.5
+			pm.scale_max = 1.6
+			q.size = Vector2(0.07, 0.07)
+			m.albedo_texture = _make_soft_texture()
 		_:
 			e.amount = 10
 			e.lifetime = 0.7
@@ -216,6 +221,25 @@ static func _make_emitter(surface: int) -> GPUParticles3D:
 	e.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	e.visibility_aabb = AABB(Vector3(-2, -2, -2), Vector3(4, 4, 4))
 	return e
+
+
+## A dark red pool with a ragged edge (decal under a body).
+static func blood_texture() -> Texture2D:
+	if _blood_tex:
+		return _blood_tex
+	var n := 128
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var noise := FastNoiseLite.new()
+	noise.frequency = 0.045
+	noise.seed = 7
+	for y in n:
+		for x in n:
+			var d := Vector2(x - n * 0.5, y - n * 0.5).length() / (n * 0.5)
+			var a := clampf((1.0 - d) * 2.2 + noise.get_noise_2d(x, y) * 1.4 - 0.25, 0.0, 1.0)
+			a = smoothstep(0.15, 0.45, a)
+			img.set_pixel(x, y, Color(0.22, 0.01, 0.01, a * 0.95))
+	_blood_tex = ImageTexture.create_from_image(img)
+	return _blood_tex
 
 
 static func _make_hole_texture() -> Texture2D:

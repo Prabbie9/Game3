@@ -39,8 +39,8 @@ static func _aabb(n: Node, xf: Transform3D) -> AABB:
 	var out := AABB()
 	var first := true
 	var t: Transform3D = xf * ((n as Node3D).transform if n is Node3D else Transform3D.IDENTITY)
-	if n is VisualInstance3D:
-		out = t * (n as VisualInstance3D).get_aabb()
+	if n is GeometryInstance3D:
+		out = t * (n as GeometryInstance3D).get_aabb()
 		first = false
 	for ch in n.get_children():
 		var b := _aabb(ch, t)

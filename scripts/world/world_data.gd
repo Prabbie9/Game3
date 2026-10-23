@@ -4,6 +4,8 @@ extends RefCounted
 ## Loaded once and shared; heights are uint16 samples every `step` metres over [-half, half]².
 
 const DIR := "res://assets/world/"
+## Lots kept free of generated buildings for hand-built places: the gun shop across from the start.
+const RESERVED := [Rect2(11.0, -32.5, 27.5, 21.5)]
 
 static var _inst: WorldData
 
@@ -66,6 +68,13 @@ var _wood: Array[Rect2] = []
 
 ## What the ground at x/z is made of, for footsteps: "concrete", "grass", "sand" or "wood".
 ## `natural` = standing on the terrain itself (not a building, road kerb or prop).
+static func is_reserved(r: Rect2) -> bool:
+	for q: Rect2 in RESERVED:
+		if q.intersects(r.grow(-0.5)):
+			return true
+	return false
+
+
 func ground_kind(x: float, z: float, natural: bool) -> String:
 	if _wood.is_empty():
 		for l: Dictionary in lots:

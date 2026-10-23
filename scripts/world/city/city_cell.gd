@@ -537,6 +537,8 @@ func _block(r: Rect2, core: bool, ring: int) -> void:
 ## Facade-shaded box building with cornice roof, rooftop units and collision. Towers on big lots get a podium
 ## and a set-back shaft, and sometimes rooftop water tanks or a mast.
 func _building(lot: Rect2, base_y: float, floors: int, wall: String, tint: Color, storefront: bool, glass: int) -> void:
+	if WorldData.is_reserved(lot):
+		return
 	if floors >= 14 and lot.size.x > 24.0 and lot.size.y > 20.0 and rng.randf() < 0.7:
 		var podium := rng.randi_range(3, 5)
 		_box_building(lot, base_y, podium, wall, tint, storefront, glass)
