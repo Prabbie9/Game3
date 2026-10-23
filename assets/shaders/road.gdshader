@@ -8,15 +8,24 @@ uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, r
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D arm_tex : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float tile = 4.0;
-uniform float road_width = 14.0;
-uniform int lanes_per_side = 2;
-uniform bool center_line = true;
-uniform bool lane_lines = true;
-uniform bool edge_lines = true;
-uniform float crosswalk_start = -1.0; // metres along where a zebra crossing starts (-1 = none)
-uniform float crosswalk_end = -1.0;
-uniform float stop_line_at = -1.0;
-uniform float road_length = 100.0;
+uniform bool markings = true;
+
+// Per-road parameters per vertex (many roads share one material / merged mesh):
+// UV2 = (road width, road length), CUSTOM0 = (lanes per side, flags, -, -) with flags:
+// 1 centre line, 2 lane lines, 4 edge lines, 8 crossing at start, 16 crossing at end, 32 stop line at start, 64 at end.
+varying vec2 v_dim;
+varying vec4 v_c0;
+
+void vertex() {
+	v_dim = UV2;
+	v_c0 = CUSTOM0;
+	// pull slightly towards the camera so the terrain carved just below never shows through at distance
+	vec4 view = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+	view.xyz *= 0.9993;
+	POSITION = PROJECTION_MATRIX * view;
+}
+
+bool flag(int f, int bit) { return (f & bit) != 0; }
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -27,6 +36,13 @@ float noise(vec2 p) {
 float band(float x, float c, float w) { return step(abs(x - c), w * 0.5); }
 
 void fragment() {
+	float road_width = v_dim.x;
+	float road_length = v_dim.y;
+	int lanes_per_side = max(int(v_c0.x + 0.5), 1);
+	int flags = markings ? int(v_c0.y + 0.5) : 0;
+	bool center_line = flag(flags, 1);
+	bool lane_lines = flag(flags, 2);
+	bool edge_lines = flag(flags, 4);
 	vec2 uvw = UV / tile;
 	vec3 base = texture(albedo_tex, uvw).rgb;
 	vec3 arm = texture(arm_tex, uvw).rgb;
@@ -44,8 +60,10 @@ void fragment() {
 	// markings
 	float paint = 0.0;
 	vec3 paint_col = vec3(0.92, 0.92, 0.88);
-	float in_cw = (crosswalk_start >= 0.0 && along > crosswalk_start && along < crosswalk_end) ? 1.0 : 0.0;
-	float near_end = (crosswalk_start >= 0.0 && along > crosswalk_start - 1.0 && along < crosswalk_end + 1.0) ? 1.0 : 0.0;
+	float cw_a = flag(flags, 8) ? 1.0 : 0.0;
+	float cw_b = flag(flags, 16) ? 1.0 : 0.0;
+	float in_cw = max(cw_a * step(0.6, along) * step(along, 3.8), cw_b * step(road_length - 3.8, along) * step(along, road_length - 0.6));
+	float near_end = max(cw_a * step(along, 4.8), cw_b * step(road_length - 4.8, along));
 	if (center_line && near_end < 0.5) {
 		float y = band(across, road_width * 0.5 - 0.12, 0.12) + band(across, road_width * 0.5 + 0.12, 0.12);
 		if (y > 0.0) { paint = 1.0; paint_col = vec3(0.91, 0.72, 0.25); }
@@ -64,8 +82,11 @@ void fragment() {
 		float stripe = step(fract(across / 1.2), 0.5) * step(0.6, across) * step(across, road_width - 0.6);
 		paint = max(paint, stripe);
 	}
-	if (stop_line_at >= 0.0) {
-		paint = max(paint, band(along, stop_line_at, 0.45) * step(across, road_width * 0.5));
+	if (flag(flags, 32)) {
+		paint = max(paint, band(along, 4.6, 0.45) * step(across, road_width * 0.5));
+	}
+	if (flag(flags, 64)) {
+		paint = max(paint, band(along, road_length - 4.6, 0.45) * step(road_width * 0.5, across));
 	}
 	float wear = smoothstep(0.25, 0.75, noise(UV * vec2(1.3, 0.35) + 17.0));
 	paint *= mix(0.55, 1.0, wear) * step(0.18, noise(UV * 6.0));

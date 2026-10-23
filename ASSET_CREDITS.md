@@ -34,3 +34,7 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Realistic HD California fan palm (1/25) (Sketchfab) | street trees | PlantCatalog (PlantCatalog) | https://sketchfab.com/3d-models/realistic-hd-california-fan-palm-125-043b0134ef134978aff9fa44067f5715 | CC-BY 4.0 |
 | Date Palm (Sketchfab) | street trees | evolveduk (evolveduk) | https://sketchfab.com/3d-models/date-palm-11acf710e6c149daa8d6fb8cdc5d087f | CC-BY 4.0 |
 | M1911 pistol (Sketchfab) | pistol | e.belous (egorbelous) | https://sketchfab.com/3d-models/m1911-pistol-80a0b8a6c4314da4a7b3a7cfe6cec1d4 | CC-BY 4.0 |
+| Coast Sand 01 (texture) | surfaces | Rob Tuytel | https://polyhaven.com/a/coast_sand_01 | CC0 |
+| Aerial Grass Rock (texture) | surfaces | Rob Tuytel | https://polyhaven.com/a/aerial_grass_rock | CC0 |
+| Rocky Terrain 02 (texture) | surfaces | Amal Kumar | https://polyhaven.com/a/rocky_terrain_02 | CC0 |
+| Rock Face (texture) | surfaces | Greg Zaal, Dario Barresi | https://polyhaven.com/a/rock_face | CC0 |

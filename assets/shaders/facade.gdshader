@@ -9,34 +9,41 @@ global uniform float wetness;
 uniform sampler2D wall_albedo : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D wall_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D wall_arm : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
-uniform vec3 wall_tint : source_color = vec3(1.0);
 uniform float wall_tile = 3.0;
 uniform float floor_height = 3.3;
 uniform float ground_floor = 4.2;
-uniform float bay_width = 3.2;
-uniform vec2 window_size = vec2(1.5, 1.8);
-uniform float sill_height = 0.95;
-uniform vec3 frame_color : source_color = vec3(0.9, 0.9, 0.88);
-uniform vec3 glass_tint : source_color = vec3(0.55, 0.66, 0.72);
-uniform bool storefront = true;
-uniform vec3 sign_color : source_color = vec3(0.16, 0.45, 0.42);
-uniform float seed = 1.0;
-uniform float facade_width = 20.0;
-uniform float building_height = 20.0;
 uniform float room_depth = 0.9;
 
-float hash(vec2 p) { return fract(sin(dot(p + seed * 1.37, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
+// Per-building parameters arrive per vertex so many buildings share one material and one merged mesh:
+// UV2 = (facade width, building height), COLOR = (wall tint, seed / 100),
+// CUSTOM0 = (bay width, window width, window height, sill height), CUSTOM1 = (frame colour, storefront + 2 * glass index)
+varying vec2 v_dim;
+varying vec4 v_tint;
+varying vec4 v_c0;
+varying vec4 v_c1;
+
+const vec3 SIGNS[5] = vec3[](vec3(0.16, 0.45, 0.42), vec3(0.7, 0.25, 0.18), vec3(0.15, 0.2, 0.3), vec3(0.55, 0.42, 0.2), vec3(0.35, 0.18, 0.32));
+const vec3 GLASS[3] = vec3[](vec3(0.55, 0.66, 0.72), vec3(0.55, 0.62, 0.68), vec3(0.62, 0.7, 0.74));
+
+void vertex() {
+	v_dim = UV2;
+	v_tint = COLOR;
+	v_c0 = CUSTOM0;
+	v_c1 = CUSTOM1;
+}
+
+float hash(vec2 p, float seed) { return fract(sin(dot(p + seed * 1.37, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p, float seed) {
 	vec2 i = floor(p); vec2 f = fract(p);
 	vec2 u = f * f * (3.0 - 2.0 * f);
-	return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+	return mix(mix(hash(i, seed), hash(i + vec2(1, 0), seed), u.x), mix(hash(i + vec2(0, 1), seed), hash(i + vec2(1, 1), seed), u.x), u.y);
 }
 
 // Interior mapping: returns room colour seen through a window. p = position in window cell (0..1),
 // r = ray direction in tangent space (z into the building).
-vec3 room(vec2 p, vec3 r, vec2 id, out float lit) {
-	float h = hash(id);
-	float h2 = hash(id + 7.3);
+vec3 room(vec2 p, vec3 r, vec2 id, float seed, out float lit) {
+	float h = hash(id, seed);
+	float h2 = hash(id + 7.3, seed);
 	vec3 rp = vec3(p, 0.0);
 	vec3 rd = normalize(vec3(r.xy, max(r.z, 0.05)));
 	float tx = rd.x > 0.0 ? (1.0 - rp.x) / rd.x : -rp.x / rd.x;
@@ -55,7 +62,7 @@ vec3 room(vec2 p, vec3 r, vec2 id, out float lit) {
 			float rows = step(0.12, hit.y) * step(hit.y, 0.78);
 			float shelf_line = step(fract(hit.y * 5.0), 0.12);
 			vec2 cell = floor(vec2(hit.x * 14.0, hit.y * 5.0));
-			vec3 product = 0.35 + 0.55 * vec3(hash(cell), hash(cell + 3.1), hash(cell + 7.7));
+			vec3 product = 0.35 + 0.55 * vec3(hash(cell, seed), hash(cell + 3.1, seed), hash(cell + 7.7, seed));
 			c = mix(c, mix(product, vec3(0.75, 0.74, 0.72), shelf_line), rows);
 		} else {
 			// furniture silhouettes / curtains on the back wall
@@ -90,6 +97,17 @@ vec3 room(vec2 p, vec3 r, vec2 id, out float lit) {
 }
 
 void fragment() {
+	float facade_width = v_dim.x;
+	float building_height = v_dim.y;
+	vec3 wall_tint = v_tint.rgb;
+	float seed = v_tint.a * 100.0;
+	float bay_width = v_c0.x;
+	vec2 window_size = v_c0.yz;
+	float sill_height = v_c0.w;
+	vec3 frame_color = v_c1.rgb;
+	bool storefront = mod(v_c1.a, 2.0) > 0.5;
+	vec3 glass_tint = GLASS[int(clamp(floor(v_c1.a * 0.5), 0.0, 2.0))];
+	vec3 sign_color = SIGNS[int(hash(vec2(seed, 3.3), seed) * 4.99)];
 	vec2 m = UV;
 	vec3 tv = normalize(vec3(dot(VIEW, TANGENT), dot(VIEW, BINORMAL), dot(VIEW, NORMAL)));
 	vec3 into = vec3(-tv.x, tv.y, tv.z); // view ray into the wall, tangent space (y up)
@@ -99,10 +117,10 @@ void fragment() {
 	vec3 nmap = texture(wall_normal, wuv).rgb;
 	float rough = warm.g;
 	float ao = warm.r;
-	float macro = noise(m * 0.15) * 0.5 + noise(m * 0.6) * 0.5;
+	float macro = noise(m * 0.15, seed) * 0.5 + noise(m * 0.6, seed) * 0.5;
 	wall *= mix(0.88, 1.06, macro);
 	// grime at the base and streaks under windows
-	float grime = smoothstep(1.4, 0.0, m.y) * 0.35 + smoothstep(0.55, 0.9, noise(vec2(m.x * 1.7, m.y * 0.12))) * 0.12;
+	float grime = smoothstep(1.4, 0.0, m.y) * 0.35 + smoothstep(0.55, 0.9, noise(vec2(m.x * 1.7, m.y * 0.12), seed)) * 0.12;
 	wall *= 1.0 - grime;
 
 	vec3 col = wall;
@@ -128,7 +146,7 @@ void fragment() {
 				if (frame > 0.0) { col = vec3(0.12); rough = 0.35; metal = 0.8; }
 				else {
 					float lit;
-					vec3 r = room(p, into, vec2(bay, -1.0), lit);
+					vec3 r = room(p, into, vec2(bay, -1.0), seed, lit);
 					col = r * glass_tint * 0.9; rough = 0.04; is_glass = 1.0;
 					emit = r * (0.06 + 0.55 * night);
 				}
@@ -151,9 +169,9 @@ void fragment() {
 				if (mullion > 0.0) { col = frame_color * 0.9; rough = 0.45; }
 				else {
 					float lit;
-					vec3 r = room(p, into, vec2(bay, fl), lit);
+					vec3 r = room(p, into, vec2(bay, fl), seed, lit);
 					// blinds on some windows
-					float blind = step(0.75, hash(vec2(bay, fl) + 3.1)) * step(1.0 - hash(vec2(bay, fl) + 5.7) * 0.6, p.y);
+					float blind = step(0.75, hash(vec2(bay, fl) + 3.1, seed)) * step(1.0 - hash(vec2(bay, fl) + 5.7, seed) * 0.6, p.y);
 					r = mix(r, vec3(0.78, 0.74, 0.66) * (0.6 + 0.4 * night * lit), blind);
 					col = r * glass_tint * 0.75; rough = 0.03; is_glass = 1.0;
 					emit = r * lit * 0.9;

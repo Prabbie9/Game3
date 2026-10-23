@@ -82,6 +82,16 @@ def main():
                 shutil.copy2(raw, dest)
             jobs.append((fid, size, dest))
     fetch(jobs)
+    # drop files that left the manifest (e.g. restored from an older CI cache) so they aren't imported/exported
+    wanted = {os.path.abspath(j[2]) for j in jobs}
+    for kind in ("characters", "animations"):
+        d = os.path.join(USED, kind)
+        for f in os.listdir(d) if os.path.isdir(d) else []:
+            path = os.path.abspath(os.path.join(d, f))
+            base = path[:-len(".import")] if path.endswith(".import") else path
+            if base.lower().endswith(".fbx") and base not in wanted:
+                os.remove(path)
+                print(f"[fetch_mixamo] removed stale {os.path.relpath(path, ROOT)}")
     print(f"[fetch_mixamo] {len(jobs)} files ready in {os.path.relpath(USED, ROOT)}")
 
 
