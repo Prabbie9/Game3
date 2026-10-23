@@ -13,6 +13,7 @@ var sky_mat: ShaderMaterial
 var weather: Weather
 var street_lights: LightPool
 var full_map: FullMap
+var night := 0.0  # 0 day .. 1 night (from the sun)
 var data: WorldData
 var terrain: Terrain
 var ocean: Ocean
@@ -41,6 +42,9 @@ func _ready() -> void:
 	street_lights.name = "StreetLights"
 	add_child(street_lights)
 	street_lights.setup(city, 32)
+	var marks := SkidMarks.new()
+	marks.name = "SkidMarks"
+	add_child(marks)
 	if Game.benchmark_mode:
 		time_scale = 0.0
 		weather.auto_change = false
@@ -236,7 +240,7 @@ func _update_sun() -> void:
 		sun.rotation = Vector3(deg_to_rad(-50.0), deg_to_rad(30.0), 0)
 		sun.light_color = Color(0.6, 0.7, 1.0)
 		sun.light_energy = 0.1
-	var night := 1.0 - day
+	night = 1.0 - day
 	RenderingServer.global_shader_parameter_set("night", night)
 	var w := weather
 	var dim := w.dim if w else 0.0

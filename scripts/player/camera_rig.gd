@@ -25,6 +25,8 @@ var sprinting := false
 var ragdolled := false
 ## Hidden when the camera is squeezed against the character (back to a wall, tight corners).
 var hide_when_close: Node3D
+## Vehicle views cycled with camera_mode: 0 chase, 1 far chase, 2 hood.
+var vehicle_view := 0
 
 var _dist := 3.4
 var _height := 1.55
@@ -54,6 +56,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_idle_look = 0.0
 	elif event.is_action_pressed("shoulder_swap"):
 		shoulder = -shoulder
+	elif event.is_action_pressed("camera_mode") and mode == Mode.VEHICLE:
+		vehicle_view = (vehicle_view + 1) % 3
 
 
 func add_recoil(amount: float) -> void:
@@ -77,7 +81,8 @@ func _process(delta: float) -> void:
 	var p: Dictionary = PRESETS[mode]
 	var tgt_xf := target.get_global_transform_interpolated()
 	if mode == Mode.VEHICLE:
-		p = {"dist": vehicle_distance, "height": vehicle_height, "side": 0.0, "fov": 72.0}
+		var far := 1.45 if vehicle_view == 1 else 1.0
+		p = {"dist": vehicle_distance * far, "height": vehicle_height * (1.2 if vehicle_view == 1 else 1.0), "side": 0.0, "fov": 72.0}
 		var v := Vector3.ZERO
 		if target is RigidBody3D:
 			v = (target as RigidBody3D).linear_velocity
@@ -114,8 +119,18 @@ func _process(delta: float) -> void:
 	rotation = Vector3(pitch, yaw, 0)
 	spring.spring_length = _dist
 	spring.position = Vector3(_side, 0, 0)
+	if mode == Mode.VEHICLE and vehicle_view == 2 and target:
+		# hood view: fixed to the car just above the windscreen base, free look with the stick/mouse
+		var vt := target.get_global_transform_interpolated()
+		var hood: Vector3 = target.get_meta("hood_cam", Vector3(0, 1.3, -0.6))
+		var car_yaw := atan2(vt.basis.z.x, vt.basis.z.z)
+		var free := Basis(Vector3.UP, wrapf(yaw - car_yaw, -PI, PI) if _idle_look < 1.5 else 0.0)
+		global_transform = Transform3D(vt.basis * free * Basis(Vector3.RIGHT, clampf(pitch, -0.4, 0.3)), vt * hood)
+		spring.spring_length = 0.0
+		spring.position = Vector3.ZERO
+		camera.fov = lerpf(camera.fov, p.fov, k)
 	if hide_when_close:
-		hide_when_close.visible = mode == Mode.VEHICLE or spring.get_hit_length() > 0.55
+		hide_when_close.visible = (mode == Mode.VEHICLE and vehicle_view != 2) or (mode != Mode.VEHICLE and spring.get_hit_length() > 0.55)
 	if shake > 0.0:
 		camera.h_offset = randf_range(-1, 1) * shake * 0.05
 		camera.v_offset = randf_range(-1, 1) * shake * 0.05

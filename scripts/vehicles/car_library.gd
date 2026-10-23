@@ -94,8 +94,31 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 	var inv := frame.affine_inverse()
 
 	var parts := []
+	var optics := {"front": SurfaceTool.new(), "rear": SurfaceTool.new()}
+	var optics_mat: Material = null
+	for st: SurfaceTool in optics.values():
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for mi in body_meshes:
-		parts.append([mi.mesh, inv * _gxf(mi)])
+		var xf := inv * _gxf(mi)
+		var mesh: Mesh = mi.mesh
+		var keep := ArrayMesh.new()
+		for s in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(s)
+			if mat and String(mat.resource_name).begins_with("Optics"):
+				# lights: split into front (headlights) and rear (tail/brake/reverse) in the car frame
+				optics_mat = mat
+				_split_optics(mesh.surface_get_arrays(s), xf, optics)
+				continue
+			keep.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh.surface_get_arrays(s))
+			keep.surface_set_material(keep.get_surface_count() - 1, mat)
+		parts.append([keep, xf])
+	var optic_meshes := {}
+	for k: String in optics:
+		var st: SurfaceTool = optics[k]
+		st.generate_normals()
+		var m := st.commit()
+		if m.get_surface_count() > 0:
+			optic_meshes[k] = m
 	var wheel_data := []
 	for w in wheels:
 		var wc := Transform3D(frame.basis, w.center)
@@ -112,7 +135,23 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 		var a := (inv * _gxf(mi)) * mi.get_aabb()
 		local_aabb = a if first else local_aabb.merge(a)
 		first = false
-	return {"parts": parts, "wheels": wheel_data, "aabb": local_aabb}
+	return {"parts": parts, "wheels": wheel_data, "aabb": local_aabb, "optics": optic_meshes, "optics_mat": optics_mat}
+
+
+## Triangles of a light surface into the front/rear SurfaceTools (car frame: forward = -Z).
+static func _split_optics(arr: Array, xf: Transform3D, out: Dictionary) -> void:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] else PackedVector2Array()
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] else PackedInt32Array(range(v.size()))
+	for t in range(0, idx.size(), 3):
+		var a := xf * v[idx[t]]
+		var b := xf * v[idx[t + 1]]
+		var c := xf * v[idx[t + 2]]
+		var st: SurfaceTool = out["front" if (a.z + b.z + c.z) < 0.0 else "rear"]
+		for k in 3:
+			if uv.size() > 0:
+				st.set_uv(uv[idx[t + k]])
+			st.add_vertex([a, b, c][k])
 
 
 static func _global_aabb(meshes: Array[MeshInstance3D]) -> AABB:
