@@ -26,3 +26,7 @@ SDFGI + volumetric fog + SSR are the expensive toggles; High enables SSAO, SSIL(
 | 2026-10-22 | v0.1.0 | street view (software render) | 532 (+1249) | 2.26 M | palms are the main shadow-draw cost |
 | 2026-10-22 | v0.1.0 | aerial | 644 (+1552) | 2.38 M | |
 Real FPS: waiting for the owner's benchmark report (OWNER_TEST_CHECKLIST.md).
+| 2026-10-23 | v0.3.0 | street view (software render) | 277 (+699) | 1.91 M | merged cell meshes; reduced street-prop meshes |
+| 2026-10-23 | v0.3.0 | downtown aerial | 313 (+440) | 1.57 M | far cells as one-material stand-ins |
+| 2026-10-23 | v0.3.0 | hills (oaks) | 172 (+163) | 0.47 M | oak/jacaranda/palm impostors beyond 130 m |
+| 2026-10-23 | v0.3.0 | stream_check (headless, 45 m/s) | — | — | p99 7.7 ms, worst 17 ms main-thread frame |

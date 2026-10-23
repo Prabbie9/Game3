@@ -119,13 +119,19 @@ func _build_far() -> void:
 
 
 ## Keep detail cells around a world position; call every frame.
+var anchor := Vector3.INF  # cells near this point stay loaded too (the player when the camera is elsewhere)
+
+
 func update(focus: Vector3) -> void:
 	_focus = focus
-	for k: Vector2i in _all_cells_near(focus, LOAD_R):
+	var want := _all_cells_near(focus, LOAD_R)
+	if anchor != Vector3.INF:
+		want.append_array(_all_cells_near(anchor, 150.0))
+	for k: Vector2i in want:
 		if not _cells.has(k) and not _jobs.has(k) and not _queued(k):
 			_request(k)
 	for k: Vector2i in _cells.keys():
-		if _rect_dist(k, focus) > UNLOAD_R:
+		if _rect_dist(k, focus) > UNLOAD_R and (anchor == Vector3.INF or _rect_dist(k, anchor) > 260.0):
 			_unload(k)
 	_collect()
 	_free_some(40)
@@ -216,7 +222,7 @@ func _collect() -> void:
 	for c: CityCell in ready:
 		WorkerThreadPool.wait_for_task_completion(_jobs[c.key])
 		_jobs.erase(c.key)
-		if _rect_dist(c.key, _focus) <= UNLOAD_R:
+		if _rect_dist(c.key, _focus) <= UNLOAD_R or (anchor != Vector3.INF and _rect_dist(c.key, anchor) <= 260.0):
 			_queue.append(c)
 
 

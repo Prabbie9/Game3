@@ -67,7 +67,7 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   assembled from the modular kit, street props now solid (collision layer 16) with one weathering variant each.
 - Pause menu lists the controls for the current device; gamepad jump moved to X (A = sprint).
 
-**Milestone 3 — World expansion: IN PROGRESS (target v0.3.0)**
+**Milestone 3 — World expansion: DONE (v0.3.0)**
 - `tools/world/gen_world.py` bakes the island (assets/world: height.bin, splat.png, nature.png, map.png, world.json):
   coastline, districts, road graph (freeway ring, avenues/streets grid, Ocean Dr, Harbor Blvd, suburbs, Canyon Rd),
   lots, heightmap with carved roads, terrain splat, vegetation density, painted map. Rerun after layout changes.
@@ -78,7 +78,12 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   boardwalk, pier, lifeguard towers, industrial warehouses, port sheds/containers/cranes, suburbs (gable-roof houses,
   driveways, yard trees), hill villas, lookout, oak/boulder scatter on the hills.
 - Checks: `tests/stream_check.gd` (hitches while flying the benchmark route at 45 m/s), screenshot `tour` shots.
-- Remaining before release: verify night/rain looks, triangle budget (vegetation LOD grouping), export + smoke test.
+- Perf (software-rendered counts): street 277 draws (+699 shadow), 1.9 M prims; downtown aerial 313 (+440), 1.6 M.
+  Street furniture uses baked reduced meshes; vegetation is grouped per 64 m with LODs and picture-card impostors.
+- Vehicles far from the streamed area are frozen; collision always stays loaded around the player.
+
+**Next: Milestone 4 — Vehicles** (see docs/PLAN.md): all classes (compact…helicopter, boat, bike), per-class handling,
+enter/exit/passenger/carjack animations, damage, lights/indicators, skid marks, engine audio, vehicle cameras.
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
@@ -94,3 +99,4 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 | v0.1.0 | 1 — vertical slice (player untextured — superseded) | GitHub Release |
 | v0.1.1 | 1 — vertical slice hotfix | GitHub Release (workflow runs on release.txt change) |
 | v0.2.0 | 2 — player polish | GitHub Release |
+| v0.3.0 | 3 — world expansion | GitHub Release |

@@ -36,8 +36,12 @@ func _smoke_test() -> void:
 		menu._on_play()
 	await get_tree().create_timer(5.0).timeout
 	var ok := player != null and world != null and player.is_inside_tree()
-	printerr("SMOKE: world loaded = %s, player at %s, fps = %d, renderer = %s" % [ok, player.global_position if player else Vector3.ZERO,
-		Engine.get_frames_per_second(), RenderingServer.get_video_adapter_name()])
+	var cells := 0
+	if ok and world.get("city"):
+		cells = world.city.ready_cells
+		ok = ok and cells >= 6 and player.global_position.y > -1.0
+	printerr("SMOKE: world loaded = %s, player at %s, city cells %d, fps = %d, renderer = %s" % [ok, player.global_position if player else Vector3.ZERO,
+		cells, Engine.get_frames_per_second(), RenderingServer.get_video_adapter_name()])
 	printerr("SMOKE TEST %s" % ("PASSED" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)
 

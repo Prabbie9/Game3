@@ -444,8 +444,7 @@ def build_terrain(coast, graph):
     hmap = h.copy()
     for rd in graph.roads:
         _road_profile(rd, h, graph)
-    for rd in graph.roads:
-        _carve_road(rd, hmap)
+    _carve_roads(graph.roads, hmap)
     # the plaza pool's pit (its basin walls are city meshes; the terrain must not cover the water)
     px0, pz0, px1, pz1 = pool_rect()
     pit = (X > px0 - 0.6) & (X < px1 + 0.6) & (Z > pz0 - 0.6) & (Z < pz1 + 0.6)
@@ -496,32 +495,45 @@ def _road_profile(rd, h, graph):
     rd["pts"] = [[p[0], float(y), p[1]] for p, y in zip(pts, sm)]   # -> [x, y, z]
 
 
-def _carve_road(rd, h):
-    """Flatten terrain across the road (plus sidewalks/shoulders) and blend embankments over 10 m."""
-    half = rd["w"] * 0.5 + (SIDEWALK if rd["walk"] else 2.5)
-    bank = 60.0 if rd["kind"] == "hill" else 10.0
-    pts = rd["pts"]
-    for p, q in zip(pts[:-1], pts[1:]):
-        ax, ay, az = p
-        bx, by, bz = q
-        x0 = min(ax, bx) - half - bank
-        x1 = max(ax, bx) + half + bank
-        z0 = min(az, bz) - half - bank
-        z1 = max(az, bz) + half + bank
-        i0 = max(int((x0 + HALF) / STEP), 0)
-        i1 = min(int((x1 + HALF) / STEP) + 2, N)
-        j0 = max(int((z0 + HALF) / STEP), 0)
-        j1 = min(int((z1 + HALF) / STEP) + 2, N)
-        if i0 >= i1 or j0 >= j1:
-            continue
-        xs = -HALF + np.arange(i0, i1) * STEP
-        zs = -HALF + np.arange(j0, j1) * STEP
-        PX, PZ = np.meshgrid(xs, zs)
-        dist, t = seg_dist(PX, PZ, ax, az, bx, bz)
-        y = ay + (by - ay) * t  # terrain at the road surface (the road shader draws a hair in front)
-        w = 1 - smoothstep(half, half + bank, dist)
-        sub = h[j0:j1, i0:i1]
-        h[j0:j1, i0:i1] = np.where(w > 0, sub * (1 - w) + y * w, sub)
+def _carve_roads(roads, h):
+    """Fit the terrain to the roads: exactly the road height across each road surface, and outside a blend of all
+    nearby roads' heights (sharpened weights) faded into the terrain over the embankment width. Blending every
+    corridor together (instead of carving one after another) keeps switchbacks from leaving cliffs between them."""
+    num = np.zeros_like(h)
+    den = np.zeros_like(h)
+    wmax = np.zeros_like(h)
+    surf_d = np.full(h.shape, np.inf)
+    surf_y = np.zeros_like(h)
+    for rd in roads:
+        half = rd["w"] * 0.5 + (SIDEWALK if rd["walk"] else 2.5)
+        bank = 60.0 if rd["kind"] == "hill" else 10.0
+        pts = rd["pts"]
+        for p, q in zip(pts[:-1], pts[1:]):
+            ax, ay, az = p
+            bx, by, bz = q
+            i0 = max(int((min(ax, bx) - half - bank + HALF) / STEP), 0)
+            i1 = min(int((max(ax, bx) + half + bank + HALF) / STEP) + 2, N)
+            j0 = max(int((min(az, bz) - half - bank + HALF) / STEP), 0)
+            j1 = min(int((max(az, bz) + half + bank + HALF) / STEP) + 2, N)
+            if i0 >= i1 or j0 >= j1:
+                continue
+            xs = -HALF + np.arange(i0, i1) * STEP
+            zs = -HALF + np.arange(j0, j1) * STEP
+            PX, PZ = np.meshgrid(xs, zs)
+            dist, t = seg_dist(PX, PZ, ax, az, bx, bz)
+            y = ay + (by - ay) * t
+            w = 1 - smoothstep(half, half + bank, dist)
+            a = w ** 6
+            sl = (slice(j0, j1), slice(i0, i1))
+            num[sl] += a * y
+            den[sl] += a
+            np.maximum(wmax[sl], w, out=wmax[sl])
+            on = (dist <= half) & (dist < surf_d[sl])
+            surf_d[sl] = np.where(on, dist, surf_d[sl])
+            surf_y[sl] = np.where(on, y, surf_y[sl])
+    road_h = num / np.maximum(den, 1e-9)
+    blended = h * (1 - wmax) + road_h * wmax
+    h[:] = np.where(np.isfinite(surf_d), surf_y, blended)
 
 
 # ----------------------------------------------------------------------------------------- lots

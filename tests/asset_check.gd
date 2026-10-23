@@ -24,6 +24,15 @@ func _ready() -> void:
 				var m := mi.mesh.surface_get_material(0) as BaseMaterial3D
 				_check("character mesh textured", m != null and m.albedo_texture != null, "%s/%s" % [c, mi.name])
 			n.free()
+	# baked world data and every city prop model
+	var d := WorldData.get_data()
+	_check("world heightmap", FileAccess.get_file_as_bytes(WorldData.DIR + "height.bin").size() == d.n * d.n * 2)
+	_check("world layout", d.roads.size() > 300 and d.lots.size() > 300, "%d roads %d lots" % [d.roads.size(), d.lots.size()])
+	_check("world nature map", d.nature != null and d.nature.get_width() >= 1024)
+	PropCatalog.prepare()
+	for name: String in PropCatalog.SOURCES:
+		var m := PropCatalog.mesh(name)
+		_check("prop mesh", m != null and m.get_surface_count() > 0, name)
 	var lib := AnimLib.get_library()
 	for clip in AnimLib.CLIPS:
 		_check("animation clip", lib.has_animation(clip), clip)

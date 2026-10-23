@@ -174,6 +174,24 @@ func warm_up(focus: Vector3) -> void:
 	city.flush()
 
 
+var _freeze_timer := 0.0
+
+
+## Vehicles beyond the streamed collision would fall through the world: park them (frozen) until we come back.
+func _freeze_far_vehicles(f: Vector3) -> void:
+	for v: Node in get_tree().get_nodes_in_group("vehicles"):
+		var rb := v as RigidBody3D
+		if rb == null or (player and player.vehicle == rb):
+			if rb:
+				rb.freeze = false
+			continue
+		var far := rb.global_position.distance_to(f) > 180.0
+		if far != rb.freeze:
+			if far:
+				rb.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
+			rb.freeze = far
+
+
 ## What the streaming follows: the active camera (works for gameplay, menu orbit and the benchmark flight).
 func focus_point() -> Vector3:
 	var cam := get_viewport().get_camera_3d()
@@ -184,10 +202,18 @@ func focus_point() -> Vector3:
 
 func _process(delta: float) -> void:
 	var f := focus_point()
+	# whatever the camera does, the ground under the player stays solid
+	var a := player.global_position if player else Vector3.INF
+	terrain.anchor = a
+	city.anchor = a
 	terrain.update(f)
 	city.update(f)
 	var cam := get_viewport().get_camera_3d()
 	ocean.follow(cam.global_position if cam else f)
+	_freeze_timer -= delta
+	if _freeze_timer <= 0.0:
+		_freeze_timer = 0.5
+		_freeze_far_vehicles(f)
 	if time_scale > 0.0:
 		time_of_day = fmod(time_of_day + delta * time_scale, 24.0)
 	_update_sun()

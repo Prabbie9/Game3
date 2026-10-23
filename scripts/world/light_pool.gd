@@ -19,8 +19,8 @@ func setup(c: City, n: int) -> void:
 	for i in 48:
 		var l := OmniLight3D.new()
 		l.light_color = Color(1.0, 0.8, 0.55)
-		l.omni_range = 16.0
-		l.omni_attenuation = 1.4
+		l.omni_range = 22.0
+		l.omni_attenuation = 1.1
 		l.light_energy = 0.0
 		l.shadow_enabled = false
 		l.light_specular = 0.6
@@ -54,7 +54,7 @@ func _process(delta: float) -> void:
 	_timer -= delta
 	if _timer > 0.0:
 		for l in _lights:
-			l.light_energy = night * 2.2
+			l.light_energy = night * 4.5
 		return
 	_timer = REFRESH
 	var cam := get_viewport().get_camera_3d()
@@ -71,7 +71,7 @@ func _process(delta: float) -> void:
 		var l := _lights[i]
 		if i < mini(count, best.size()):
 			l.global_position = best[i][1]
-			l.light_energy = night * 2.2
+			l.light_energy = night * 4.5
 			l.visible = true
 		else:
 			l.visible = false

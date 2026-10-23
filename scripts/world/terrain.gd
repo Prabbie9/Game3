@@ -70,8 +70,17 @@ func _make_material() -> ShaderMaterial:
 	return m
 
 
+var anchor := Vector3.INF  # second position that always keeps collision (the player when the camera is elsewhere)
+var _anchor_chunk := Vector2i(1 << 20, 1 << 20)
+
+
 ## Keep detail and collision around a world position (call every frame; cheap when nothing changes).
 func update(pos: Vector3) -> void:
+	if anchor != Vector3.INF:
+		var ac := Vector2i(floori((anchor.x + data.half) / CHUNK), floori((anchor.z + data.half) / CHUNK))
+		if ac != _anchor_chunk:
+			_anchor_chunk = ac
+			_center = Vector2i(1 << 20, 1 << 20)  # recompute the wanted set
 	var c := Vector2i(floori((pos.x + data.half) / CHUNK), floori((pos.z + data.half) / CHUNK))
 	if c != _center:
 		_center = c
@@ -162,25 +171,31 @@ func _collect() -> void:
 
 func _update_collision(c: Vector2i) -> void:
 	var keep := {}
-	for dz in range(-COL_R, COL_R + 1):
-		for dx in range(-COL_R, COL_R + 1):
-			var k := c + Vector2i(dx, dz)
-			if not _valid(k):
-				continue
-			keep[k] = true
-			if _cols.has(k) or _col_jobs.has(k):
-				continue
-			var d := data
-			var per := int(CHUNK / data.step)
-			_col_jobs[k] = WorkerThreadPool.add_task(func() -> void:
-				var f := PackedFloat32Array()
-				f.resize((per + 1) * (per + 1))
-				for j in per + 1:
-					for i in per + 1:
-						f[j * (per + 1) + i] = d.sample(k.x * per + i, k.y * per + j)
-				_mutex.lock()
-				_col_done.append([k, f])
-				_mutex.unlock())
+	var centres := [c]
+	if anchor != Vector3.INF and _anchor_chunk != c:
+		centres.append(_anchor_chunk)
+	var ks := []
+	for cc: Vector2i in centres:
+		for dz in range(-COL_R, COL_R + 1):
+			for dx in range(-COL_R, COL_R + 1):
+				ks.append(cc + Vector2i(dx, dz))
+	for k: Vector2i in ks:
+		if not _valid(k):
+			continue
+		keep[k] = true
+		if _cols.has(k) or _col_jobs.has(k):
+			continue
+		var d := data
+		var per := int(CHUNK / data.step)
+		_col_jobs[k] = WorkerThreadPool.add_task(func() -> void:
+			var f := PackedFloat32Array()
+			f.resize((per + 1) * (per + 1))
+			for j in per + 1:
+				for i in per + 1:
+					f[j * (per + 1) + i] = d.sample(k.x * per + i, k.y * per + j)
+			_mutex.lock()
+			_col_done.append([k, f])
+			_mutex.unlock())
 	for k: Vector2i in _cols.keys():
 		if not keep.has(k):
 			(_cols[k] as Node).queue_free()

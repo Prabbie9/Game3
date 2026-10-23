@@ -100,13 +100,53 @@ static func _extract(name: String) -> Dictionary:
 		var st: SurfaceTool = by_mat[mat]
 		st.commit(am)
 		am.surface_set_material(am.get_surface_count() - 1, mat)
-	if name in LOD_NAMES:
-		am = _with_lods(am)
+	am = _with_lods(am) if name in VEGETATION else _reduced(am, BUDGET.get(name, 2000))
 	return {"mesh": am, "aabb": aabb, "col": src[2]}
 
 
-## Vegetation is instanced by the hundred: give it automatic LODs (the merge above drops the imported ones).
-const LOD_NAMES := ["palm_crown", "date_palm", "jacaranda", "oak", "boulder"]
+## Vegetation keeps automatic LODs (grouped per 64 m, impostors far away). Street furniture is grouped per cell, so a
+## LOD would be picked for the nearest instance only: bake a reduced mesh instead (triangle budget per prop).
+const VEGETATION := ["palm_crown", "date_palm", "jacaranda", "oak", "boulder"]
+const BUDGET := {"street_lamp_01": 3500, "fire_hydrant": 1600, "fire_hydrant_aged": 1600, "metal_trash_can": 1400,
+	"metal_trash_can_rust": 1400, "utility_box_01": 600, "utility_box_02": 600, "concrete_road_barrier": 500,
+	"exterior_aircon_unit": 1200, "bench": 2000}
+
+
+## Mesh with the simplest generated LOD that still has at least `tris` triangles per surface (scaled by share).
+static func _reduced(am: ArrayMesh, tris: int) -> ArrayMesh:
+	var total := 0
+	for s in am.get_surface_count():
+		total += am.surface_get_array_index_len(s) / 3 if am.surface_get_array_index_len(s) > 0 else am.surface_get_array_len(s) / 3
+	if total <= tris:
+		return am
+	var im := ImporterMesh.new()
+	for s in am.get_surface_count():
+		var src := am.surface_get_arrays(s)
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		for a in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_TANGENT, Mesh.ARRAY_TEX_UV, Mesh.ARRAY_COLOR, Mesh.ARRAY_INDEX]:
+			arr[a] = src[a]
+		if arr[Mesh.ARRAY_INDEX] == null:
+			var idx := PackedInt32Array()
+			for i in (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+				idx.append(i)
+			arr[Mesh.ARRAY_INDEX] = idx
+		im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, am.surface_get_material(s))
+	im.generate_lods(25.0, 60.0, [])
+	var out := ArrayMesh.new()
+	for s in im.get_surface_count():
+		var arr := im.get_surface_arrays(s)
+		var share := float((arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3) / maxf(total, 1)
+		var want := int(tris * share)
+		var best: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		for l in im.get_surface_lod_count(s):
+			var li := im.get_surface_lod_indices(s, l)
+			if li.size() / 3 >= want and li.size() < best.size():
+				best = li
+		arr[Mesh.ARRAY_INDEX] = best
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		out.surface_set_material(s, im.get_surface_material(s))
+	return out
 
 
 static func _with_lods(am: ArrayMesh) -> ArrayMesh:
@@ -156,6 +196,7 @@ static func _bench() -> Dictionary:
 	for mat: Material in by_mat:
 		(by_mat[mat] as SurfaceTool).commit(am)
 		am.surface_set_material(am.get_surface_count() - 1, mat)
+	am = _reduced(am, BUDGET["bench"])
 	return {"mesh": am, "aabb": AABB(Vector3(-0.92, 0, -0.3), Vector3(1.84, 0.475, 0.6)), "col": ["box"]}
 
 

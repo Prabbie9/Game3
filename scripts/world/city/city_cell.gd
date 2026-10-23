@@ -534,8 +534,46 @@ func _block(r: Rect2, core: bool, ring: int) -> void:
 			_building(lot, CURB_H, rng.randi_range(lo, hi), WALLS[rng.randi() % 4], TINTS[rng.randi() % TINTS.size()], true, rng.randi() % 3)
 
 
-## Facade-shaded box building with cornice roof, rooftop units and collision.
+## Facade-shaded box building with cornice roof, rooftop units and collision. Towers on big lots get a podium
+## and a set-back shaft, and sometimes rooftop water tanks or a mast.
 func _building(lot: Rect2, base_y: float, floors: int, wall: String, tint: Color, storefront: bool, glass: int) -> void:
+	if floors >= 14 and lot.size.x > 24.0 and lot.size.y > 20.0 and rng.randf() < 0.7:
+		var podium := rng.randi_range(3, 5)
+		_box_building(lot, base_y, podium, wall, tint, storefront, glass)
+		var inset := rng.randf_range(3.0, minf(lot.size.x, lot.size.y) * 0.22)
+		var top_y := base_y + 4.2 + float(podium - 1) * 3.3 + 1.2
+		var shaft := lot.grow(-inset)
+		var tw: String = "concrete_tile_facade" if rng.randf() < 0.5 else wall
+		_box_building(shaft, top_y, floors - podium, tw, tint, false, glass)
+		_rooftop(shaft, top_y + float(floors - podium - 1) * 3.3 + 5.4)
+		return
+	_box_building(lot, base_y, floors, wall, tint, storefront, glass)
+	if floors >= 8:
+		_rooftop(lot, base_y + 4.2 + float(floors - 1) * 3.3 + 1.2)
+
+
+func _rooftop(lot: Rect2, top: float) -> void:
+	var roll := rng.randf()
+	var c := lot.get_center()
+	if roll < 0.35:
+		# timber water tank on legs
+		var p := Vector3(c.x + rng.randf_range(-lot.size.x, lot.size.x) * 0.25, top, c.y + rng.randf_range(-lot.size.y, lot.size.y) * 0.25)
+		for sx: float in [-1.0, 1.0]:
+			for sz: float in [-1.0, 1.0]:
+				b.box("metal", p + Vector3(sx * 1.3, 1.0, sz * 1.3), Vector3(0.18, 2.0, 0.18))
+		b.box("piles", p + Vector3(0, 3.4, 0), Vector3(3.2, 2.8, 3.2))
+		b.box("roof", p + Vector3(0, 5.0, 0), Vector3(3.4, 0.4, 3.4))
+	elif roll < 0.55:
+		# antenna mast with a red beacon
+		var p := Vector3(c.x, top, c.y)
+		b.box("metal", p + Vector3(0, 6.0, 0), Vector3(0.4, 12.0, 0.4))
+		b.box("metal", p + Vector3(0, 0.6, 0), Vector3(2.0, 1.2, 2.0))
+	elif roll < 0.75:
+		# lift / plant room
+		b.box("roof", Vector3(c.x, top + 1.8, c.y), Vector3(minf(lot.size.x * 0.4, 10.0), 3.6, minf(lot.size.y * 0.35, 8.0)))
+
+
+func _box_building(lot: Rect2, base_y: float, floors: int, wall: String, tint: Color, storefront: bool, glass: int) -> void:
 	var height := 4.2 + float(floors - 1) * 3.3 + 1.2
 	var tall := floors >= 10
 	var frame: Color = [Color(0.92, 0.91, 0.88), Color(0.25, 0.25, 0.26), Color(0.55, 0.38, 0.28)][rng.randi() % 3]
