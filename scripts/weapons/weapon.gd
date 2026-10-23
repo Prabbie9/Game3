@@ -10,7 +10,7 @@ signal fired
 signal weapon_changed(name: String)
 signal inventory_changed
 
-const SHOT_MASK := 1 | 8 | 16 | 32
+const SHOT_MASK := 1 | 4 | 8 | 16 | 32
 const BLOOM_RECOVER := 1.5
 
 ## Currently selected weapon id (see WeaponDefs.ORDER).
@@ -69,6 +69,9 @@ func setup(player: Player, visual: HumanoidVisual, cam: CameraRig) -> void:
 	add_child(_support)
 	_pose.support_target = _support
 	_hand_ik = visual.install_hand_ik(_support)
+	var pole := _support.get_node("ElbowPole") as Node3D
+	pole.top_level = true
+	_pose.support_pole = pole
 	_muzzle = Node3D.new()
 	add_child(_muzzle)
 	_flash = OmniLight3D.new()
@@ -226,6 +229,9 @@ func _show_model(model_id: String) -> void:
 	_pose.model = _model
 	_pose.mount = WeaponMounts.grip(model_id)
 	_pose.support_local = _model.get_meta("support")
+	var sl: Transform3D = _pose.support_local
+	# elbow: pistol (two-hand grip) as tuned with M2; long guns under and outside the fore-end
+	_pose.pole_local = sl * Vector3(-0.35, -0.45, 0.25) if model_id == "pistol" else sl.origin + Vector3(-0.32, -0.5, 0.18)
 	_muzzle.reparent(_model, false)
 	_muzzle.position = _model.get_meta("muzzle")
 	if _flash.get_parent():
@@ -258,6 +264,7 @@ func _process(delta: float) -> void:
 		elif Input.is_action_just_pressed("weapon_prev"):
 			cycle(-1)
 	_update_drive_by(delta)
+	_update_arc()
 	var shown := (st in [Player.State.ON_FOOT, Player.State.COVER] or (st == Player.State.ACTION and not _player.hands_busy())) \
 			or drive_by
 	if _model:
@@ -318,7 +325,8 @@ func _process(delta: float) -> void:
 
 
 func _trigger(from_vehicle: bool) -> void:
-	var held := Input.is_action_pressed("fire") if data.get("auto", false) else Input.is_action_just_pressed("fire")
+	var act := "vehicle_fire" if from_vehicle else "fire"
+	var held := Input.is_action_pressed(act) if data.get("auto", false) else Input.is_action_just_pressed(act)
 	if not held or _cooldown > 0.0:
 		return
 	if not from_vehicle and _player.aim_weight < 0.8:
@@ -326,7 +334,7 @@ func _trigger(from_vehicle: bool) -> void:
 	if in_mag <= 0:
 		if reserve > 0:
 			_start_reload()
-		elif Input.is_action_just_pressed("fire"):
+		elif Input.is_action_just_pressed(act):
 			Audio.play_at(Audio.stream("weapons/dry_fire.ogg"), _muzzle.global_position, -8.0)
 			_cooldown = 0.25
 		return
@@ -381,6 +389,7 @@ func _fire() -> void:
 	if int(a[0]) <= 0 and int(a[1]) > 0 and data.kind == "launcher":
 		_start_reload()
 	Game.noise(_player.global_position, 60.0 if data.kind != "launcher" else 120.0, _player)
+	Game.crime("shooting", _player.global_position)
 
 
 func _cone(radius: float) -> Vector3:
@@ -481,6 +490,75 @@ func _throw() -> void:
 	_player.face_camera()
 
 
+func _throw_start() -> Vector3:
+	return _player.global_position + Vector3(0, 1.7, 0) + _player.global_basis.x * 0.25
+
+
+## Lob: forward along the view, pitched up a little more than the camera.
+func _throw_velocity() -> Vector3:
+	var aim := -_cam.camera.global_basis.z
+	var flat := Vector3(aim.x, 0, aim.z).normalized()
+	var a := clampf(_cam.pitch + 0.35, -0.6, 1.2)
+	return (flat * cos(a) + Vector3.UP * sin(a)).normalized() * 15.0 + _player.velocity * 0.5
+
+
+var _arc: MultiMeshInstance3D
+
+
+## While aiming a grenade: dots along the predicted flight, ending where it first lands.
+func _update_arc() -> void:
+	var show := current == "grenade" and in_mag > 0 and _player.aiming and _player.state == Player.State.ON_FOOT and _throw_t < 0.0
+	if not show:
+		if _arc:
+			_arc.visible = false
+		return
+	if _arc == null:
+		_arc = MultiMeshInstance3D.new()
+		_arc.top_level = true
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		var sm := SphereMesh.new()
+		sm.radius = 0.035
+		sm.height = 0.07
+		sm.radial_segments = 6
+		sm.rings = 3
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(1.0, 0.85, 0.5)
+		sm.material = m
+		mm.mesh = sm
+		mm.instance_count = 40
+		_arc.multimesh = mm
+		_arc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_arc)
+	_arc.visible = true
+	_arc.global_transform = Transform3D.IDENTITY
+	var mm := _arc.multimesh
+	var p := _throw_start()
+	var v := _throw_velocity()
+	var space := get_world_3d().direct_space_state
+	var g := float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
+	var n := 0
+	var landed := false
+	for i in 80:
+		var nxt := p + v * 0.03
+		v.y -= g * 0.03
+		var q := PhysicsRayQueryParameters3D.create(p, nxt, 1 | 8 | 16)
+		var hit := space.intersect_ray(q)
+		if hit:
+			nxt = hit.position
+			landed = true
+		if i % 2 == 0 or landed:
+			if n < mm.instance_count:
+				var sc := 2.2 if landed else 1.0
+				mm.set_instance_transform(n, Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * sc), nxt))
+				n += 1
+		p = nxt
+		if landed:
+			break
+	mm.visible_instance_count = n
+
+
 func _release_grenade() -> void:
 	var a: Array = ammo[current]
 	if int(a[0]) <= 0:
@@ -491,13 +569,9 @@ func _release_grenade() -> void:
 	g.source = _player
 	g.damage = float(data.damage)
 	get_tree().current_scene.add_child(g)
-	var start := _model.global_position if _model else _player.global_position + Vector3(0, 1.6, 0)
-	var aim := -_cam.camera.global_basis.z
-	var flat := Vector3(aim.x, 0, aim.z).normalized()
-	# lob: forward along the view, pitched up a little more than the camera
-	var dir := (flat * cos(_cam.pitch + 0.35) + Vector3.UP * sin(_cam.pitch + 0.35)).normalized()
+	var start := _throw_start()
 	g.global_position = start
-	g.linear_velocity = dir * 15.0 + _player.velocity * 0.5
+	g.linear_velocity = _throw_velocity()
 	g.angular_velocity = Vector3(randf_range(-8, 8), randf_range(-4, 4), randf_range(-8, 8))
 	g.add_collision_exception_with(_player)
 	Audio.play_at(Audio.pick("weapons/swing_%d.ogg", 3), start, -10.0, 1.2)
@@ -556,7 +630,7 @@ func _drive_by_weapon() -> String:
 
 func _update_drive_by(delta: float) -> void:
 	var seated := _player.state == Player.State.DRIVING and _player.vehicle and not (_player.vehicle is Helicopter)
-	var want := seated and Game.controls_enabled and Input.is_action_pressed("aim") and not WeaponWheel.open
+	var want := seated and Game.controls_enabled and Input.is_action_pressed("vehicle_aim") and not WeaponWheel.open
 	if want and not drive_by:
 		var id := _drive_by_weapon()
 		if id == "":

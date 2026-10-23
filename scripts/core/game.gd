@@ -5,6 +5,9 @@ signal money_changed(amount: int)
 signal notify(text: String)
 ## Something loud happened (gunfire, explosions): pedestrians and police react within `radius` metres.
 signal noise_made(pos: Vector3, radius: float, source: Node)
+## The player broke the law (kind: "assault", "murder", "shooting", "theft", "carjack", "hit_pedestrian",
+## "attack_police", ...): the wanted system (Milestone 7) listens.
+signal crime_committed(kind: String, pos: Vector3)
 
 var player: Node3D
 var world: Node3D
@@ -75,6 +78,10 @@ func _exit_tree() -> void:
 	VehicleDamage.release()
 	NPCDriver.release()
 	Explosion.release()
+
+
+func crime(kind: String, pos: Vector3) -> void:
+	crime_committed.emit(kind, pos)
 
 
 func noise(pos: Vector3, radius: float, source: Node = null) -> void:

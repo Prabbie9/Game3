@@ -58,4 +58,15 @@
 - 2026-10-23 — Audio sources are CC0/CC-BY from OpenGameArt and Kenney (freesound/pixabay are blocked here); the raw
   files stay out of the repo (tools/audio/build_audio.py re-fetches them), processed files are committed.
 - 2026-10-23 — ASSET_CREDITS.md now ships in the release zip (CC-BY attribution for players).
-
+- 2026-10-23 — Weapons are placed by a SkeletonModifier (AimPose) from the current frame's hand pose instead of a
+  BoneAttachment (one frame late, so the support hand swam on the fore-end); TwoBoneIK only reaches positions, so a
+  BoneOrient modifier turns the support wrist to the grip.
+- 2026-10-23 — Bullets stop at a character's capsule only if the ray also passes through a limb capsule built from
+  the skeleton (ray_test); otherwise the trace continues. Head = x3, limbs = x0.6. No per-bone physics bodies.
+- 2026-10-23 — Drive-by has its own actions (vehicle_aim / vehicle_fire: RMB/LMB, LB/X) because the pad's triggers
+  are throttle and brake in vehicles.
+- 2026-10-23 — The gun shop is a hand-built interior on a lot the city generator leaves empty (WorldData.RESERVED),
+  across the street from the start, so the first shop is found without a map.
+- 2026-10-23 — Traffic follows a lane graph derived from the road graph at load (50 ms), right-hand traffic, two
+  signal phases per town junction; AI drives real VehicleBody3D cars through Vehicle.ai_* inputs (same physics as
+  the player's car, so crashes, damage and carjacking just work).

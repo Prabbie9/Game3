@@ -239,7 +239,8 @@ func _on_foot(delta: float) -> void:
 	# feet adapt to the ground when grounded; lighter while sprinting so strides stay natural
 	foot_ik.weight = clampf(1.0 - (speed - visual.run_speed) / 3.0, 0.4, 1.0) if on_floor and _jump_timer < 0.0 else 0.0
 	var local := global_basis.inverse() * velocity
-	visual.set_aim(Vector2(local.x, -local.z), aim_weight)
+	# grenades are aimed with the camera only (the arm stays free for the throw)
+	visual.set_aim(Vector2(local.x, -local.z), aim_weight if weapon.data.kind != "throw" else 0.0)
 	cam.mode = CameraRig.Mode.AIM if aiming else CameraRig.Mode.ON_FOOT
 	cam.zoom_fov = weapon.zoom_fov() if aiming else 0.0
 	cam.crouch = crouched
@@ -277,6 +278,8 @@ func _nearest_vehicle() -> Vehicle:
 		var npc := v.driver is NPCDriver and (v.driver as NPCDriver).state == NPCDriver.State.SEATED
 		if v.driver != null and not npc:
 			continue
+		if npc and v.linear_velocity.length() > 2.5:
+			continue  # can't pull someone out of a moving car
 		var d := global_position.distance_to(v.driver_door_position())
 		if d < best_d:
 			best = v
@@ -896,6 +899,18 @@ func _respawn() -> void:
 	state = State.ON_FOOT
 	visual.jump_to("ground")
 	Game.message("You woke up a little bruised.")
+
+
+## Hit by a vehicle (not the one we're in): knocked flying.
+func struck_by_vehicle(v: Vehicle, vel: Vector3) -> void:
+	if v == vehicle or state in [State.DEAD, State.RAGDOLL, State.DRIVING, State.ENTERING, State.EXITING]:
+		return
+	var closing := (vel - velocity).length()
+	if closing < 4.0:
+		return
+	take_damage((closing - 3.5) * 5.0, v)
+	if state != State.DEAD and state != State.RAGDOLL:
+		go_ragdoll(vel * 0.9 + Vector3.UP * (2.0 + closing * 0.12))
 
 
 func heal(amount: float) -> void:

@@ -18,6 +18,9 @@ var mount := Transform3D.IDENTITY
 ## Left-hand IK target (top-level) and its transform relative to the weapon root.
 var support_target: Node3D
 var support_local := Transform3D.IDENTITY
+## The support arm's elbow pole and where it sits in weapon space (below and outside the fore-end).
+var support_pole: Node3D
+var pole_local := Vector3(-0.3, -0.5, 0.2)
 ## Drive-by: the gun's transform in skeleton space (the arm IK has already brought the hand there) and its
 ## weight; the hand is turned to hold it.
 var drive_xf := Transform3D.IDENTITY
@@ -59,3 +62,5 @@ func _process_modification_with_delta(_delta: float) -> void:
 		model.global_transform = hand * mount
 		if support_target:
 			support_target.global_transform = model.global_transform * support_local
+		if support_pole:
+			support_pole.global_position = model.global_transform * pole_local

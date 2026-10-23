@@ -43,9 +43,9 @@ func _ready() -> void:
 	add_child(_body)
 	_shape(Vector3((X0 + X1) * 0.5, y1 - 0.12, (Z0 + Z1) * 0.5), Vector3(X1 - X0, 0.24, Z1 - Z0))
 	# back and side walls (brick outside, plaster inside)
-	_solid_wall(Vector3(X0, y0, Z0), Vector3(X1, y0, Z0), false)
-	_solid_wall(Vector3(X0, y0, Z1), Vector3(X0, y0, Z0), false)
-	_solid_wall(Vector3(X1, y0, Z0), Vector3(X1, y0, Z1), false)
+	_solid_wall(Vector3(X1, y0, Z0), Vector3(X0, y0, Z0))
+	_solid_wall(Vector3(X0, y0, Z0), Vector3(X0, y0, Z1))
+	_solid_wall(Vector3(X1, y0, Z1), Vector3(X1, y0, Z0))
 	# street wall: pieces around the door and the two shop windows
 	var xs := [X0, WINDOWS[0][0], WINDOWS[0][1], DOOR[0], DOOR[1], WINDOWS[1][0], WINDOWS[1][1], X1]
 	for i in xs.size() - 1:
@@ -153,10 +153,10 @@ func _material(city: City, key: String) -> Material:
 
 
 ## A full-height wall from a to b (seen from outside, left to right): brick outside, plaster inside, collision.
-func _solid_wall(a: Vector3, c: Vector3, _unused: bool) -> void:
+func _solid_wall(a: Vector3, c: Vector3) -> void:
 	var b := MeshBatch.new()
 	var d := (c - a).normalized()
-	var n := Vector3(d.z, 0, -d.x)  # outward
+	var n := Vector3(-d.z, 0, d.x)  # outward (a -> c runs left to right seen from outside)
 	b.wall("ext", a + n * T * 0.5, c + n * T * 0.5, H)
 	b.wall("int", c - n * T * 0.5, a - n * T * 0.5, H - 0.3)
 	_add_batch(b)
@@ -302,7 +302,7 @@ func _spawn_clerk() -> void:
 	clerk.stay_put = true
 	add_child(clerk)
 	clerk.global_position = Vector3(23.0, _base + 0.02, COUNTER_Z - 1.0)
-	clerk.rotation.y = 0.0
+	clerk.rotation.y = PI  # facing the door
 	_clerk_gone_t = 0.0
 	_spawned_once = true
 

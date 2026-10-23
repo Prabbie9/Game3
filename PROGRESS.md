@@ -28,6 +28,7 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   as `PortSolano.x86_64` next to a symlink of `build/PortSolano/PortSolano.pck` and run
   `xvfb-run -a ./PortSolano.x86_64 -- --smoke` (must print `SMOKE TEST PASSED`, exit 0). Wine 9 crashes on start-up
   in this container (page fault inside ntdll), so the Linux template + same .pck is the boot check.
+- `... -- res://tests/weapons_check.gd`, `lane_graph_check.gd`, `traffic_check.gd` (traffic not in the world yet).
 - `... -- res://tests/asset_check.gd` — characters textured, all clips resolve (also runs in CI before export).
 - After a release: download the zip (`gh api repos/Prabbie9/Game3/releases/tags/vX`), smoke-test its pck, and compare
   `tools/pck_list.py` against the local build.
@@ -106,16 +107,39 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Checks: vehicle_classes_check, parked_check, damage_check, audio_check, air_sea_check, bike_check, carjack_check;
   `tests/showroom.gd OUT [models]` renders every model; screenshots `parked`, `signals`, `bike`.
 
-**Next: Milestone 5 — Combat** (see docs/PLAN.md): 9 weapon types, weapon wheel, recoil/spread, hand IK grip,
-per-surface impacts, decals, ragdoll deaths, headshots, pickups, gun shop, drive-by. Weapons have no sound yet.
+**Milestone 5 — Combat: DONE (v0.5.0)**
+- Weapons (WeaponDefs, Weapon): fists, knife, bat, pistol, SMG, shotgun (8 pellets), assault rifle, sniper rifle
+  (scope, 12° zoom), rocket launcher (Rocket projectile), grenades (Grenade rigid body, 3 s fuse, trajectory arc
+  while aiming). Inventory with per-weapon magazine/reserve, reloads (upper-body clips), recoil, spread + bloom
+  shown by the crosshair, hit marker, dry fire. Weapon wheel (hold Tab / LB, slow motion), wheel/D-pad cycling.
+- Models: Sketchfab CC-BY/CC0 glTFs baked by tools/dev/bake_weapons.gd (xvfb) into assets/models/weapons/*.scn
+  (origin at the grip, barrel -Z, Muzzle/Support markers). AimPose (SkeletonModifier) bends the spine with the aim
+  pitch and places the gun on the right hand + the support target every frame; left-hand TwoBoneIK + BoneOrient
+  hold long guns by the fore-end. Rifle carry/aim blend spaces mixed in by stance; upper-body OneShot layer.
+- Damage: bullets traced against limbs (Pedestrian.ray_test: head ×3, limbs ×0.6, shots past the body miss),
+  per-surface impacts and sounds, blood (spray, pool), ragdoll deaths pushed by the shot, knock-downs that get up,
+  hit reactions, fleeing from gunfire (Game.noise_made). Explosion helper (fireball, scorch, shock wave) shared by
+  vehicles, rockets and grenades. Vehicles knock people down (struck_by_vehicle) instead of stopping dead.
+- Drive-by (vehicle_aim RMB/LB + vehicle_fire LMB/X): pistol or SMG out of the window, arm IK, works on bikes.
+- Gun shop (GunShop, ShopMenu): walk-in store across the street from the start (lot reserved in WorldData),
+  clerk, racked weapons, counter turntable preview, buy weapons/ammo/armour. Pickups (Pickup) for every weapon,
+  health, armour and cash around the map. Gamepad aim assist (Game.aim_assist). Crimes are reported through
+  Game.crime_committed for the wanted system.
+- Checks: tests/weapons_check.gd (every weapon, head/miss, reload, knife, rocket, grenade, drive-by, pickup, shop);
+  screenshots `weapons` / `wpn_<id>` (each weapon relaxed and aimed).
+
+**Next: Milestone 6 — Population** (started): LaneGraph (scripts/traffic/lane_graph.gd: lanes both ways, junction
+connectors, two-phase signals at town junctions; tests/lane_graph_check.gd) and TrafficManager (pure-pursuit AI
+drivers, signals, give way, gaps, lane changes around stopped cars, honking, panic; tests/traffic_check.gd) are
+written but not yet added to the World. To do: traffic light props, tune junction turns (box trucks stall), sidewalk
+graph + walking pedestrians with variety (more Mixamo characters at 1K textures), idle behaviours (phone, sitting,
+talking), crossings, reactions/panic spread/calling police, emergency services responding.
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
 - Wheels sit ~4 cm low on the road (suspension/visual offset; tyres look slightly loaded — kept).
-- Fire engine front wheel arch shows a little of the merged mesh's liner around the cut-out wheel.
 - NPC drivers only wait in parked cars and flee straight away when jacked (traffic/pedestrian AI is Milestone 6).
 - Bus/fire engine have no passenger door and are entered from the driver side like cars.
-- Pistol and punches: no gunshot sound yet (weapon audio comes with Milestone 5).
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).
 - Props are solid but not breakable yet (Milestone 9).
@@ -129,3 +153,4 @@ per-surface impacts, decals, ragdoll deaths, headshots, pickups, gun shop, drive
 | v0.2.0 | 2 — player polish | GitHub Release |
 | v0.3.0 | 3 — world expansion | GitHub Release |
 | v0.4.0 | 4 — vehicles | GitHub Release |
+| v0.5.0 | 5 — combat | GitHub Release |

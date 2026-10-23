@@ -59,6 +59,14 @@ const RED_RPM := 6800.0
 @export var vehicle_mass := 1450.0
 
 var driver: Node = null
+var _bounds := AABB()
+var _strike_q: PhysicsShapeQueryParameters3D
+## AI driving (traffic, police): used instead of the player's controls while ai_drive is on.
+var ai_drive := false
+var ai_throttle := 0.0
+var ai_brake := 0.0
+var ai_steer := 0.0      # -1 right .. 1 left, like the steer_left/steer_right axis
+var ai_handbrake := false
 var camera_distance := 6.5
 var camera_height := 1.7
 var input_enabled := false
@@ -128,6 +136,7 @@ func _build() -> void:
 	var data := CarLibrary.get_model(model)
 	var aabb: AABB = data.aabb
 	_size = aabb.size
+	_bounds = aabb
 	damage = VehicleDamage.new()
 	damage.name = "Damage"
 	add_child(damage)
@@ -454,6 +463,11 @@ func set_headlights(on: bool) -> void:
 ## Velocity jumps that aren't the car's own driving are collisions: accumulate one collision's change over its
 ## ticks, then dent the body where it was hit (opposite the push) and play the impact.
 func _detect_impact(delta: float) -> void:
+	if freeze:
+		_prev_vel = Vector3.ZERO
+		_jolt = Vector3.ZERO
+		_jolt_ticks = 0
+		return
 	var dv := linear_velocity - _prev_vel
 	_prev_vel = linear_velocity
 	dv.y += 9.8 * delta
@@ -492,6 +506,24 @@ func _detect_impact(delta: float) -> void:
 		var cam: CameraRig = Game.player.get("cam")
 		if cam:
 			cam.shake = maxf(cam.shake, clampf(strength / 14.0, 0.0, 1.6))
+
+
+## Moving at speed: anyone just ahead of the bumpers (on foot) is knocked down rather than stopping the car
+## dead like a post. Their ragdoll still collides with the body.
+func _strike_people() -> void:
+	if _strike_q == null:
+		_strike_q = PhysicsShapeQueryParameters3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = _bounds.size + Vector3(0.3, -0.3, 0.6)
+		_strike_q.shape = bs
+		_strike_q.collision_mask = 2 | 4
+	var v := linear_velocity
+	var lead := v * (1.0 / 30.0)
+	_strike_q.transform = Transform3D(global_basis, global_transform * _bounds.get_center() + lead + Vector3(0, 0.15, 0))
+	for r: Dictionary in get_world_3d().direct_space_state.intersect_shape(_strike_q, 6):
+		var b: Object = r.collider
+		if b and b.has_method("struck_by_vehicle"):
+			b.struck_by_vehicle(self, v)
 
 
 ## Gunfire (Weapon calls this with the hit point and direction).
@@ -630,6 +662,8 @@ func speed_kmh() -> float:
 
 func _physics_process(delta: float) -> void:
 	_detect_impact(delta)
+	if linear_velocity.length_squared() > 9.0:
+		_strike_people()
 	# parked and at rest: apply no forces at all so the physics engine can put the body to sleep
 	if indicator != Blinker.OFF:
 		_blink += delta
@@ -682,6 +716,11 @@ func _physics_process(delta: float) -> void:
 			set_indicator(Blinker.OFF if indicator == Blinker.RIGHT else Blinker.RIGHT)
 		if Input.is_action_just_pressed("hazards"):
 			set_indicator(Blinker.OFF if indicator == Blinker.HAZARD else Blinker.HAZARD)
+	elif ai_drive:
+		throttle = ai_throttle
+		brake_in = ai_brake
+		steer_in = ai_steer
+		handbrake = ai_handbrake
 
 	# brake pedal reverses once (almost) stopped
 	if engine_dead:
@@ -698,6 +737,10 @@ func _physics_process(delta: float) -> void:
 	if throttle > 0.05 and fwd_speed < -1.0:
 		braking = throttle
 		drive = 0.0
+	if ai_drive:
+		# AI: the brake only brakes (it holds the car at a standstill); reverse is a negative throttle
+		braking = brake_in
+		drive = throttle if brake_in <= 0.05 else 0.0
 	_throttle = move_toward(_throttle, drive, delta * 3.0)
 	# automatic gearbox: pick the gear for this speed, engine pull falls off with gear and near the redline
 	var v := absf(fwd_speed)
@@ -732,7 +775,7 @@ func _physics_process(delta: float) -> void:
 	braking_now = braking > 0.05 or (handbrake and v > 1.0)
 	reversing = _throttle < -0.05
 	# nobody at the controls (parked, or a driver getting in/out): hold the car firmly
-	brake = braking * max_brake if input_enabled else max_brake
+	brake = braking * max_brake if input_enabled or ai_drive else max_brake
 
 	var steer_limit := max_steer / (1.0 + absf(fwd_speed) / 5.5)
 	var steer_rate := 2.6 if absf(steer_in) > 0.01 else 4.0

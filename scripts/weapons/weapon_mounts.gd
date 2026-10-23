@@ -12,6 +12,8 @@ static var PISTOL_SUPPORT := Transform3D(Basis.from_euler(Vector3(0, deg_to_rad(
 
 ## Knife, bat (handle across the fist, blade/barrel out of the thumb side) and grenade (in the palm).
 static var BLADE_GRIP := Transform3D(Basis(Vector3(0, 0, -1), Vector3(0, -1, 0), Vector3(-1, 0, 0)), Vector3(0.0, 0.08, 0.03))
+## Bat: the same fist grip, the barrel angled 45 degrees toward the fingers so it hangs forward and down.
+static var BAT_GRIP := Transform3D(Basis(Vector3(0, 0, -1), Vector3(0.7071, -0.7071, 0), Vector3(-0.7071, -0.7071, 0)), Vector3(0.0, 0.08, 0.03))
 static var PALM_GRIP := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.085, 0.045))
 
 ## Long guns: right hand on the pistol grip, left hand under the fore-end (palm up, fingers round the left side).
@@ -23,8 +25,10 @@ static func grip(model: String) -> Transform3D:
 	match model:
 		"pistol":
 			return PISTOL_GRIP
-		"knife", "bat":
+		"knife":
 			return BLADE_GRIP
+		"bat":
+			return BAT_GRIP
 		"grenade":
 			return PALM_GRIP
 	return LONG_GRIP

@@ -51,7 +51,7 @@ const SINGLE := {
 	"bus": {"file": DIR + "town_bus/scene.gltf", "scale": 0.092, "forward": Vector3(1, 0, 0),
 		"wheel_meshes": ["Object_10", "Object_11", "Object_12", "Object_14"], "hub_meshes": ["Object_13", "Object_15"], "paint": ""},
 	"firetruck": {"file": DIR + "fire_truck/scene.gltf", "scale": 4.4, "forward": Vector3(0, 0, 1),
-		"cut_wheels": [[-0.522, -0.277, 0.124, 0.12], [0.415, -0.278, 0.124, 0.035]], "paint": "",
+		"cut_wheels": [[-0.472, -0.272, 0.124, 0.12, 1.06], [0.415, -0.278, 0.124, 0.035]], "paint": "",
 		"beacon_boxes": [[Vector3(-0.85, 3.02, -3.05), Vector3(0.5, 0.16, 0.22)], [Vector3(0.85, 3.02, -3.05), Vector3(0.5, 0.16, 0.22)]]},
 	# no wheels: framed on the bounding box (origin under its centre). spin: parts that rotate (axis in car frame)
 	"heli": {"file": DIR + "police_heli/scene.gltf", "scale": 4.5, "forward": Vector3(0, 0, 1), "paint": "",
@@ -513,7 +513,8 @@ static func _cut_wheels(mi: MeshInstance3D, specs: Array) -> Array:
 				var side := 0.0
 				for k in 3:
 					var p := v[idx[t + k]]
-					if Vector2(p.y - sp[0], p.z - sp[1]).length() < sp[2] * 1.14 and absf(p.x) > sp[3]:
+					# optional 5th value: how far out (x radius) to take triangles; past the tyre is the arch liner
+					if Vector2(p.y - sp[0], p.z - sp[1]).length() < sp[2] * (float(sp[4]) if sp.size() > 4 else 1.14) and absf(p.x) > sp[3]:
 						inside += 1
 						side += p.x
 				if inside == 3:

@@ -84,6 +84,21 @@ func _run() -> void:
 				await get_tree().process_frame
 			await RenderingServer.frame_post_draw
 			get_tree().root.get_texture().get_image().save_png(out.path_join("%s_%s.png" % [m, view[0]]))
+		if OS.get_environment("HIDE_WHEELS") != "":
+			for w: VehicleWheel3D in v._wheels:
+				for ch in w.get_children():
+					if ch is Node3D:
+						(ch as Node3D).visible = false
+		# close-up of the front-left wheel (cut-out wheels, arches)
+		for w: VehicleWheel3D in v._wheels:
+			if w.use_as_steering and w.position.x < 0.0:
+				var wp := w.global_position
+				cam.look_at_from_position(wp - v.global_basis.x * 2.2 + v.global_basis.z * 0.6 + Vector3(0, 0.25, 0), wp)
+				for i in 8:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				get_tree().root.get_texture().get_image().save_png(out.path_join("%s_wheel.png" % m))
+				break
 		print("shot ", m)
 		v.queue_free()
 		await get_tree().process_frame

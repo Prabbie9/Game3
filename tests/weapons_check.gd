@@ -44,12 +44,12 @@ func _aim_at(target: Vector3) -> void:
 		p.cam.pitch = atan2(to.y, Vector2(to.x, to.z).length())
 
 
-func _shoot(n := 1) -> void:
+func _shoot(n := 1, act := "fire") -> void:
 	for i in n:
-		Input.action_press("fire")
+		Input.action_press(act)
 		await get_tree().process_frame
 		await get_tree().process_frame
-		Input.action_release("fire")
+		Input.action_release(act)
 		await _secs(maxf(float(p.weapon.data.get("interval", 0.2)) + 0.05, 0.1))
 
 
@@ -116,6 +116,7 @@ func _run() -> void:
 	await _secs(0.4)
 	Input.action_press("reload")
 	await get_tree().process_frame
+	await get_tree().process_frame
 	Input.action_release("reload")
 	_check(p.weapon.reloading(), "reload starts (mag %d)" % before)
 	await _secs(1.8)
@@ -150,9 +151,15 @@ func _run() -> void:
 	# --- grenade
 	p.weapon.select("grenade")
 	var n0 := p.weapon.in_mag
-	var ped4 := await _ped(base + Vector3(0, 0, -8.0), 0.0)
+	var ped4 := await _ped(base + Vector3(0, 0, -15.0), 0.0)
 	p.cam.yaw = 0.0
 	p.cam.pitch = -0.2
+	Input.action_press("aim")
+	await _secs(0.4)
+	var arc: MultiMeshInstance3D = p.weapon._arc
+	_check(arc != null and arc.visible and arc.multimesh.visible_instance_count > 5, "grenade arc shows while aiming (%d dots)" % (arc.multimesh.visible_instance_count if arc else 0))
+	Input.action_release("aim")
+	await _secs(0.2)
 	await _shoot(1)
 	await _secs(1.0)
 	_check(p.weapon.in_mag == n0 - 1, "grenade thrown (%d left)" % p.weapon.in_mag)
@@ -175,17 +182,22 @@ func _run() -> void:
 	await _secs(0.5)
 	p.weapon.select("smg")
 	var smg0 := p.weapon.in_mag
-	Input.action_press("aim")
+	Input.action_press("vehicle_aim")
 	await _secs(0.5)
 	_check(p.weapon.drive_by, "aiming from the seat")
 	p.cam.yaw = dc.rotation.y + PI * 0.5
-	await _shoot(3)
+	await _shoot(3, "vehicle_fire")
 	_check(p.weapon.in_mag < smg0, "drive-by fires (%d -> %d)" % [smg0, p.weapon.in_mag])
-	Input.action_release("aim")
+	Input.action_release("vehicle_aim")
 	await _secs(0.3)
 	_check(not p.weapon.drive_by, "stops aiming")
 	p.exit_vehicle()
-	await _secs(4.0)
+	t = 0.0
+	while p.state != Player.State.ON_FOOT and t < 10.0:
+		await _secs(0.25)
+		t += 0.25
+	_check(p.state == Player.State.ON_FOOT, "out of the car again")
+	await _secs(0.5)
 
 	# --- pickups and the shop
 	var pk := Pickup.make(Pickup.Kind.ARMOR)

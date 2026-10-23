@@ -32,6 +32,11 @@ static func parked_cars() -> int:
 	return [16, 22, 30, 38][mini(preset, 3)] if preset != Preset.CUSTOM else 30
 
 
+## How many moving traffic cars are kept around the player.
+static func traffic_cars() -> int:
+	return [8, 12, 16, 22][mini(preset, 3)] if preset != Preset.CUSTOM else 16
+
+
 static func ensure_loaded() -> void:
 	if _loaded:
 		return

@@ -200,9 +200,10 @@ func _run() -> void:
 				continue
 			p.weapon.give(id)
 			p.weapon.select(id)
-			p.global_position = Vector3(58, 0.2, 30)
-			p.rotation.y = PI
-			p.cam.yaw = PI
+			# on the pavement by the start, the road in front
+			p.global_position = Vector3(30.0, 0.2, 8.6)
+			p.rotation.y = PI * 0.5
+			p.cam.yaw = PI * 0.5
 			p.cam.pitch = -0.05
 			for aim in [false, true]:
 				if aim:
@@ -221,6 +222,18 @@ func _run() -> void:
 				Input.action_release("aim")
 				Game.controls_enabled = false
 			await _frames(6)
+	if _want("shop"):
+		# the gun shop from the street, then inside at the counter
+		for view: Array in [["shop_front", Vector3(30.0, 1.7, -2.0), Vector3(23.0, 2.2, -12.0)], ["shop_inside", Vector3(25.5, 1.65, -13.2), Vector3(22.0, 1.3, -21.0)]]:
+			var c := Camera3D.new()
+			world.add_child(c)
+			c.look_at_from_position(view[1], view[2])
+			c.fov = 62
+			c.make_current()
+			await _frames(16)
+			await _snap(view[0])
+			c.queue_free()
+		p.cam.camera.make_current()
 	if _want("pool"):
 		var pl: Array = world.data.pool
 		var pr := Rect2(pl[0], pl[1], pl[2] - pl[0], pl[3] - pl[1])

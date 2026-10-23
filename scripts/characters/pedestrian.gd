@@ -7,7 +7,7 @@ extends CharacterBody3D
 
 signal died(ped: Pedestrian)
 
-enum State { IDLE, WALK, HIT, FLEE, DEAD }
+enum State { IDLE, WALK, HIT, FLEE, DEAD, DOWN, GETUP }
 
 const GRAVITY := 18.0
 const RUN := 4.6
@@ -38,6 +38,7 @@ var _flee_from := Vector3.ZERO
 var _dead_t := 0.0
 var _bones := {}
 var _killer: Node
+var _getup_len := 2.0
 
 
 func _ready() -> void:
@@ -90,7 +91,12 @@ func ray_test(from: Vector3, dir: Vector3) -> Dictionary:
 		var b := a + (a - _bone_pos("Neck")).normalized() * 0.12 if seg[1] == "" else _bone_pos(seg[1])
 		var r: float = seg[2]
 		var hit := _ray_capsule(from, dir, a, b, r)
-		if hit >= 0.0 and hit < best_t:
+		if hit < 0.0:
+			continue
+		# the torso capsules round off above the shoulders; a ray through the skull counts as the head
+		if seg[3] == "head" and hit < best_t + 0.3:
+			return {"pos": from + dir * hit, "zone": "head"}
+		if hit < best_t:
 			best_t = hit
 			best = {"pos": from + dir * hit, "zone": seg[3]}
 	return best
@@ -140,23 +146,73 @@ func take_damage(amount: float, from: Node = null) -> void:
 
 ## Knocked over (a car hit, an explosion) without necessarily dying.
 func go_ragdoll(vel: Vector3, _impulse := Vector3.ZERO) -> void:
-	if state == State.DEAD:
+	if state == State.DEAD or state == State.DOWN:
 		return
-	_die(vel, "")
+	_knock_down(vel)
+
+
+## Hit by a vehicle: damage from the closing speed, thrown along with the bonnet.
+func struck_by_vehicle(v: Vehicle, vel: Vector3) -> void:
+	if state == State.DEAD or state == State.DOWN:
+		return
+	var closing := (vel - velocity).length()
+	if closing < 3.0:
+		return
+	var who: Node = v.driver if v.driver else v
+	_hurt((closing - 2.5) * 7.0, who, vel * 1.1 + Vector3.UP * (2.0 + closing * 0.15), global_position + Vector3(0, 0.9, 0), "blast")
+	Audio.play_at(Audio.pick("vehicles/bump_%d.ogg", 3), global_position + Vector3(0, 0.8, 0), clampf(-8.0 + closing, -8.0, 4.0), randf_range(0.8, 1.0))
+	if who == Game.player:
+		Game.crime("hit_pedestrian", global_position)
+
+
+func _knock_down(push: Vector3) -> void:
+	state = State.DOWN
+	_t = 0.0
+	collision_layer = 0
+	collision_mask = 0
+	ragdoll.start(velocity + push * 0.5, Vector3.ZERO)
+	if push.length() > 0.1:
+		ragdoll.push("Chest", push * 4.0)
+	Audio.play_at(Audio.stream("player/body_fall.ogg"), global_position + Vector3(0, 0.5, 0), -8.0, randf_range(0.9, 1.1))
+
+
+func _get_up() -> void:
+	var down := ragdoll.face_down()
+	var hx := ragdoll.hips_transform()
+	ragdoll.stop()
+	var fwd := hx.basis.y
+	fwd.y = 0.0
+	var at := hx.origin
+	var q := PhysicsRayQueryParameters3D.create(at + Vector3(0, 0.5, 0), at + Vector3(0, -2.0, 0), 1 | 8 | 16)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	global_position = hit.position if hit else Vector3(at.x, at.y - 0.2, at.z)
+	if fwd.length() > 0.1:
+		rotation.y = atan2(fwd.x, fwd.z) + (0.0 if down else PI)
+	collision_layer = 4
+	collision_mask = 1 | 8 | 16
+	velocity = Vector3.ZERO
+	var clip := "get_up_front" if down else "get_up_back"
+	visual.jump_to(clip)
+	state = State.GETUP
+	_t = 0.0
+	_getup_len = visual.action_duration(clip)
 
 
 func _hurt(amount: float, from: Node, push: Vector3, at: Vector3, zone: String) -> void:
 	if state == State.DEAD:
 		return
 	health -= amount
-	if from == Game.player and Game.hud and Game.hud.has_method("hit_marker"):
-		Game.hud.hit_marker(health <= 0.0)
+	if from == Game.player:
+		if Game.hud and Game.hud.has_method("hit_marker") and zone != "blast":
+			Game.hud.hit_marker(health <= 0.0)
+		Game.crime("murder" if health <= 0.0 else "assault", global_position)
 	if health <= 0.0:
 		_killer = from
 		_die(push, "Head" if zone == "head" else "")
 		return
 	if zone == "blast":
-		_die(push, "")
+		_flee_from = from.global_position if from is Node3D else at
+		_knock_down(push)
 		return
 	# flinch, then run from whoever did it
 	state = State.HIT
@@ -167,12 +223,14 @@ func _hurt(amount: float, from: Node, push: Vector3, at: Vector3, zone: String) 
 
 
 func _die(push: Vector3, bone: String) -> void:
+	var was_down := state == State.DOWN
 	state = State.DEAD
 	_dead_t = 0.0
 	collision_layer = 0
 	collision_mask = 0
 	remove_from_group("aim_targets")
-	ragdoll.start(velocity + push * 0.35, Vector3.ZERO)
+	if not was_down:
+		ragdoll.start(velocity + push * 0.35, Vector3.ZERO)
 	if push.length() > 0.1:
 		ragdoll.push(bone if bone != "" else "Chest", push * 6.0)
 	Audio.play_at(Audio.stream("player/body_fall.ogg"), global_position + Vector3(0, 0.5, 0), -6.0, randf_range(0.9, 1.1))
@@ -228,6 +286,16 @@ func _physics_process(delta: float) -> void:
 				var seen := cam and cam.is_position_in_frustum(global_position) and cam.global_position.distance_to(global_position) < 80.0
 				if not seen or _dead_t > 90.0:
 					queue_free()
+			return
+		State.DOWN:
+			if (_t > 1.6 and ragdoll.hips_speed() < 0.4) or _t > 6.0:
+				_get_up()
+			return
+		State.GETUP:
+			if _t >= _getup_len - 0.1:
+				state = State.IDLE if stay_put else State.FLEE
+				_t = 0.0
+				visual.travel("ground")
 			return
 		State.HIT:
 			if _t > 0.7:

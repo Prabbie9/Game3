@@ -13,6 +13,18 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.5.0 — Milestone 5 combat
+- [ ] Hold Tab (LB): the weapon wheel opens, time slows, mouse/right stick picks; does it feel quick enough?
+- [ ] Walk into the gun shop across the street from the start, press F at the counter, buy a rifle and armour.
+- [ ] Aim each gun (RMB/LT): both hands on long guns, body follows the aim up/down, gun not clipping the face.
+      Send a screenshot of anything that looks off (wrist angles on the fore-end were tuned blind).
+- [ ] Fire every gun: sound, recoil and crosshair spread feel right? Sniper scope zoom and mouse speed OK?
+- [ ] Shoot a pedestrian on the plaza in the head / body / past the shoulder; ragdoll, blood pool, others run.
+- [ ] Throw a grenade (the arc shows while aiming), fire a rocket at a parked car: blast, scorch, chain fires.
+- [ ] In a car/bike: hold RMB (LB) and fire with LMB (X) out of the window. Pad users: is LB/X comfortable?
+- [ ] Drive into a pedestrian (they should be thrown and get back up if they survive).
+- [ ] GPU frame time while lots is going on (explosions + smoke) on Medium/High.
+
 ## v0.4.0 — Milestone 4 vehicles
 Download `PortSolano-v0.4.0-windows-x86_64.zip` from the Releases page, unzip, run `PortSolano.exe`.
 

@@ -9,7 +9,7 @@ const CONTROLS := [
 	["VEHICLE", ""],
 	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
 	["Indicators / hazards", "indicator_left|indicator_right|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
-	["Shoot from the window", "aim|fire"], ["Exit vehicle", "interact"],
+	["Shoot from the window", "vehicle_aim|vehicle_fire"], ["Exit vehicle", "interact"],
 ]
 
 var _root: Control
