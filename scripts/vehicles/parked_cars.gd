@@ -13,9 +13,12 @@ const GRID := 64.0
 const KERB_GAP := 6.6          # kerbside slot pitch (m)
 const KERB_ODDS := {"street": 0.42, "residential": 0.3}
 const LOT_ODDS := {"parking": 0.55, "mall": 0.5, "gas_station": 0.25, "industrial": 0.35, "port_sheds": 0.3, "container_yard": 0.15}
-const URBAN_MODELS := ["sedan", "sedan", "hatchback", "hatchback", "compact", "compact", "wagon", "suv", "coupe", "minivan", "pickup", "sport"]
+const URBAN_MODELS := ["sedan", "sedan", "hatchback", "hatchback", "compact", "compact", "wagon", "suv", "coupe", "minivan", "pickup", "sport",
+	"muscle", "van", "sedan", "hatchback"]
+## kerbside only (too wide for a painted bay)
+const KERB_EXTRA := ["boxtruck", "van"]
 const SUBURB_MODELS := ["suv", "suv", "minivan", "minivan", "wagon", "sedan", "hatchback", "pickup", "offroad", "compact"]
-const WORK_MODELS := ["pickup", "pickup", "pickup", "offroad", "suv", "sedan", "wagon", "minivan"]
+const WORK_MODELS := ["pickup", "pickup", "pickup", "offroad", "suv", "sedan", "wagon", "minivan", "van", "van"]
 
 var max_active := 30
 var _slots: Array = []         # [Vector3 pos (road surface), float yaw, String model, Color paint]
@@ -24,6 +27,7 @@ var _active := {}              # slot id -> Vehicle sitting in it
 var _taken := {}               # slot id -> Vehicle that was moved off it (slot stays empty)
 var _want: Array = []          # slot ids that should have a car, nearest first
 var _scan := 0.0
+var _reserved: Array = []     # [Vector3, radius]: kept clear (helipad, boat ramp)
 var _fill_in := -1             # frames until a full fill (new collision needs a physics step to be queryable)
 
 
@@ -60,7 +64,8 @@ func _kerb_slots(r: int, rd: Dictionary, net: RoadNet) -> void:
 			var pos := p + Vector3(rt.x, 0, rt.y) * off
 			# cars face the direction of travel of their side of the road (forward is -Z)
 			var dir := f * side
-			_add_slot(pos, atan2(-dir.x, -dir.y) + rng.randf_range(-0.03, 0.03), models[rng.randi() % models.size()], CarLibrary.random_paint(rng))
+			var m: String = models[rng.randi() % models.size()] if rng.randf() > 0.07 else KERB_EXTRA[rng.randi() % KERB_EXTRA.size()]
+			_add_slot(pos, atan2(-dir.x, -dir.y) + rng.randf_range(-0.03, 0.03), m, CarLibrary.random_paint(rng))
 		s += KERB_GAP
 
 
@@ -108,6 +113,11 @@ static func _along(pts: Array, s: float) -> Array:
 			return [a.lerp(b, t), Vector2(b.x - a.x, b.z - a.z).normalized()]
 		acc += seg
 	return [Vector3(pts[0][0], pts[0][1], pts[0][2]), Vector2(0, -1)]
+
+
+## Keep parked cars out of a circle (where a helicopter stands, say).
+func reserve_area(pos: Vector3, radius: float) -> void:
+	_reserved.append([pos, radius])
 
 
 func slot_count() -> int:
@@ -210,6 +220,10 @@ func _refresh(focus: Vector3) -> void:
 func _spawn(id: int) -> bool:
 	var s: Array = _slots[id]
 	var pos: Vector3 = s[0]
+	for r: Array in _reserved:
+		if Vector2(pos.x - r[0].x, pos.z - r[0].z).length() < r[1]:
+			_taken[id] = null
+			return false
 	var space := get_world_3d().direct_space_state
 	# needs the ground's collision to be streamed in; finds the exact surface height
 	var ray := PhysicsRayQueryParameters3D.create(pos + Vector3(0, 2.5, 0), pos + Vector3(0, -3.0, 0), 1)
@@ -219,7 +233,8 @@ func _spawn(id: int) -> bool:
 	pos.y = hit.position.y
 	# keep clear of buildings, pumps, containers and other cars
 	var box := BoxShape3D.new()
-	box.size = Vector3(2.1, 1.1, 4.9)
+	var size := (CarLibrary.get_model(s[2]).aabb as AABB).size
+	box.size = Vector3(size.x * 0.92, 1.1, size.z + 0.3)
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = box
 	q.transform = Transform3D(Basis(Vector3.UP, s[1]), pos + Vector3(0, 1.0, 0))

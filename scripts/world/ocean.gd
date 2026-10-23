@@ -65,3 +65,28 @@ func follow(cam_pos: Vector3) -> void:
 	var gz := snappedf(cam_pos.z, CELL * 2.0)
 	_grid.global_position = Vector3(gx, level, gz)
 	_apron.global_position = Vector3(gx, level - 0.15, gz)
+
+
+## Water surface height at x/z, matching the wave grid's Gerstner sum (ocean.gdshader) so boats ride the
+## visible swell. Gerstner waves also move water sideways: two fixed-point steps find the surface point above x/z.
+func wave_height(x: float, z: float) -> float:
+	var t := fposmod(Time.get_ticks_msec() / 1000.0, 3600.0)
+	var wet: float = Game.world.weather.wetness if Game.world and Game.world.weather else 0.0
+	var sw: Variant = _mat.get_shader_parameter("swell") if _mat else null
+	var s: float = (0.32 if sw == null else float(sw)) * (1.0 + wet)
+	var p := Vector2(x, z)
+	var off := Vector3.ZERO
+	for i in 2:
+		off = _gerstner(p, Vector2(1.0, 0.35), 61.0, s, 0.5, t) + _gerstner(p, Vector2(0.6, 1.0), 33.0, s * 0.55, 0.45, t) \
+			+ _gerstner(p, Vector2(-0.4, 1.0), 17.0, s * 0.3, 0.4, t)
+		p = Vector2(x, z) - Vector2(off.x, off.z)
+	return level + off.y
+
+
+static func _gerstner(p: Vector2, dir: Vector2, wavelength: float, amp: float, steep: float, t: float) -> Vector3:
+	var k := TAU / wavelength
+	var c := sqrt(9.8 / k)
+	var d := dir.normalized()
+	var f := k * (d.dot(p) - c * t * 0.6)
+	var q := steep / (k * amp * 4.0 + 0.0001)
+	return Vector3(d.x * q * amp * cos(f), amp * sin(f), d.y * q * amp * cos(f))

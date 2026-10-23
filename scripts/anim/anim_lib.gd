@@ -59,7 +59,16 @@ const CLIPS := {
 	"hard_land": ["mid_air_falling_to_a_hard_landing", false, Root.NO_RISE],
 	"hit_head": ["receiving_a_big_hit_from_a_right_punch", false, Root.IN_PLACE],
 	"hit_body": ["receive_punch_to_the_body", false, Root.IN_PLACE],
+	# Milestone 4
+	"pilot": ["pilot_flies_helicopter", true, Root.IN_PLACE],
+	"passenger": ["passenger_jostled_while_sitting_in_a_vehicle", true, Root.IN_PLACE],
+	"carjack": ["pull_pilot_out_of_seat_and_take_the_controls", false, Root.KEEP],
+	"jacked": ["pulled_out_of_pilot_seat", false, Root.KEEP],
+	"thrown": ["being_thrown_to_the_side", false, Root.EXTRACT],
 }
+
+## Mirror images (left/right swapped) of clips: passenger-side entry and exit from the driver-side ones.
+const MIRRORS := {"car_enter_r": "car_enter", "car_exit_r": "car_exit", "carjack_r": "carjack", "jacked_r": "jacked"}
 
 ## Sub-ranges of clips used by the state machine: name -> [start_offset, length] (seconds)
 const WINDOWS := {
@@ -122,7 +131,41 @@ static func get_library() -> AnimationLibrary:
 		anim.loop_mode = Animation.LOOP_LINEAR if c[1] else Animation.LOOP_NONE
 		_process_root(clip_name, anim, c[2])
 		_lib.add_animation(clip_name, anim)
+	for m: String in MIRRORS:
+		var src_name: String = MIRRORS[m]
+		if _lib.has_animation(src_name):
+			_lib.add_animation(m, _mirror(_lib.get_animation(src_name)))
+			if displacement.has(src_name):
+				var d: Vector3 = displacement[src_name]
+				displacement[m] = Vector3(-d.x, d.y, d.z)
+			if yaw_change.has(src_name):
+				yaw_change[m] = -float(yaw_change[src_name])
+			hip_height[m] = hip_height.get(src_name, 0.98)
 	return _lib
+
+
+## Left/right mirror of a humanoid clip (reflection across the character's YZ plane): Left*/Right* bone tracks
+## swap, rotations q -> (x, -y, -z, w), positions x -> -x. Relies on the retargeted skeleton's rests being
+## mirror-symmetric, which SkeletonProfileHumanoid's normalized axes are.
+static func _mirror(src: Animation) -> Animation:
+	var a: Animation = src.duplicate(true)
+	for t in a.get_track_count():
+		var path := String(a.track_get_path(t))
+		var swapped := path
+		if path.contains(":Left"):
+			swapped = path.replace(":Left", ":Right")
+		elif path.contains(":Right"):
+			swapped = path.replace(":Right", ":Left")
+		a.track_set_path(t, NodePath(swapped))
+		var ty := a.track_get_type(t)
+		for k in a.track_get_key_count(t):
+			if ty == Animation.TYPE_ROTATION_3D:
+				var q: Quaternion = a.track_get_key_value(t, k)
+				a.track_set_key_value(t, k, Quaternion(q.x, -q.y, -q.z, q.w))
+			elif ty == Animation.TYPE_POSITION_3D:
+				var p: Vector3 = a.track_get_key_value(t, k)
+				a.track_set_key_value(t, k, Vector3(-p.x, p.y, p.z))
+	return a
 
 
 ## Native speed in m/s of a clip for a skeleton with the given motion scale.

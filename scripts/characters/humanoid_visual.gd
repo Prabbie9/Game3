@@ -115,7 +115,8 @@ func _build_tree() -> void:
 
 	var sm := AnimationNodeStateMachine.new()
 	sm.add_node("ground", ground)
-	for s in ["jump", "jump_run", "fall", "land", "car_enter", "car_exit", "drive"]:
+	for s in ["jump", "jump_run", "fall", "land", "car_enter", "car_exit", "drive",
+			"car_enter_r", "car_exit_r", "passenger", "pilot", "carjack", "jacked", "thrown"]:
 		sm.add_node(s, _anim(s))
 	# looping base states with a 1D blend (speed, or lateral speed for cover)
 	sm.add_node("crouch", _blend1d("crouch", [["crouch_idle", 0.0], ["crouch_walk", crouch_speed]]))
@@ -168,6 +169,29 @@ func _build_tree() -> void:
 	_link(sm, "car_enter", "ground", 0.2)
 	_link(sm, "drive", "ground", 0.2)
 	_link(sm, "ground", "drive", 0.2)
+	# passenger side (mirrored driver clips) and the passenger seat
+	_link(sm, "ground", "car_enter_r", 0.2)
+	_link(sm, "car_enter_r", "passenger", 0.25, true)
+	_link(sm, "passenger", "car_exit_r", 0.2)
+	_link(sm, "car_exit_r", "ground", 0.3, true)
+	_link(sm, "car_enter_r", "ground", 0.2)
+	_link(sm, "passenger", "ground", 0.2)
+	_link(sm, "ground", "passenger", 0.2)
+	# helicopter: the pilot pose instead of the steering-wheel one
+	_link(sm, "car_enter", "pilot", 0.3)
+	_link(sm, "drive", "pilot", 0.3)
+	_link(sm, "pilot", "car_exit", 0.2)
+	_link(sm, "pilot", "ground", 0.2)
+	_link(sm, "ground", "pilot", 0.2)
+	# carjacking: the jacker pulls the driver out and takes the seat; the driver is pulled out
+	_link(sm, "ground", "carjack", 0.2)
+	_link(sm, "carjack", "drive", 0.3, true)
+	_link(sm, "carjack", "ground", 0.2)
+	_link(sm, "drive", "jacked", 0.15)
+	_link(sm, "jacked", "ground", 0.3, true)
+	_link(sm, "jacked", "fall", 0.2)
+	_link(sm, "ground", "thrown", 0.15)
+	_link(sm, "thrown", "ground", 0.3, true)
 
 	tree = AnimationTree.new()
 	tree.name = "AnimationTree"

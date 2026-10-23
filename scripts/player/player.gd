@@ -311,11 +311,16 @@ func exit_vehicle() -> void:
 	visual.travel("car_exit")
 
 
-## Player root transform that puts the drive pose's hips on the vehicle seat.
+## Player root transform that puts the seated pose's hips on the vehicle seat.
 func _seat_root(v: Vehicle) -> Transform3D:
 	var s := v.seat_transform()
-	s.origin -= s.basis.y * visual.clip_hip_height("drive")
+	s.origin -= s.basis.y * visual.clip_hip_height(_seat_clip(v))
 	return s
+
+
+## Seated pose for a vehicle: hands on the cyclic and collective in a helicopter, on the wheel otherwise.
+func _seat_clip(v: Vehicle) -> String:
+	return "pilot" if v is Helicopter and AnimLib.get_library().has_animation("pilot") else "drive"
 
 
 func _sequence(delta: float) -> void:
@@ -332,6 +337,8 @@ func _sequence(delta: float) -> void:
 func _on_action_finished(anim: StringName) -> void:
 	if anim == &"car_enter" and state == State.ENTERING:
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
+		if _seat_clip(vehicle) != "drive":
+			visual.travel(_seat_clip(vehicle))
 		state = State.DRIVING
 		vehicle.set_driver(self)
 		vehicle_changed.emit(vehicle)
@@ -825,6 +832,25 @@ func bail_out(v: Vehicle) -> void:
 		go_ragdoll(away.normalized() * 6.0 + Vector3.UP * 4.0)
 
 
+## Thrown off a bike in a crash: out of the seat at the bike's speed, straight into a ragdoll.
+func thrown_off(v: Vehicle, vel: Vector3) -> void:
+	if vehicle != v:
+		return
+	vehicle = null
+	v.set_driver(null)
+	global_position = v.global_position + Vector3(0, 1.1, 0)
+	collision_layer = 2
+	collision_mask = MASK_ON_FOOT
+	state = State.ON_FOOT
+	cam.mode = CameraRig.Mode.ON_FOOT
+	cam.target = self
+	visual.jump_to("ground")
+	vehicle_changed.emit(null)
+	take_damage(clampf(vel.length() * 1.5, 5.0, 60.0), v)
+	if state != State.DEAD and state != State.RAGDOLL:
+		go_ragdoll(vel + Vector3.UP * 2.0)
+
+
 ## Test/screenshot helper: put the player straight into the driver's seat (no entry animation).
 func debug_seat_in(v: Vehicle) -> void:
 	vehicle = v
@@ -835,7 +861,7 @@ func debug_seat_in(v: Vehicle) -> void:
 	v.reserve(self)
 	_seat_local = v.global_transform.affine_inverse() * _seat_root(v)
 	global_transform = _seat_root(v)
-	visual.jump_to("drive")
+	visual.jump_to(_seat_clip(v))
 	v.set_driver(self)
 	cam.mode = CameraRig.Mode.VEHICLE
 	cam.target = v

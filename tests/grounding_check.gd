@@ -57,6 +57,8 @@ func _run() -> void:
 	# vehicles: all wheels in contact, body not sunk
 	await _frames(60)
 	for v: Vehicle in world.get_tree().get_nodes_in_group("vehicles"):
+		if v._wheels.size() != 4:
+			continue  # helicopters and boats: air_sea_check
 		var contacts := 0
 		for w in v._wheels:
 			if w.is_in_contact():

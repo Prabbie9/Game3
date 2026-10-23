@@ -51,8 +51,21 @@ const SINGLE := {
 	"bus": {"file": DIR + "town_bus/scene.gltf", "scale": 0.092, "forward": Vector3(1, 0, 0),
 		"wheel_meshes": ["Object_10", "Object_11", "Object_12", "Object_14"], "hub_meshes": ["Object_13", "Object_15"], "paint": ""},
 	"firetruck": {"file": DIR + "fire_truck/scene.gltf", "scale": 4.4, "forward": Vector3(0, 0, 1),
-		"cut_wheels": [[-0.522, -0.277, 0.124, 0.14], [0.415, -0.278, 0.124, 0.035]], "paint": "",
+		"cut_wheels": [[-0.522, -0.277, 0.124, 0.12], [0.415, -0.278, 0.124, 0.035]], "paint": "",
 		"beacon_boxes": [[Vector3(-0.85, 3.02, -3.05), Vector3(0.5, 0.16, 0.22)], [Vector3(0.85, 3.02, -3.05), Vector3(0.5, 0.16, 0.22)]]},
+	# no wheels: framed on the bounding box (origin under its centre). spin: parts that rotate (axis in car frame)
+	"heli": {"file": DIR + "police_heli/scene.gltf", "scale": 4.5, "forward": Vector3(0, 0, 1), "paint": "",
+		"spin": {"rotor": Vector3.UP, "tail": Vector3.RIGHT}},
+	"speedboat": {"file": DIR + "speedboat/scene.gltf", "forward": Vector3(0, 0, 1), "paint": ""},
+	# two-wheelers. root_node: use only that subtree (the dirt bike file holds seven bikes). wheel_groups: node names
+	# (dots become underscores in Godot) whose meshes spin as one wheel, the first group is the front wheel.
+	"dirtbike": {"file": DIR + "dirt_bikes/scene.gltf", "root_node": "dirt_bike red", "paint": "",
+		"wheel_groups": [["front_wheel_003"], ["rear_wheel_003"]]},
+	"bicycle": {"file": DIR + "bicycle_yellow/scene.gltf", "scale": 0.0036, "paint": "",
+		"wheel_groups": [["Cylinder_018", "Circle_015", "Cylinder_038", "Cylinder_039", "Cylinder_040", "Cylinder_041", "Cylinder_042",
+			"Cylinder_043", "Cylinder_044", "Cylinder_045", "Cylinder_046", "Cylinder_047", "Cylinder_048", "Cylinder_049", "Cylinder_050"],
+			["Cylinder_017", "Circle_002", "Cylinder_021", "Cylinder_024", "Cylinder_027", "Cylinder_028", "Cylinder_029", "Cylinder_030",
+			"Cylinder_031", "Cylinder_032", "Cylinder_033", "Cylinder_034", "Cylinder_035", "Cylinder_036", "Cylinder_037"]]},
 }
 ## light mesh roles by node name (checked in order), stored in the optics' vertex alpha for car_lights.gdshader
 const ROLES := [["Blinker", 0.5], ["Reverse", 0.7], ["Brakelight", 0.3], ["Taillight", 0.3], ["Headlight", 0.1]]
@@ -270,7 +283,8 @@ static func _extract_single(model: String) -> Dictionary:
 	var root: Node3D = (load(cfg.file) as PackedScene).instantiate()
 	var sc: float = cfg.get("scale", 1.0)
 	var all: Array[MeshInstance3D] = []
-	for mi in root.find_children("*", "MeshInstance3D", true, false):
+	var sub: Node = root.find_child(cfg.root_node, true, false) if cfg.has("root_node") else root
+	for mi in sub.find_children("*", "MeshInstance3D", true, false):
 		all.append(mi)
 	var used := {}
 	var groups := []          # {parts: [[mesh, pack xf]], center, aabb, name}
@@ -287,6 +301,23 @@ static func _extract_single(model: String) -> Dictionary:
 				continue
 			var a := _global_aabb(ms)
 			groups.append({"parts": ms.map(func(m): return [m.mesh, _gxf(m)]), "center": a.get_center(), "aabb": a, "name": String(n.name)})
+	elif cfg.has("wheel_groups"):
+		var gi := 0
+		for names: Array in cfg.wheel_groups:
+			var ms: Array[MeshInstance3D] = []
+			for mi in all:
+				var n: Node = mi
+				while n and n != root:
+					if String(n.name) in names:
+						ms.append(mi)
+						used[mi] = true
+						break
+					n = n.get_parent()
+			if not ms.is_empty():
+				var a := _global_aabb(ms)
+				groups.append({"parts": ms.map(func(m): return [m.mesh, _gxf(m)]), "center": a.get_center(), "aabb": a,
+					"name": "_F" if gi == 0 else "_R"})
+			gi += 1
 	elif cfg.has("wheel_meshes"):
 		for nm: String in cfg.wheel_meshes:
 			var mi: MeshInstance3D = root.find_child(nm, true, false)
@@ -314,6 +345,10 @@ static func _extract_single(model: String) -> Dictionary:
 		fwd = fm / maxf(nf, 1) - rm / maxf(groups.size() - nf, 1)
 	fwd.y = 0
 	fwd = fwd.normalized()
+	if groups.is_empty():
+		# no wheels (aircraft, boats): frame on the overall bounds
+		var bb := _global_aabb(all)
+		groups.append({"parts": [], "center": bb.get_center() - Vector3(0, bb.size.y * 0.5, 0), "aabb": AABB(bb.position, Vector3(0, 0, 0)), "name": "_none"})
 	var along := groups.map(func(g): return (g.center as Vector3).dot(fwd))
 	var lo: float = along.min()
 	var hi: float = along.max()
@@ -345,6 +380,8 @@ static func _extract_single(model: String) -> Dictionary:
 	var optics_mat: Material = null
 	for st: SurfaceTool in optics.values():
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var spinners := []
+	var spin: Dictionary = cfg.get("spin", {})
 	var paint_key: String = cfg.get("paint", "")
 	var beacon_key: String = cfg.get("beacons", "")
 	var body_aabb := AABB()
@@ -355,6 +392,15 @@ static func _extract_single(model: String) -> Dictionary:
 		var xf := car * _gxf(mi)
 		var mesh: Mesh = replaced.get(mi, mi.mesh)
 		var path := _path_name(mi)
+		var spin_axis := Vector3.ZERO
+		for key: String in spin:
+			if path.contains(key):
+				spin_axis = spin[key]
+		if spin_axis != Vector3.ZERO:
+			var c := (xf * mi.get_aabb()).get_center()
+			spinners.append({"mesh": mi.mesh, "xf": Transform3D(Basis.IDENTITY, -c) * xf, "pivot": c, "axis": spin_axis,
+				"radius": (xf * mi.get_aabb()).size.x * 0.5})
+			continue
 		var role := -1.0
 		# the mesh instance itself is named after its material ("..._Lights_and_Glass_0"): judge by its parents
 		if not _path_name(mi.get_parent()).to_lower().contains("glass"):
@@ -398,6 +444,8 @@ static func _extract_single(model: String) -> Dictionary:
 			optic_meshes[k] = m
 	var wheel_data := []
 	for g: Dictionary in groups:
+		if g.name == "_none":
+			continue
 		var c := car * (g.center as Vector3)
 		var wparts := []
 		for pp: Array in g.parts:
@@ -405,7 +453,7 @@ static func _extract_single(model: String) -> Dictionary:
 		wheel_data.append({"pos": c, "radius": (g.aabb as AABB).size.y * 0.5 * sc, "parts": wparts})
 	root.free()
 	return {"parts": parts, "wheels": wheel_data, "aabb": body_aabb, "optics": optic_meshes, "optics_mat": optics_mat,
-		"amber": {"front": true, "rear": true}, "roles": true, "beacon_boxes": cfg.get("beacon_boxes", [])}
+		"amber": {"front": true, "rear": true}, "roles": true, "beacon_boxes": cfg.get("beacon_boxes", []), "spinners": spinners}
 
 
 ## Surface arrays without the custom channels and skinning some files carry (not needed, and they'd need
@@ -465,7 +513,7 @@ static func _cut_wheels(mi: MeshInstance3D, specs: Array) -> Array:
 				var side := 0.0
 				for k in 3:
 					var p := v[idx[t + k]]
-					if Vector2(p.y - sp[0], p.z - sp[1]).length() < sp[2] * 1.06 and absf(p.x) > sp[3]:
+					if Vector2(p.y - sp[0], p.z - sp[1]).length() < sp[2] * 1.14 and absf(p.x) > sp[3]:
 						inside += 1
 						side += p.x
 				if inside == 3:

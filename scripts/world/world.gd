@@ -84,16 +84,30 @@ func _spawn_vehicles() -> void:
 		["hatchback", Vector3(5.2, 0.6, 30.0), PI],
 		["pickup", Vector3(-5.2, 0.6, -36.0), 0.0],
 		["compact", Vector3(46.0, 0.6, -5.2), PI * 0.5],
+		["police", Vector3(-38.0, 0.6, 5.2), -PI * 0.5],
+		["muscle", Vector3(5.2, 0.6, -52.0), 0.0],
+		["ambulance", Vector3(-5.2, 0.6, 52.0), PI],
+		["firetruck", Vector3(-62.0, 0.6, -5.4), PI * 0.5],
+		["bus", Vector3(5.4, 0.6, 58.0), PI],
 	]
-	var names := {"sedan": "Calder Sedan", "sport": "Kestrel GT", "suv": "Vireo Ranger", "hatchback": "Solano Hatch",
-		"pickup": "Hauler 1500", "compact": "Minnow"}
 	for s in spots:
 		var v := Vehicle.new()
 		v.model = s[0]
-		v.display_name = names[s[0]]
 		v.position = s[1]
 		v.rotation.y = s[2]
 		add_child(v)
+	# a police helicopter at the end of the south car park, a speedboat moored beside the pier
+	var pad := Vector3(215.0, 0.0, -447.0)
+	pad.y = data.height_at(pad.x, pad.z) + CityCell.CURB_H + 0.05
+	parked.reserve_area(pad, 9.0)
+	var heli := Helicopter.new()
+	heli.position = pad
+	heli.rotation.y = PI * 0.5
+	add_child(heli)
+	var boat := Boat.new()
+	boat.position = Vector3(-1020.0, data.sea - 0.5, 15.0)
+	boat.rotation.y = PI * 0.5
+	add_child(boat)
 
 
 func _build_environment() -> void:

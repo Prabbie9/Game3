@@ -24,6 +24,8 @@ func _run() -> void:
 	root.add_child(marks)
 	print("CLASS        0-100 km/h   v(12 s)  gear  upright  marks")
 	for model: String in Vehicle.SPECS:
+		if int(Vehicle.SPECS[model].force) == 0:
+			continue  # aircraft and boats have their own checks
 		var v := Vehicle.new()
 		v.model = model
 		v.position = Vector3(0, 0.8, 0)
@@ -54,7 +56,9 @@ func _run() -> void:
 			await get_tree().physics_frame
 		var up := v.global_basis.y.dot(Vector3.UP)
 		var made := posmod(marks._next - m0, SkidMarks.MAX)
-		var ok := t100 > 0.0 and t100 < 12.0 and up > 0.8 and made > 5
+		var heavy: bool = Vehicle.SPECS[model].get("sound", "") == "heavy"
+		var quick_enough := (t100 > 0.0 and t100 < 12.0) if not heavy else v8 > 55.0  # buses and trucks are slow off the line
+		var ok := quick_enough and up > 0.8 and made > 5
 		if not ok:
 			fails += 1
 		print("%-10s   %6s s   %5.0f    %d    %.2f   %4d  %s" % [model, ("%.1f" % t100) if t100 > 0 else "  -", v8, g, up, made, "" if ok else "FAIL"])

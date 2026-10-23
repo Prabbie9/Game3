@@ -28,11 +28,19 @@ const SPECS := {
 		"sound": "heavy", "seat_z": 1.45, "seat_y": 0.33},
 	"firetruck": {"mass": 13500, "force": 31000, "top": 30.0, "steer": 0.48, "grip": 2.35, "stiff": 50.0, "travel": 0.24, "drive": "rwd", "name": "Fire Engine",
 		"sound": "heavy", "seat_z": 1.35, "seat_y": 0.37, "siren": true},
+	"dirtbike": {"mass": 165, "force": 1350, "top": 42.0, "steer": 0.5, "grip": 2.9, "stiff": 30.0, "travel": 0.22, "drive": "rwd",
+		"name": "Ridgeback 450", "seat_z": 1.0, "seat_y": 0.72},
+	"bicycle": {"mass": 22, "force": 120, "top": 11.0, "steer": 0.55, "grip": 2.6, "stiff": 30.0, "travel": 0.08, "drive": "rwd",
+		"name": "Seaside Cruiser", "seat_z": 0.9, "seat_y": 0.78, "sound": "none"},
+	"heli": {"mass": 2600, "force": 0, "top": 60.0, "steer": 0.0, "grip": 1.0, "stiff": 40.0, "travel": 0.2, "drive": "rwd",
+		"name": "Skywatch Police Helicopter", "seat_z": 3.1, "seat_y": 0.28},
+	"speedboat": {"mass": 1800, "force": 0, "top": 24.0, "steer": 0.0, "grip": 1.0, "stiff": 40.0, "travel": 0.2, "drive": "rwd",
+		"name": "Squalo Speedboat", "seat_z": 4.75, "seat_y": 0.52},
 }
 ## Engine sound character per body (small engines rev higher); heavy vehicles use the diesel loops.
 const ENGINE_PITCH := {"compact": 1.18, "hatchback": 1.12, "sedan": 0.96, "wagon": 0.94, "coupe": 1.05, "sport": 1.08,
 	"suv": 0.86, "minivan": 0.92, "pickup": 0.8, "offroad": 0.84, "muscle": 0.8, "police": 0.86, "van": 0.85, "ambulance": 0.86,
-	"boxtruck": 1.0, "bus": 0.92, "firetruck": 0.96}
+	"boxtruck": 1.0, "bus": 0.92, "firetruck": 0.96, "speedboat": 0.74, "dirtbike": 1.35}
 const GEARS := [0.2, 0.36, 0.53, 0.7, 0.86, 1.0]   # top speed fraction reached at the redline in each gear
 const GEAR_PULL := [1.55, 1.25, 1.05, 0.9, 0.78, 0.68]
 const IDLE_RPM := 850.0
@@ -91,6 +99,8 @@ var engine_dead := false
 var _prev_vel := Vector3.ZERO
 var _jolt := Vector3.ZERO     # velocity change accumulated over the ticks of one collision
 var _jolt_ticks := 0
+var _last_strength := 0.0
+var _last_jolt := Vector3.ZERO
 var _lit_was := false
 
 
@@ -141,6 +151,16 @@ func _build() -> void:
 			damage.materials.append(sm)
 			mi.set_surface_override_material(s, sm)
 		add_child(mi)
+	# rotors and other spinning parts: a pivot node per part (the subclass turns it)
+	for sp: Dictionary in data.get("spinners", []):
+		var pivot := Node3D.new()
+		pivot.position = sp.pivot
+		pivot.set_meta("spin_axis", sp.axis)
+		var smi := MeshInstance3D.new()
+		smi.mesh = sp.mesh
+		smi.transform = sp.xf
+		pivot.add_child(smi)
+		add_child(pivot)
 	for bb: Array in data.get("beacon_boxes", []):
 		var bm := MeshInstance3D.new()
 		var box_mesh := BoxMesh.new()
@@ -152,19 +172,7 @@ func _build() -> void:
 		bm.material_override = sm
 		damage.materials.append(sm)
 		add_child(bm)
-	# collision: convex hull of the body (one per mesh part is overkill; use the main body part)
-	var hull := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(aabb.size.x * 0.96, aabb.size.y * 0.55, aabb.size.z * 0.97)
-	hull.shape = box
-	hull.position = aabb.get_center() + Vector3(0, -aabb.size.y * 0.12, 0)
-	add_child(hull)
-	var cabin := CollisionShape3D.new()
-	var cbox := BoxShape3D.new()
-	cbox.size = Vector3(aabb.size.x * 0.8, aabb.size.y * 0.42, aabb.size.z * 0.5)
-	cabin.shape = cbox
-	cabin.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.25, -aabb.size.z * 0.03)
-	add_child(cabin)
+	_make_collision(aabb)
 	center_of_mass = Vector3(0, aabb.position.y + 0.08, 0)
 
 	for w in data.wheels:
@@ -459,6 +467,8 @@ func _detect_impact(delta: float) -> void:
 	_jolt = Vector3.ZERO
 	_jolt_ticks = 0
 	var strength := j.length()
+	_last_strength = strength
+	_last_jolt = j
 	if strength < 2.5:
 		return
 	var local := global_basis.inverse() * j
@@ -529,6 +539,22 @@ func _on_wrecked() -> void:
 		driver.bail_out(self)
 
 
+## Car bodies: a box for the lower body (above the wheels, which carry the car) and one for the cabin.
+func _make_collision(aabb: AABB) -> void:
+	var hull := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(aabb.size.x * 0.96, aabb.size.y * 0.55, aabb.size.z * 0.97)
+	hull.shape = box
+	hull.position = aabb.get_center() + Vector3(0, -aabb.size.y * 0.12, 0)
+	add_child(hull)
+	var cabin := CollisionShape3D.new()
+	var cbox := BoxShape3D.new()
+	cbox.size = Vector3(aabb.size.x * 0.8, aabb.size.y * 0.42, aabb.size.z * 0.5)
+	cabin.shape = cbox
+	cabin.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.25, -aabb.size.z * 0.03)
+	add_child(cabin)
+
+
 func driver_door_position() -> Vector3:
 	return global_transform * _door
 
@@ -562,7 +588,7 @@ func set_driver(who: Node) -> void:
 		horn_on = false
 		if audio:
 			audio.stop()
-	elif not engine_dead:
+	elif not engine_dead and SPECS.get(model, SPECS.sedan).get("sound", "car") != "none":
 		if audio == null:
 			audio = VehicleAudio.new()
 			audio.name = "Audio"
@@ -701,16 +727,20 @@ func _physics_process(delta: float) -> void:
 				w.brake = max_brake * 0.8
 	# downforce keeps it planted at speed
 	apply_central_force(-global_basis.y * linear_velocity.length_squared() * 1.6)
-	# arcade anti-roll: resist roll/pitch away from upright (weaker when airborne so jumps still tumble)
 	var grounded := 0
 	for w in _wheels:
 		if w.is_in_contact():
 			grounded += 1
+	_stabilize(delta, grounded, fwd_speed)
+	_update_tyres(v, handbrake)
+	_update_lights()
+
+
+## Arcade anti-roll: resist roll/pitch away from upright (weaker when airborne so jumps still tumble).
+func _stabilize(_delta: float, grounded: int, _fwd_speed: float) -> void:
 	var tilt := global_basis.y.cross(Vector3.UP)
 	var k := 16.0 if grounded >= 2 else 1.5
 	apply_torque(tilt * mass * k - (angular_velocity - global_basis.y * angular_velocity.dot(global_basis.y)) * mass * 0.6)
-	_update_tyres(v, handbrake)
-	_update_lights()
 
 
 func _go_idle() -> void:
