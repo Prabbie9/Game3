@@ -41,9 +41,16 @@ def get_model(uid, dest, used_for):
     zipfile.ZipFile(io.BytesIO(data)).extractall(d)
     path = os.path.join(ROOT, "ASSET_CREDITS.md")
     url = info["viewerUrl"]
-    if url not in open(path).read():
-        with open(path, "a") as f:
-            f.write(f"| {info['name']} (Sketchfab) | {used_for} | {info['user']['displayName']} ({info['user']['username']}) | {url} | {ALLOWED[lic]} |\n")
+    text = open(path).read()
+    if url not in text:
+        row = f"| {info['name']} (Sketchfab) | {used_for} | {info['user']['displayName']} ({info['user']['username']}) | {url} | {ALLOWED[lic]} |"
+        # the model table ends where the sounds section starts
+        if "\n## Sounds" in text:
+            head, tail = text.split("\n## Sounds", 1)
+            text = head.rstrip("\n") + "\n" + row + "\n\n## Sounds" + tail
+        else:
+            text = text.rstrip("\n") + "\n" + row + "\n"
+        open(path, "w").write(text)
     print(f"{info['name']}: {info['faceCount']} faces, license {ALLOWED[lic]} -> {dest}")
 
 

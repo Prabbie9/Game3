@@ -30,3 +30,7 @@ Real FPS: waiting for the owner's benchmark report (OWNER_TEST_CHECKLIST.md).
 | 2026-10-23 | v0.3.0 | downtown aerial | 313 (+440) | 1.57 M | far cells as one-material stand-ins |
 | 2026-10-23 | v0.3.0 | hills (oaks) | 172 (+163) | 0.47 M | oak/jacaranda/palm impostors beyond 130 m |
 | 2026-10-23 | v0.3.0 | stream_check (headless, 45 m/s) | — | — | p99 7.7 ms, worst 17 ms main-thread frame |
+| 2026-10-23 | v0.4.0 | street with parked cars (software render) | 416 (+830) | 2.03 M | ~25 parked cars; idle cars sleep (no physics cost) |
+| 2026-10-23 | v0.4.0 | car park (software render) | 320 (+1128) | 1.59 M | cars are the shadow-draw cost here |
+| 2026-10-23 | v0.4.0 | stream_check (headless, 45 m/s) | — | — | p99 11 ms, worst 24–36 ms; NPC characters load on threads, car models extract at load |
+Parked car budget by preset: 16 / 22 / 30 / 38; at most 3 NPC drivers around. Vehicle build ≈1 ms.

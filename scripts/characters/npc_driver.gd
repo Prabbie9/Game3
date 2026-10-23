@@ -17,6 +17,32 @@ var _end := Transform3D()
 var _flee_dir := Vector3.FORWARD
 
 
+static var _scenes := {}   # character -> PackedScene, kept so the loader cache never drops them
+
+
+## Start loading the NPC characters on background threads (they take ~1 s each to load from disk).
+static func preload_characters() -> void:
+	for c: String in CHARACTERS:
+		var path := HumanoidVisual.CHAR_PATH % c
+		if not _scenes.has(c) and ResourceLoader.load_threaded_request(path) == OK:
+			_scenes[c] = null
+
+
+## True once a character is in memory (spawning before that would stall the frame).
+static func is_ready(character: String) -> bool:
+	if _scenes.get(character) != null:
+		return true
+	var path := HumanoidVisual.CHAR_PATH % character
+	if _scenes.has(character) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+		_scenes[character] = ResourceLoader.load_threaded_get(path)
+		return true
+	return false
+
+
+static func release() -> void:
+	_scenes.clear()
+
+
 static func seat_in(v: Vehicle, character: String) -> NPCDriver:
 	var n := NPCDriver.new()
 	n.vehicle = v

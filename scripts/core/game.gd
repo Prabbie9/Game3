@@ -68,6 +68,7 @@ func _exit_tree() -> void:
 	PropCatalog.release()
 	Audio.release()
 	VehicleDamage.release()
+	NPCDriver.release()
 
 
 func message(text: String) -> void:

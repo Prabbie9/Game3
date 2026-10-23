@@ -54,6 +54,7 @@ func _ready() -> void:
 	parked.name = "ParkedCars"
 	add_child(parked)
 	parked.setup(data, city.net)
+	parked.warm_models()
 	parked.max_active = GraphicsSettings.parked_cars()
 	warm_up(spawn)
 	_spawn_vehicles()

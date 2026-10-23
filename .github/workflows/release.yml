@@ -100,6 +100,7 @@ jobs:
           test -s build/PortSolano/PortSolano.exe
           test -s build/PortSolano/PortSolano.pck
           cp OWNER_TEST_CHECKLIST.md build/PortSolano/ || true
+          cp ASSET_CREDITS.md build/PortSolano/
           cd build && zip -r -q PortSolano-${{ steps.ver.outputs.tag }}-windows-x86_64.zip PortSolano
 
       - name: Publish GitHub Release

@@ -13,6 +13,20 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.4.0 — Milestone 4 vehicles
+Download `PortSolano-v0.4.0-windows-x86_64.zip` from the Releases page, unzip, run `PortSolano.exe`.
+
+1. **Benchmark:** Graphics HIGH → Benchmark and paste the report (parked cars now line the route).
+2. **Drive a few classes** near the start: sedan, sports car, muscle car (south), police cruiser (west; tap H for the
+   siren), ambulance, fire engine, the bus, the dirt bike and bicycle on the pavement. Tell me which ones feel
+   wrong (too twitchy, too slow, rolls over too easily, brakes too hard).
+3. **Crash something** into a wall a few times: does the damage look right? Keep going until it burns and blows up.
+4. **Sound:** is the engine believable when you rev and change gear? Too loud/quiet relative to everything else?
+5. **Carjack** a car with someone at the wheel (they wait in some parked cars, engine running): walk to the driver's
+   door and press F.
+6. **Helicopter** (south car park, east end; open the map, M): Space climbs, Ctrl descends, W/S pitch, A/D turn.
+   **Boat**: moored at the end of the pier on the beach. How do they feel?
+
 ## v0.3.0 — Milestone 3 world expansion
 Download `PortSolano-v0.3.0-windows-x86_64.zip` from the Releases page, unzip, run `PortSolano.exe`.
 

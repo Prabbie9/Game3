@@ -33,6 +33,16 @@ var _reserved: Array = []     # [Vector3, radius]: kept clear (helipad, boat ram
 var _fill_in := -1             # frames until a full fill (new collision needs a physics step to be queryable)
 
 
+## Extract every model the slots use now (during loading) rather than on first sight (~0.1 s each).
+func warm_models() -> void:
+	var seen := {}
+	for sl: Array in _slots:
+		if not seen.has(sl[2]):
+			seen[sl[2]] = true
+			CarLibrary.get_model(sl[2])
+	NPCDriver.preload_characters()
+
+
 func setup(data: WorldData, net: RoadNet) -> void:
 	for r in data.roads.size():
 		var rd: Dictionary = data.roads[r]
@@ -254,8 +264,9 @@ func _spawn(id: int) -> bool:
 	add_child(v)
 	_active[id] = v
 	# now and then someone waits at the wheel with the engine running (carjackable)
-	if _occupied() < MAX_OCCUPIED and hash(id * 31 + 7) % 100 < OCCUPIED_PCT and v.has_passenger_door():
-		NPCDriver.seat_in(v, NPCDriver.CHARACTERS[hash(id) % NPCDriver.CHARACTERS.size()])
+	var who: String = NPCDriver.CHARACTERS[hash(id) % NPCDriver.CHARACTERS.size()]
+	if _occupied() < MAX_OCCUPIED and hash(id * 31 + 7) % 100 < OCCUPIED_PCT and v.has_passenger_door() and NPCDriver.is_ready(who):
+		NPCDriver.seat_in(v, who)
 	return true
 
 

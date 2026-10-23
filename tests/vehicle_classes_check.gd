@@ -24,8 +24,8 @@ func _run() -> void:
 	root.add_child(marks)
 	print("CLASS        0-100 km/h   v(12 s)  gear  upright  marks")
 	for model: String in Vehicle.SPECS:
-		if int(Vehicle.SPECS[model].force) == 0:
-			continue  # aircraft and boats have their own checks
+		if int(Vehicle.SPECS[model].force) == 0 or Vehicle.SPECS[model].has("rider"):
+			continue  # aircraft, boats and bikes have their own checks
 		var v := Vehicle.new()
 		v.model = model
 		v.position = Vector3(0, 0.8, 0)

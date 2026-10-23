@@ -39,3 +39,23 @@
   is moved to the lamps nearest the camera.
 - 2026-10-23 — Trees: Sketchfab CC-BY jacaranda/oak (≈10k faces) rather than Poly Haven's scanned trees
   (200–900 MB of geometry). Vegetation gets runtime LODs (ImporterMesh.generate_lods) and is grouped per 64 m.
+- 2026-10-23 — Vehicle sources: the generic car pack plus single CC-BY glTFs with fictional names (Daniel Zhabotinsky's
+  low-poly series for muscle/police/van/ambulance/box truck; generic bus, fire engine, bikes, boat, helicopter).
+  Models with real brands or real fire-department lettering (e.g. FDNY) were skipped. Textures capped at 2K
+  (interiors/metal maps 1K).
+- 2026-10-23 — Crash damage is a vertex-shader deformation (8 dents per car as uniforms in the car frame, shared by
+  body, glass and lamp materials) rather than CPU mesh edits: free per frame, no mesh copies, works on shared meshes.
+- 2026-10-23 — Engine sound: recorded CC0 loops (idle/low/high) crossfaded by rpm with a compressed pitch curve
+  (pitch = (rpm/ref)^0.72) because the recordings cover a narrow rpm band; heavy vehicles use a diesel set.
+- 2026-10-23 — Bikes are VehicleBody3D with two wheels and a lean controller. Its corrections are torque impulses:
+  assigning angular_velocity from script overwrites the tyre impulses VehicleBody3D applies in its state callback
+  (turns lost all yaw). Lean target comes from the steering (v·tan(steer)/wheelbase), not the measured yaw rate,
+  which would hold a lean forever.
+- 2026-10-23 — Carjack uses Mixamo's helicopter pair ("Pull Pilot Out Of Seat And Take The Controls" / "Pulled Out Of
+  Pilot Seat"), sped up 1.6x/1.3x; passenger-side entry/exit are runtime mirrors of the driver clips (Left/Right
+  tracks swapped, q → (x,-y,-z,w)), which the normalized humanoid rests allow. Three Mixamo characters now ship
+  for NPC drivers (pck grows accordingly).
+- 2026-10-23 — Audio sources are CC0/CC-BY from OpenGameArt and Kenney (freesound/pixabay are blocked here); the raw
+  files stay out of the repo (tools/audio/build_audio.py re-fetches them), processed files are committed.
+- 2026-10-23 — ASSET_CREDITS.md now ships in the release zip (CC-BY attribution for players).
+

@@ -82,12 +82,40 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   Street furniture uses baked reduced meshes; vegetation is grouped per 64 m with LODs and picture-card impostors.
 - Vehicles far from the streamed area are frozen; collision always stays loaded around the player.
 
-**Next: Milestone 4 — Vehicles** (see docs/PLAN.md): all classes (compact…helicopter, boat, bike), per-class handling,
-enter/exit/passenger/carjack animations, damage, lights/indicators, skid marks, engine audio, vehicle cameras.
+**Milestone 4 — Vehicles: DONE (v0.4.0)**
+- 19 vehicles. Generic car pack (10 cars) + one glTF each for muscle, police, van, ambulance, box truck, bus, fire
+  engine (Sketchfab CC-BY), dirt bike, bicycle, speedboat, police helicopter. `CarLibrary.SINGLE` configures each:
+  scale, nose direction, wheels (node names / mesh names + hubs / cylinders cut out of a merged mesh), light meshes
+  by role, glass, paintable body, light bar. Every surface gets a dentable shader (car_body.gdshaderinc).
+- Handling per class (Vehicle.SPECS): mass, power, top speed, grip, suspension, drive; automatic gearbox with rpm;
+  speed-sensitive steering, handbrake drifts, anti-roll; heavy vehicles slower off the line, brakes scale with mass.
+- Bike (Bike): lean controller (lean for the turn the steering asks for), side stand, falls after crashes and throws
+  the rider; rider pose by IK (arms to grips, legs to pegs / turning pedals). Helicopter: spin-up, hover-holding
+  collective, pitch/bank/yaw, autorotating descent. Boat: floats on Ocean.wave_height (CPU mirror of the shader
+  swell), stern thrust, rudder, wake.
+- Lights: headlights (auto at night), tail/brake/reverse, indicators/hazards on the amber lenses (Z/X/B), emergency
+  light bars + siren (tap H). Skid marks + tyre smoke. Cameras: chase / far / hood / cinematic (V), look behind (E).
+- Damage (VehicleDamage): shader dents from crash jolts, smashed lamps, cracked/shattered glass, engine health →
+  smoke → fire → explosion (shock wave) → burnt wreck; bullets crack glass/lights.
+- Audio (Audio autoload, VehicleAudio): rpm-crossfaded engine loops, heavy diesel set, tyre squeal, horn, siren,
+  indicator relay, doors, start/stop, impacts, explosions, fire; footsteps by surface, punches, splash, rain.
+  `tools/audio/build_audio.py` fetches/processes the CC0/CC-BY sources into assets/audio.
+- Parked cars (ParkedCars): deterministic kerb/bay slots from the road graph and car parks, spawned around the focus
+  (budget by preset), paint variety, NPC drivers waiting in a few (carjackable). Idle vehicles sleep.
+- Carjacking (paired Mixamo pull-out clips, retimed) and passenger-side entry (mirrored driver clips + slide over).
+- Checks: vehicle_classes_check, parked_check, damage_check, audio_check, air_sea_check, bike_check, carjack_check;
+  `tests/showroom.gd OUT [models]` renders every model; screenshots `parked`, `signals`, `bike`.
+
+**Next: Milestone 5 — Combat** (see docs/PLAN.md): 9 weapon types, weapon wheel, recoil/spread, hand IK grip,
+per-surface impacts, decals, ragdoll deaths, headshots, pickups, gun shop, drive-by. Weapons have no sound yet.
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
-- Wheels sit ~4 cm low on the road (suspension/visual offset) — check in M4 handling pass.
+- Wheels sit ~4 cm low on the road (suspension/visual offset; tyres look slightly loaded — kept).
+- Fire engine front wheel arch shows a little of the merged mesh's liner around the cut-out wheel.
+- NPC drivers only wait in parked cars and flee straight away when jacked (traffic/pedestrian AI is Milestone 6).
+- Bus/fire engine have no passenger door and are entered from the driver side like cars.
+- Pistol and punches: no gunshot sound yet (weapon audio comes with Milestone 5).
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).
 - Props are solid but not breakable yet (Milestone 9).
@@ -100,3 +128,4 @@ enter/exit/passenger/carjack animations, damage, lights/indicators, skid marks, 
 | v0.1.1 | 1 — vertical slice hotfix | GitHub Release (workflow runs on release.txt change) |
 | v0.2.0 | 2 — player polish | GitHub Release |
 | v0.3.0 | 3 — world expansion | GitHub Release |
+| v0.4.0 | 4 — vehicles | GitHub Release |
