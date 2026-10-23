@@ -222,6 +222,20 @@ func _run() -> void:
 				Input.action_release("aim")
 				Game.controls_enabled = false
 			await _frames(6)
+	if _want("street"):
+		# street life: a junction near the start with traffic, signals and people (let things populate first)
+		for i in 900:
+			await get_tree().physics_frame
+		for view: Array in [["street_junction", Vector3(10.5, 1.8, 9.5), Vector3(-6.0, 0.6, -6.0)], ["street_pavement", Vector3(60.0, 1.7, 10.5), Vector3(85.0, 1.0, 8.0)]]:
+			var c := Camera3D.new()
+			world.add_child(c)
+			c.look_at_from_position(view[1], view[2])
+			c.fov = 60
+			c.make_current()
+			await _frames(12)
+			await _snap(view[0])
+			c.queue_free()
+		p.cam.camera.make_current()
 	if _want("shop"):
 		# the gun shop from the street, then inside at the counter
 		for view: Array in [["shop_front", Vector3(30.0, 1.7, -2.0), Vector3(23.0, 2.2, -12.0)], ["shop_inside", Vector3(25.5, 1.65, -13.2), Vector3(22.0, 1.3, -21.0)]]:

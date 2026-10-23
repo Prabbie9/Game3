@@ -70,3 +70,13 @@
 - 2026-10-23 — Traffic follows a lane graph derived from the road graph at load (50 ms), right-hand traffic, two
   signal phases per town junction; AI drives real VehicleBody3D cars through Vehicle.ai_* inputs (same physics as
   the player's car, so crashes, damage and carjacking just work).
+- 2026-10-23 — Pedestrians walk a pavement graph (WalkGraph: both kerbs of every walkable road, corner links,
+  zebra crossings at town junctions) instead of a navmesh: the city is procedural and streamed, the graph costs
+  25 ms to build for the whole island and gives crossings and signal timing for free.
+- 2026-10-23 — 14 Mixamo characters (7 women with their own walk/idle/run clips) serve as pedestrians, drivers,
+  clerks and crews; the least-used character is picked for each spawn so streets don't fill with clones.
+- 2026-10-23 — Mixamo characters embed 4096² textures (~50 MB video memory each); a post-import script
+  (tools/import/character_post_import.gd) downsizes them to 1024 (pedestrians) / 2048 (player).
+- 2026-10-23 — Emergency services are ordinary traffic cars on a planned lane route (Dijkstra over the lane
+  graph) with siren/priority; an ambulance's paramedic revives the dead or injured, a fire engine's crew puts out
+  burning cars. They only operate near the player (streamed like the rest of the traffic).

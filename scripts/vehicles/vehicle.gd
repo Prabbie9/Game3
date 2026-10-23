@@ -321,6 +321,23 @@ static func _soft_dot() -> Texture2D:
 	return _dot
 
 
+## A new colour (respray garage): every paint surface that can take one.
+func repaint(c: Color) -> void:
+	paint = c
+	for m: ShaderMaterial in damage.materials:
+		if not bool(m.get_shader_parameter("is_paint")):
+			continue
+		if bool(m.get_shader_parameter("solid")):
+			m.set_shader_parameter("paint", c)
+		else:
+			var tex := m.get_shader_parameter("albedo_tex") as Texture2D
+			var ref := CarLibrary.paint_ref(tex) if tex else Color(0, 0, 0, 0)
+			if ref.a > 0.0:
+				m.set_shader_parameter("ref_color", ref)
+				m.set_shader_parameter("repaint", true)
+				m.set_shader_parameter("paint", c)
+
+
 ## Dentable stand-in for a model material: paint surfaces take the car's colour, other surfaces keep their look.
 func _paint_material(src: Material, paint_surface: bool, cutout := false) -> ShaderMaterial:
 	var m := ShaderMaterial.new()

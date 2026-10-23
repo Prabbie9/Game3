@@ -3,7 +3,18 @@
   "Ch08_nonPBR.fbx",
   "Ch02_nonPBR.fbx",
   "Ch21_nonPBR.fbx",
-  "Ch33_nonPBR.fbx"
+  "Ch33_nonPBR.fbx",
+  "Ch01_nonPBR.fbx",
+  "Ch06_nonPBR.fbx",
+  "Ch07_nonPBR.fbx",
+  "Ch12_nonPBR.fbx",
+  "Ch13_nonPBR.fbx",
+  "Ch22_nonPBR.fbx",
+  "Ch23_nonPBR.fbx",
+  "Ch26_nonPBR.fbx",
+  "Ch28_nonPBR.fbx",
+  "Ch31_nonPBR.fbx",
+  "Ch41_nonPBR.fbx"
  ],
  "animations": [
   "Breathing Idle.fbx",
@@ -80,6 +91,26 @@
   "Small Hit Reaction From The Front.fbx",
   "Hit Reaction.fbx",
   "Death Falling Backwards.fbx",
-  "Dying Shot To The Head Falling On Two Knees.fbx"
+  "Dying Shot To The Head Falling On Two Knees.fbx",
+  "Female Walk Forward.fbx",
+  "Female Standing Idle.fbx",
+  "Female Run Forward.fbx",
+  "Male Talking On The Cell Phone.fbx",
+  "Female Standing Talking On Phone.fbx",
+  "Texting On A Smart Phone While Standing.fbx",
+  "Male Walking While Texting On A Smartphone.fbx",
+  "Idle Smoking.fbx",
+  "Sitting With Breathing Idle.fbx",
+  "Sitting And Talking To Another Person.fbx",
+  "Talking Finding Something Funny.fbx",
+  "Standing Arguing With Another Person.fbx",
+  "Being Terrified While Standing.fbx",
+  "Duck And Look Around Apprehensively.fbx",
+  "Clumsily Running To Evade A Threat.fbx",
+  "Look Around Nervously.fbx",
+  "Male Standing While Talking On A Cell Phone.fbx",
+  "Kneeling Idle.fbx",
+  "Standing To Kneeling Down.fbx",
+  "Happy Idle Variation 1.fbx"
  ]
 }

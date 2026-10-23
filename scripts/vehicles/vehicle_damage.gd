@@ -133,6 +133,32 @@ func _upload_dents() -> void:
 		m.set_shader_parameter("dent_push", b)
 
 
+## Back to new (respray garage): engine, body, lamps and glass. A wreck can't be saved.
+func repair() -> void:
+	if wrecked:
+		return
+	health = MAX_HEALTH
+	on_fire = false
+	_dents.clear()
+	_upload_dents()
+	_glass_hits.clear()
+	var arr := PackedVector4Array()
+	arr.resize(4)
+	for m in glass:
+		m.set_shader_parameter("glass_hits", arr)
+		m.set_shader_parameter("shatter", 0.0)
+	lamps_broken = {"front": Vector2.ZERO, "rear": Vector2.ZERO}
+	vehicle._on_lamps_broken()
+	for n in [_fire, _smoke]:
+		if n:
+			(n as GPUParticles3D).emitting = false
+	if is_instance_valid(_fire_light):
+		_fire_light.queue_free()
+	if is_instance_valid(_fire_sound):
+		_fire_sound.queue_free()
+	vehicle.engine_dead = false
+
+
 func _crack(point: Vector3, r: float) -> void:
 	if glass.is_empty():
 		return
@@ -183,6 +209,26 @@ func _update_smoke() -> void:
 	var dark := smoothstep(SMOKE_AT, BLACK_AT * 0.5, health)
 	pm.color = Color(0.75, 0.75, 0.75, 0.32).lerp(Color(0.07, 0.07, 0.07, 0.7), dark)
 	_smoke.emitting = true
+
+
+## Put the flames out (firefighters): the engine stays dead, the smoke thins.
+func extinguish() -> void:
+	if not on_fire and not wrecked:
+		return
+	on_fire = false
+	if _fire:
+		_fire.emitting = false
+	if is_instance_valid(_fire_light):
+		_fire_light.queue_free()
+	if is_instance_valid(_fire_sound):
+		_fire_sound.queue_free()
+	if _smoke:
+		_smoke.amount_ratio = 0.3
+
+
+## Burning (before or after the explosion) and worth sending a fire engine to.
+func burning() -> bool:
+	return on_fire or (wrecked and _fire != null and _fire.emitting)
 
 
 func _ignite() -> void:

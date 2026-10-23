@@ -8,6 +8,8 @@ signal noise_made(pos: Vector3, radius: float, source: Node)
 ## The player broke the law (kind: "assault", "murder", "shooting", "theft", "carjack", "hit_pedestrian",
 ## "attack_police", ...): the wanted system (Milestone 7) listens.
 signal crime_committed(kind: String, pos: Vector3)
+## A witness phoned the police about trouble at `where` (they are calling from `pos`).
+signal police_call(pos: Vector3, where: Vector3)
 
 var player: Node3D
 var world: Node3D
@@ -78,6 +80,10 @@ func _exit_tree() -> void:
 	VehicleDamage.release()
 	NPCDriver.release()
 	Explosion.release()
+
+
+func police_called(pos: Vector3, where: Vector3) -> void:
+	police_call.emit(pos, where)
 
 
 func crime(kind: String, pos: Vector3) -> void:

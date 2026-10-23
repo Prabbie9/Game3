@@ -128,17 +128,27 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Checks: tests/weapons_check.gd (every weapon, head/miss, reload, knife, rocket, grenade, drive-by, pickup, shop);
   screenshots `weapons` / `wpn_<id>` (each weapon relaxed and aimed).
 
-**Next: Milestone 6 — Population** (started): LaneGraph (scripts/traffic/lane_graph.gd: lanes both ways, junction
-connectors, two-phase signals at town junctions; tests/lane_graph_check.gd) and TrafficManager (pure-pursuit AI
-drivers, signals, give way, gaps, lane changes around stopped cars, honking, panic; tests/traffic_check.gd) are
-written but not yet added to the World. To do: traffic light props, tune junction turns (box trucks stall), sidewalk
-graph + walking pedestrians with variety (more Mixamo characters at 1K textures), idle behaviours (phone, sitting,
-talking), crossings, reactions/panic spread/calling police, emergency services responding.
+**Milestone 6 — Population: DONE (v0.6.0)**
+- Traffic (TrafficManager + LaneGraph): AI drivers in real VehicleBody3D cars (Vehicle.ai_* inputs) spawn out of
+  sight 70–160 m away; pure-pursuit lane following, speed by road class, slow for turns, stop at red/amber, give
+  way at unsignalled junctions and when turning left, junction conflict rule, keep gaps (other traffic, box casts
+  for anything else), change lanes round stopped cars, honk when held up, panic at gunfire, headlights at night,
+  wedged cars recycled. TrafficLights: signal heads on poles at every signalled junction near the player.
+- Emergency services (EmergencyServices): ambulance for anyone dead in the street (paramedic kneels and revives),
+  fire engine for burning cars (firefighter sprays them out); units drive a Dijkstra lane route with sirens.
+- Pedestrians (Population + WalkGraph + Pedestrian): 14 Mixamo characters (7 women with female walk/idle/run),
+  count by preset × district density × time of day × rain; they walk the pavements with a sideways spread, avoid
+  each other and the player, wait at crossings for the cars' red (or a gap), stop for phone calls / texting /
+  smoking, stand chatting in pairs, sit on benches; at trouble they cower, run (along the pavements, away),
+  spread the panic, call the police (Game.police_call), and some men fight back with fists. Far ones animate at
+  10 Hz. Character textures are downsized at import (tools/import/character_post_import.gd).
+- Checks: lane_graph_check, traffic_check, walk_graph_check, population_check, emergency_check; screenshots `street`.
+
+**Next: Milestone 7 — Police** (drafts of Wanted/Cop are in progress; see docs/PLAN.md).
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
 - Wheels sit ~4 cm low on the road (suspension/visual offset; tyres look slightly loaded — kept).
-- NPC drivers only wait in parked cars and flee straight away when jacked (traffic/pedestrian AI is Milestone 6).
 - Bus/fire engine have no passenger door and are entered from the driver side like cars.
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).

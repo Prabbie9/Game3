@@ -842,7 +842,13 @@ func _ragdolled(delta: float) -> void:
 	global_position = Vector3(hips.x, hit.position.y if hit else hips.y - 0.15, hips.z)
 	if state == State.DEAD:
 		if _respawn_timer < 0.0:
-			_respawn_timer = 4.0
+			var w := Game.world as World
+			if w and w.game_over:
+				# WASTED: the screen does the waiting, then we come round at the hospital
+				_respawn_timer = 9999.0
+				w.game_over.play("wasted", func(): _respawn(w.respawn_point("hospital"), "Patched up at Solano General."))
+			else:
+				_respawn_timer = 4.0
 		_respawn_timer -= delta
 		if _respawn_timer <= 0.0:
 			_respawn()
@@ -885,20 +891,59 @@ func _rescue() -> void:
 	visual.jump_to("ground")
 
 
-func _respawn() -> void:
+func _respawn(at := Transform3D(), text := "You woke up a little bruised.") -> void:
+	if vehicle:
+		vehicle.set_driver(null)
+		vehicle = null
+		vehicle_changed.emit(null)
+	foot_ik.override = []
+	if _arms:
+		_arms.ik.influence = 0.0
+	cam.mode = CameraRig.Mode.ON_FOOT
+	cam.target = self
 	ragdoll.stop()
 	cam.ragdolled = false
 	_respawn_timer = -1.0
 	health = 100.0
 	armor = 0.0
 	health_changed.emit(health, armor)
-	global_transform = spawn_point
+	global_transform = at if at != Transform3D() else spawn_point
+	cam.yaw = rotation.y
 	velocity = Vector3.ZERO
 	collision_layer = 2
 	collision_mask = MASK_ON_FOOT
 	state = State.ON_FOOT
 	visual.jump_to("ground")
-	Game.message("You woke up a little bruised.")
+	Game.controls_enabled = true
+	Game.message(text)
+
+
+## Arrested: hands up on the knees, then (after BUSTED) out of the police station without the guns.
+func arrested(w: World) -> void:
+	if state == State.DEAD:
+		return
+	Game.controls_enabled = false
+	if vehicle:
+		var out := vehicle.driver_door_position()
+		vehicle.set_driver(null)
+		vehicle = null
+		vehicle_changed.emit(null)
+		global_position = out
+		cam.mode = CameraRig.Mode.ON_FOOT
+		cam.target = self
+	state = State.ACTION
+	_act = "arrest"
+	_act_t = 0.0
+	_act_len = 9999.0
+	_melee_at = 0.0
+	collision_layer = 2
+	collision_mask = MASK_ON_FOOT
+	velocity = Vector3.ZERO
+	visual.set_aim(Vector2.ZERO, 0.0)
+	visual.play_loop("kneel")
+	w.game_over.play("busted", func():
+		weapon.confiscate()
+		_respawn(w.respawn_point("police"), "Released from the station. Your weapons stay here."))
 
 
 ## Hit by a vehicle (not the one we're in): knocked flying.

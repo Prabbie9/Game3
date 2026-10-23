@@ -5,7 +5,9 @@ extends RefCounted
 
 const DIR := "res://assets/world/"
 ## Lots kept free of generated buildings for hand-built places: the gun shop across from the start.
-const RESERVED := [Rect2(11.0, -32.5, 27.5, 21.5)]
+## Also: the police station (6th Ave, west), the hospital and the respray garage (6th Ave, east).
+const RESERVED := [Rect2(11.0, -32.5, 27.5, 21.5), Rect2(-70.0, -32.5, 27.5, 21.5), Rect2(90.0, 11.0, 27.5, 27.0),
+	Rect2(90.0, -32.5, 27.5, 21.5)]
 
 static var _inst: WorldData
 

@@ -62,7 +62,7 @@ def write_import(fbx, kind):
             "meshes/force_disable_compression=false", "skins/use_named_skins=true",
             "animation/import=true", "animation/fps=30", "animation/trimming=true",
             "animation/remove_immutable_tracks=true", "animation/import_rest_as_RESET=false",
-            'import_script/path=""', "materials/extract=0", "materials/extract_format=0", 'materials/extract_path=""',
+            f'import_script/path="{"" if is_anim else "res://tools/import/character_post_import.gd"}"', "materials/extract=0", "materials/extract_format=0", 'materials/extract_path=""',
             '_subresources={', '"nodes": {', '"PATH:Skeleton3D": {',
             f'"retarget/bone_map": Resource("{bm}"),',
             '"retarget/bone_renamer/unique_node/skeleton_name": "GeneralSkeleton"',
@@ -72,7 +72,9 @@ def write_import(fbx, kind):
             # checkout (CI), which shipped an untextured player in v0.1.0
             f"fbx/embedded_image_handling={0 if is_anim else 2}", "fbx/naming_version=2", ""]
     new = "\n".join(out)
-    if not os.path.exists(imp) or "retarget/bone_map" not in open(imp).read() or "embedded_image_handling=1" in open(imp).read():
+    old = open(imp).read() if os.path.exists(imp) else ""
+    want_script = "" if is_anim else "character_post_import.gd"
+    if not old or "retarget/bone_map" not in old or "embedded_image_handling=1" in old or (want_script and want_script not in old):
         open(imp, "w").write(new)
         return True
     return False

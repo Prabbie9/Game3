@@ -20,6 +20,11 @@ var ocean: Ocean
 var city: City
 var player: Player
 var parked: ParkedCars
+var traffic: TrafficManager
+var population: Population
+var game_over: GameOver
+var hospital: Storefront
+var police_station: Storefront
 
 
 func _ready() -> void:
@@ -59,6 +64,13 @@ func _ready() -> void:
 	warm_up(spawn)
 	_spawn_vehicles()
 	_spawn_places()
+	traffic = TrafficManager.new()
+	traffic.name = "Traffic"
+	add_child(traffic)
+	population = Population.new()
+	population.name = "Population"
+	add_child(population)
+	population.traffic = traffic
 	player = PLAYER_SCENE.instantiate()
 	player.position = spawn
 	player.rotation.y = deg_to_rad(90)
@@ -87,6 +99,30 @@ func _spawn_places() -> void:
 	var shop := GunShop.new()
 	shop.name = "GunShop"
 	add_child(shop)
+	police_station = Storefront.new()
+	police_station.name = "PoliceStation"
+	police_station.rect = Rect2(-66.0, -26.0, 20.0, 14.0)
+	police_station.front = 1
+	police_station.sign_text = "POLICE"
+	police_station.sign_color = Color(0.5, 0.7, 1.0)
+	police_station.wall = "concrete_tile_facade"
+	add_child(police_station)
+	hospital = Storefront.new()
+	hospital.name = "Hospital"
+	hospital.rect = Rect2(92.0, 12.0, 24.0, 14.0)
+	hospital.front = -1
+	hospital.sign_text = "SOLANO GENERAL  +"
+	hospital.sign_color = Color(1.0, 0.35, 0.35)
+	hospital.wall = "white_stucco"
+	add_child(hospital)
+	var respray := Respray.new()
+	respray.name = "Respray"
+	respray.rect = Rect2(95.0, -28.0, 14.0, 16.0)
+	respray.front = 1
+	add_child(respray)
+	game_over = GameOver.new()
+	game_over.name = "GameOver"
+	add_child(game_over)
 	var W := Pickup.Kind.WEAPON
 	var spots := [
 		[W, "smg", Vector3(40.5, 0, 57.0)], [W, "bat", Vector3(128.0, 0, -112.0)], [W, "knife", Vector3(-850.0, 0, -706.0)],
@@ -111,6 +147,12 @@ func _spawn_places() -> void:
 var _plaza_people := []
 
 
+## Where the player comes round: "hospital" (wasted) or "police" (busted).
+func respawn_point(kind: String) -> Transform3D:
+	var b := hospital if kind == "hospital" else police_station
+	return b.entrance() if b else player.spawn_point
+
+
 ## The plaza regulars appear once their characters have finished loading in the background.
 func _place_people() -> void:
 	for i in range(_plaza_people.size() - 1, -1, -1):
@@ -126,20 +168,18 @@ func _place_people() -> void:
 
 
 func _spawn_vehicles() -> void:
+	# parked at the kerb of the streets round the start (not in the avenue's lanes, where traffic would have
+	# to go round them): Grand St to the east, 7th St to the north, 5th St to the south
 	var spots := [
-		["sedan", Vector3(22.0, 0.6, 5.2), -PI * 0.5],
-		["sport", Vector3(34.0, 0.6, 5.2), -PI * 0.5],
-		["suv", Vector3(-24.0, 0.6, -5.2), PI * 0.5],
-		["hatchback", Vector3(5.2, 0.6, 30.0), PI],
-		["pickup", Vector3(-5.2, 0.6, -36.0), 0.0],
-		["compact", Vector3(46.0, 0.6, -5.2), PI * 0.5],
-		["police", Vector3(-38.0, 0.6, 5.2), -PI * 0.5],
-		["muscle", Vector3(5.2, 0.6, -52.0), 0.0],
-		["ambulance", Vector3(-5.2, 0.6, 52.0), PI],
-		["firetruck", Vector3(-62.0, 0.6, -5.4), PI * 0.5],
-		["bus", Vector3(5.4, 0.6, 58.0), PI],
+		["sedan", Vector3(75.2, 0.6, 16.0), PI], ["sport", Vector3(75.2, 0.6, 26.0), PI],
+		["muscle", Vector3(75.2, 0.6, -34.0), PI], ["pickup", Vector3(84.8, 0.6, 30.0), 0.0],
+		["police", Vector3(-30.0, 0.6, 75.2), PI * 0.5], ["ambulance", Vector3(-48.0, 0.6, 75.2), PI * 0.5],
+		["firetruck", Vector3(-30.0, 0.6, 84.8), -PI * 0.5], ["bus", Vector3(30.0, 0.6, 74.7), PI * 0.5],
+		["hatchback", Vector3(30.0, 0.6, -75.2), -PI * 0.5], ["compact", Vector3(44.0, 0.6, -75.2), -PI * 0.5],
+		["suv", Vector3(-30.0, 0.6, -75.2), -PI * 0.5],
 	]
 	for s in spots:
+		parked.reserve_area(s[1], 7.0 if s[0] != "bus" else 9.0)
 		var v := Vehicle.new()
 		v.model = s[0]
 		v.position = s[1]

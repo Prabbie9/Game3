@@ -285,6 +285,7 @@ func _steps_for(c: CityCell) -> Array[Callable]:
 			vol.position = w[0]
 			root.add_child(vol)
 		root.set_meta("lights", c.lights)
+		root.set_meta("benches", c.props.get("bench", []))
 		_lights_dirty = true
 		root.visible = true
 		if _far.has(c.key):
@@ -352,6 +353,19 @@ func _mesh_from(arrays: Dictionary, mats: Dictionary) -> ArrayMesh:
 		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays[key], [], {}, MESH_FLAGS)
 		am.surface_set_material(am.get_surface_count() - 1, mats[key])
 	return am
+
+
+## Bench transforms (seat origin, facing -Z of the prop... see Population.BENCH_SEAT) in loaded cells near pos.
+func benches_near(pos: Vector3, radius: float) -> Array:
+	var out := []
+	for k: Vector2i in _cells:
+		var n = _cells[k]
+		if not is_instance_valid(n) or not (n as Node3D).visible:
+			continue
+		for xf: Transform3D in (n as Node).get_meta("benches", []):
+			if xf.origin.distance_to(pos) < radius:
+				out.append(xf)
+	return out
 
 
 ## True once every cell around the focus is shown in detail (used while loading).

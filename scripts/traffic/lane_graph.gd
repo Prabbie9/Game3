@@ -10,9 +10,9 @@ extends RefCounted
 const SPEED := {"freeway": 26.0, "drive": 17.0, "avenue": 15.0, "street": 12.5, "residential": 10.0, "hill": 11.0}
 const CONNECTOR_SPEED := 6.5
 ## signal cycle (s): green, amber, all-red per phase
-const GREEN := 14.0
+const GREEN := 18.0
 const AMBER := 3.0
-const ALL_RED := 1.5
+const ALL_RED := 1.0
 
 ## Lane: {pts: PackedVector3Array, cum: PackedFloat32Array, len, road, dir (+1 a->b / -1), index, lanes,
 ##        from, to (nodes), next: [lane ids], speed, node (-1, or the junction a connector crosses),

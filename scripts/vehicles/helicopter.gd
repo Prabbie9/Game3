@@ -12,6 +12,7 @@ const YAW_RATE := 1.25        # rad/s
 const DRAG := 0.085           # horizontal drag (1/s): top speed ~ g * tan(pitch) / drag
 
 var rotor := 0.0              # 0..1 rotor speed
+var ai_lift := 0.0            # AI collective (-1 descend .. 1 climb)
 var _spin := []               # [Node3D pivot, axis, rate]
 var _rotor_sound: AudioStreamPlayer3D
 var _grounded := true
@@ -75,6 +76,10 @@ func _physics_process(delta: float) -> void:
 		lift_in = Input.get_action_strength("ascend") - Input.get_action_strength("descend")
 		if Input.is_action_just_pressed("headlights"):
 			set_headlights(not headlights_on)
+	elif ai_drive:
+		pitch_in = ai_throttle - ai_brake
+		yaw_in = ai_steer
+		lift_in = ai_lift
 	var lift_k := rotor * rotor
 	var up := global_basis.y
 	# ground contact: skids on something just below

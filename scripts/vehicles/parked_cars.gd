@@ -73,10 +73,11 @@ func _kerb_slots(r: int, rd: Dictionary, net: RoadNet) -> void:
 			var p: Vector3 = at[0]
 			var f: Vector2 = at[1]
 			var rt := Vector2(-f.y, f.x) * side
-			var pos := p + Vector3(rt.x, 0, rt.y) * off
+			var m: String = models[rng.randi() % models.size()] if rng.randf() > 0.07 else KERB_EXTRA[rng.randi() % KERB_EXTRA.size()]
+			# vans and trucks sit tight against the kerb so they don't stick out into the traffic lane
+			var pos := p + Vector3(rt.x, 0, rt.y) * (off + (0.45 if m in KERB_EXTRA else 0.0))
 			# cars face the direction of travel of their side of the road (forward is -Z)
 			var dir := f * side
-			var m: String = models[rng.randi() % models.size()] if rng.randf() > 0.07 else KERB_EXTRA[rng.randi() % KERB_EXTRA.size()]
 			_add_slot(pos, atan2(-dir.x, -dir.y) + rng.randf_range(-0.03, 0.03), m, CarLibrary.random_paint(rng))
 		s += KERB_GAP
 

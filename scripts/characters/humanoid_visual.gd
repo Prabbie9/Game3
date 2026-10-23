@@ -8,6 +8,8 @@ signal action_finished(state: StringName)
 const CHAR_PATH := "res://assets/source/mixamo/characters/%s.fbx"
 
 @export var character_file := "ch08_nonpbr"
+## Per-character clip substitutions, e.g. {"walk": "f_walk"} for women (set before the node enters the tree).
+var clip_swap := {}
 
 var model: Node3D
 var skeleton: Skeleton3D
@@ -25,6 +27,7 @@ var aim_run_speed := 3.2
 
 var _aim_points := {}
 var _ground: AnimationNodeBlendTree
+var _act_clip: AnimationNodeAnimation
 
 ## Bones the upper-body layer drives (spine up, arms and fingers).
 const UPPER_BONES := ["Spine", "Chest", "UpperChest", "Neck", "Head", "LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
@@ -69,8 +72,8 @@ func _build_model() -> void:
 	model.add_child(anim_player)
 	anim_player.root_node = NodePath("..")
 	anim_player.add_animation_library("", AnimLib.get_library())
-	walk_speed = AnimLib.speed_of("walk", motion_scale)
-	run_speed = AnimLib.speed_of("run", motion_scale)
+	walk_speed = AnimLib.speed_of(clip_swap.get("walk", "walk"), motion_scale)
+	run_speed = AnimLib.speed_of(clip_swap.get("run", "run"), motion_scale)
 	sprint_speed = AnimLib.speed_of("sprint", motion_scale)
 	aim_walk_speed = AnimLib.speed_of("pistol_fwd", motion_scale)
 	aim_run_speed = AnimLib.speed_of("pistol_run", motion_scale)
@@ -81,6 +84,7 @@ func _build_model() -> void:
 
 func _anim(clip: String) -> AnimationNodeAnimation:
 	var a := AnimationNodeAnimation.new()
+	clip = clip_swap.get(clip, clip)
 	a.animation = clip
 	if AnimLib.WINDOWS.has(clip):
 		var w: Array = AnimLib.WINDOWS[clip]
@@ -176,7 +180,15 @@ func _build_tree() -> void:
 	sm.add_node("swim", _blend1d("swim", [["swim_idle", 0.0], ["swim", swim_speed]]))
 	sm.add_node("cover", _blend1d("cover", [["cover_left", -cover_speed], ["cover_idle", 0.0], ["cover_right", cover_speed]]))
 	sm.add_node("cover_low", _blend1d("cover_low", [["cover_low_left", -cover_speed], ["cover_low_idle", 0.0], ["cover_low_right", cover_speed]]))
-	var bases := ["ground", "crouch", "swim", "cover", "cover_low"]
+	# "act": a looping activity clip chosen at run time (phone call, smoking, sitting, cowering...)
+	var act_bt := AnimationNodeBlendTree.new()
+	var act_clip := AnimationNodeAnimation.new()
+	act_clip.animation = "idle"
+	act_bt.add_node("clip", act_clip, Vector2(0, 0))
+	act_bt.connect_node("output", 0, "clip")
+	sm.add_node("act", act_bt)
+	_act_clip = act_clip
+	var bases := ["ground", "crouch", "swim", "cover", "cover_low", "act"]
 	for a in bases:
 		for b in bases:
 			if a != b:
@@ -352,6 +364,14 @@ func play_upper(clip: String, speed := 1.0) -> void:
 	(_ground.get_node("upper_clip") as AnimationNodeAnimation).animation = clip
 	tree.set("parameters/ground/upper_ts/scale", speed)
 	tree.set("parameters/ground/upper/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+
+
+## Loop an activity clip (state "act"); travel("ground") ends it.
+func play_loop(clip: String) -> void:
+	_act_clip.animation = clip_swap.get(clip, clip)
+	if current_state() == &"act":
+		jump_to("ground")
+	travel("act")
 
 
 func upper_active() -> bool:

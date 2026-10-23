@@ -6,6 +6,7 @@ var _money: Label
 var _ammo: Label
 var _weapon: Label
 var _crosshair: Control
+var _stars: Control
 var _scope: Control
 var _hit_marker := 0.0
 var _speed: Label
@@ -81,6 +82,11 @@ func _ready() -> void:
 	_money = UITheme.label("$500", 40, UITheme.heading, Color(0.55, 0.85, 0.55))
 	_money.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	tr.add_child(_money)
+	# wanted stars (only while wanted)
+	_stars = Control.new()
+	_stars.custom_minimum_size = Vector2(380, 34)
+	_stars.draw.connect(_draw_stars)
+	tr.add_child(_stars)
 	_weapon = UITheme.label("PISTOL", 22, UITheme.heading, UITheme.PAPER)
 	_weapon.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	tr.add_child(_weapon)
@@ -186,6 +192,7 @@ func _process(_delta: float) -> void:
 		_ammo.text = "%d  /  %d" % [_player.weapon.in_mag, _player.weapon.reserve]
 	if not _player:
 		return
+	_stars.queue_redraw()
 	var scoped := _player.weapon.scoped()
 	_scope.visible = scoped
 	_crosshair.visible = _player.aiming and _player.aim_weight > 0.5 and not scoped
@@ -238,6 +245,27 @@ var _hit_kill := false
 func hit_marker(kill: bool) -> void:
 	_hit_marker = 0.25
 	_hit_kill = kill
+
+
+func _draw_stars() -> void:
+	var w = Game.world.get("wanted") if Game.world else null
+	if w == null or int(w.stars) == 0:
+		return
+	var n: int = w.stars
+	# out of sight: the stars blink while the police search
+	var searching: bool = w.unseen > 1.5
+	var on := not searching or int(Time.get_ticks_msec() / 300) % 2 == 0
+	for i in 5:
+		var c := Vector2(_stars.size.x - 18.0 - (4 - i) * 34.0, 17.0)
+		var pts := PackedVector2Array()
+		for k in 10:
+			var a := -PI * 0.5 + k * PI / 5.0
+			var r := 14.0 if k % 2 == 0 else 6.0
+			pts.append(c + Vector2(cos(a), sin(a)) * r)
+		if i < n and on:
+			_stars.draw_colored_polygon(pts, Color(0.98, 0.86, 0.3))
+		pts.append(pts[0])
+		_stars.draw_polyline(pts, Color(0, 0, 0, 0.7) if i < n else Color(1, 1, 1, 0.25), 2.0, true)
 
 
 func _draw_scope() -> void:

@@ -22,7 +22,7 @@ static var _scenes := {}   # character -> PackedScene, kept so the loader cache 
 
 ## Start loading the NPC characters on background threads (they take ~1 s each to load from disk).
 static func preload_characters() -> void:
-	for c: String in CHARACTERS:
+	for c: String in CHARACTERS + Population.CHARACTERS.keys():
 		var path := HumanoidVisual.CHAR_PATH % c
 		if not _scenes.has(c) and ResourceLoader.load_threaded_request(path) == OK:
 			_scenes[c] = null
@@ -33,9 +33,14 @@ static func is_ready(character: String) -> bool:
 	if _scenes.get(character) != null:
 		return true
 	var path := HumanoidVisual.CHAR_PATH % character
-	if _scenes.has(character) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+	if not _scenes.has(character):
+		return false
+	var st := ResourceLoader.load_threaded_get_status(path)
+	if st == ResourceLoader.THREAD_LOAD_LOADED:
 		_scenes[character] = ResourceLoader.load_threaded_get(path)
 		return true
+	if st == ResourceLoader.THREAD_LOAD_FAILED or st == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		ResourceLoader.load_threaded_request(path)  # try again
 	return false
 
 
@@ -48,6 +53,8 @@ static func seat_in(v: Vehicle, character: String) -> NPCDriver:
 	n.vehicle = v
 	n.visual = HumanoidVisual.new()
 	n.visual.character_file = character
+	if Population.CHARACTERS.get(character, false):
+		n.visual.clip_swap = {"walk": "f_walk", "idle": "f_idle", "run": "f_run"}
 	n.add_child(n.visual)
 	v.add_child(n)
 	n.visual.jump_to.call_deferred("drive")

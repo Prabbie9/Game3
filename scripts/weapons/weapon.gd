@@ -112,6 +112,14 @@ func give(id: String, rounds := -1) -> bool:
 	return new or int(a[0]) + int(a[1]) > before
 
 
+## Arrested: everything but the fists is kept by the police.
+func confiscate() -> void:
+	owned = {"fists": true}
+	ammo.clear()
+	select("fists")
+	inventory_changed.emit()
+
+
 func has(id: String) -> bool:
 	return owned.has(id)
 

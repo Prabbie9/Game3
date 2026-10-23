@@ -87,6 +87,27 @@ const CLIPS := {
 	"hit_react": ["hit_reaction", false, Root.IN_PLACE],
 	"death_back": ["death_falling_backwards", false, Root.EXTRACT],
 	"death_head": ["dying_shot_to_the_head_falling_on_two_knees", false, Root.EXTRACT],
+	# Milestone 6: street life
+	"f_walk": ["female_walk_forward", true, Root.IN_PLACE],
+	"f_idle": ["female_standing_idle", true, Root.IN_PLACE],
+	"f_run": ["female_run_forward", true, Root.IN_PLACE],
+	"phone_m": ["male_talking_on_the_cell_phone", true, Root.IN_PLACE],
+	"phone_f": ["female_standing_talking_on_phone", true, Root.IN_PLACE],
+	"texting": ["texting_on_a_smart_phone_while_standing", true, Root.IN_PLACE],
+	"walk_text": ["male_walking_while_texting_on_a_smartphone", true, Root.IN_PLACE],
+	"smoke": ["idle_smoking", true, Root.IN_PLACE],
+	"sit": ["sitting_with_breathing_idle", true, Root.IN_PLACE],
+	"sit_talk": ["sitting_and_talking_to_another_person", true, Root.IN_PLACE],
+	"talk": ["talking_finding_something_funny", true, Root.IN_PLACE],
+	"argue": ["standing_arguing_with_another_person", true, Root.IN_PLACE],
+	"terrified": ["being_terrified_while_standing", true, Root.IN_PLACE],
+	"cower": ["duck_and_look_around_apprehensively", true, Root.IN_PLACE],
+	"panic_run": ["clumsily_running_to_evade_a_threat", true, Root.IN_PLACE],
+	"nervous": ["look_around_nervously", true, Root.IN_PLACE],
+	"call_police": ["male_standing_while_talking_on_a_cell_phone", true, Root.IN_PLACE],
+	"kneel": ["kneeling_idle", true, Root.IN_PLACE],
+	"kneel_down": ["standing_to_kneeling_down", false, Root.IN_PLACE],
+	"happy_idle": ["happy_idle_variation_1", true, Root.IN_PLACE],
 }
 
 ## Clips played faster than authored (the Mixamo carjack takes its time settling into the seat).

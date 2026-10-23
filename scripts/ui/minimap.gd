@@ -49,13 +49,35 @@ func _draw() -> void:
 		wp = Vector2(clampf(wp.x, r.position.x, r.end.x), clampf(wp.y, r.position.y, r.end.y))
 		draw_circle(wp, 6.0, Color(0.1, 0.1, 0.1, 0.8))
 		draw_circle(wp, 4.0, UITheme.SAND)
-	# vehicle blips
+	# places: the gun shop
+	var shop := Game.world.get_node_or_null("GunShop") as Node3D
+	if shop:
+		var sp: Vector2 = to_px.call(Vector2(23.0, -18.0))
+		var r2 := Rect2(Vector2(10, 10), size_px - Vector2(20, 20))
+		sp = Vector2(clampf(sp.x, r2.position.x, r2.end.x), clampf(sp.y, r2.position.y, r2.end.y))
+		draw_circle(sp, 8.0, Color(UITheme.INK, 0.9))
+		draw_string(UITheme.heading, sp + Vector2(-4.5, 5.5), "G", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UITheme.CORAL)
+	# wanted: the search area round the last sighting, police blips
+	var wanted = Game.world.get("wanted")
+	var flash_w := int(Time.get_ticks_msec() / 250) % 2 == 0
+	if wanted and int(wanted.stars) > 0:
+		if wanted.unseen > 1.5:
+			var zc: Vector2 = to_px.call(Vector2(wanted.last_seen.x, wanted.last_seen.z))
+			var zr: float = wanted.search_radius() * scale_f
+			draw_circle(zc, zr, Color(0.9, 0.2, 0.2, 0.18) if flash_w else Color(0.2, 0.35, 0.95, 0.18))
+			draw_arc(zc, zr, 0, TAU, 48, Color(1, 1, 1, 0.35), 1.5)
+		for cop in get_tree().get_nodes_in_group("police"):
+			var cp: Vector2 = to_px.call(Vector2(cop.global_position.x, cop.global_position.z))
+			if Rect2(Vector2.ZERO, size_px).has_point(cp):
+				draw_circle(cp, 3.5, Color(0.95, 0.2, 0.2) if flash_w else Color(0.25, 0.45, 1.0))
+	# emergency vehicles on a call: flashing red / blue
+	var flash := int(Time.get_ticks_msec() / 250) % 2 == 0
 	for v in get_tree().get_nodes_in_group("vehicles"):
-		if v == p.vehicle:
+		if v == p.vehicle or not (v as Vehicle).siren_on:
 			continue
 		var vp: Vector2 = to_px.call(Vector2(v.global_position.x, v.global_position.z))
 		if Rect2(Vector2.ZERO, size_px).has_point(vp):
-			draw_circle(vp, 3.0, Color(0.55, 0.75, 0.95, 0.9))
+			draw_circle(vp, 4.0, Color(0.95, 0.2, 0.2) if flash else Color(0.25, 0.45, 1.0))
 	# player arrow (north-up rotates with camera)
 	var fwd := -p.global_basis.z if not p.vehicle else -p.vehicle.global_basis.z
 	var ang := atan2(fwd.x, -fwd.z) + yaw
