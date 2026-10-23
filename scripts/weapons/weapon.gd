@@ -149,7 +149,9 @@ func _fire() -> void:
 			hit = hit2
 			end = hit2.position
 		var col: Object = hit.collider
-		if col and col.has_method("take_damage"):
+		if col and col.has_method("bullet_hit"):
+			col.bullet_hit(end, dir, data.damage, _player)
+		elif col and col.has_method("take_damage"):
 			col.take_damage(data.damage, _player)
 		elif col is RigidBody3D:
 			(col as RigidBody3D).apply_impulse(dir * 6.0, end - (col as RigidBody3D).global_position)

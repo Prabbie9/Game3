@@ -80,6 +80,7 @@ func _ready() -> void:
 	visual.action_finished.connect(_on_action_finished)
 	weapon.setup(self, visual, cam)
 	foot_ik = FootIK.install(visual.skeleton, self)
+	foot_ik.stepped.connect(_on_step)
 	ragdoll = Ragdoll.new(visual.skeleton)
 	_capsule = _col.shape
 	spawn_point = global_transform
@@ -272,6 +273,7 @@ func enter_vehicle(v: Vehicle) -> void:
 	visual.set_aim(Vector2.ZERO, 0.0)
 	weapon.holster(true)
 	v.reserve(self)
+	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
 	# Place the character so the root-motion clip ends with the hips at the seat.
 	var seat := _seat_root(v)
 	var turn := visual.clip_yaw("car_enter")
@@ -295,6 +297,7 @@ func exit_vehicle() -> void:
 		return
 	state = State.EXITING
 	vehicle.set_driver_input_enabled(false)
+	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
 	var seat := _seat_root(vehicle)
 	global_transform = seat
 	var turn := visual.clip_yaw("car_exit")
@@ -328,12 +331,14 @@ func _sequence(delta: float) -> void:
 
 func _on_action_finished(anim: StringName) -> void:
 	if anim == &"car_enter" and state == State.ENTERING:
+		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		state = State.DRIVING
 		vehicle.set_driver(self)
 		vehicle_changed.emit(vehicle)
 	elif anim == &"car_exit" and state == State.EXITING:
 		global_transform = _seq_to
 		var v := vehicle
+		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		vehicle = null
 		v.set_driver(null)
 		state = State.ON_FOOT
@@ -518,7 +523,10 @@ func _melee_hit() -> void:
 	q.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, 1.05, 0) - global_basis.z * 0.7)
 	q.collision_mask = 4 | 8 | 16
 	q.exclude = [get_rid()]
-	for r in get_world_3d().direct_space_state.intersect_shape(q, 8):
+	var hits := get_world_3d().direct_space_state.intersect_shape(q, 8)
+	if not hits.is_empty():
+		Audio.play_at(Audio.pick("player/punch_%d.ogg", 3), global_position + Vector3(0, 1.3, 0) - global_basis.z * 0.6, -2.0 if _combo >= 2 else -5.0, randf_range(0.92, 1.08))
+	for r in hits:
 		var c: Object = r.collider
 		if c and c.has_method("take_damage"):
 			c.take_damage(12.0 if _combo < 2 else 22.0, self)
@@ -611,6 +619,7 @@ func _surface_y() -> float:
 
 
 func _enter_swim() -> void:
+	Audio.play_at(Audio.stream("player/splash.ogg"), global_position, clampf(-14.0 + absf(velocity.y) * 2.0, -14.0, 2.0), randf_range(0.9, 1.1))
 	state = State.SWIM
 	_air_time = 0.0
 	_fall_speed = 0.0
@@ -778,6 +787,42 @@ func take_damage(amount: float, _from: Node = null) -> void:
 			state = State.DEAD
 		else:
 			go_ragdoll(velocity)
+
+
+const STEP_SETS := {"concrete": 5, "grass": 4, "sand": 4, "wood": 4}
+
+
+func _on_step(_foot: int, pos: Vector3, col: Object) -> void:
+	if state != State.ON_FOOT and state != State.COVER:
+		return
+	var spd := Vector2(velocity.x, velocity.z).length()
+	if spd < 0.4:
+		return
+	var kind := WorldData.get_data().ground_kind(pos.x, pos.z, col is StaticBody3D and (col as Node).get_parent() is Terrain)
+	var vol := lerpf(-16.0, -3.0, clampf(spd / 6.5, 0.0, 1.0)) - (5.0 if crouched else 0.0)
+	Audio.play_at(Audio.pick("player/step_" + kind + "_%d.ogg", STEP_SETS[kind]), pos, vol, randf_range(0.92, 1.08), &"SFX", 35.0)
+
+
+## The vehicle we're in blew up: out of the seat and thrown clear.
+func bail_out(v: Vehicle) -> void:
+	if vehicle != v:
+		return
+	var out := v.driver_door_position() + Vector3(0, 0.6, 0)
+	var away := (out - v.global_position)
+	away.y = 0
+	vehicle = null
+	v.set_driver(null)
+	global_position = out
+	collision_layer = 2
+	collision_mask = MASK_ON_FOOT
+	state = State.ON_FOOT
+	cam.mode = CameraRig.Mode.ON_FOOT
+	cam.target = self
+	visual.jump_to("ground")
+	vehicle_changed.emit(null)
+	take_damage(65.0, v)
+	if state != State.DEAD and state != State.RAGDOLL:
+		go_ragdoll(away.normalized() * 6.0 + Vector3.UP * 4.0)
 
 
 ## Test/screenshot helper: put the player straight into the driver's seat (no entry animation).

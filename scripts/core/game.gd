@@ -66,6 +66,8 @@ func _exit_tree() -> void:
 	WaterVolume._mat = null
 	WorldData.release()
 	PropCatalog.release()
+	Audio.release()
+	VehicleDamage.release()
 
 
 func message(text: String) -> void:

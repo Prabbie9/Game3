@@ -9,6 +9,9 @@ const KNEES := ["LeftLowerLeg", "RightLowerLeg"]
 const MAX_DROP := 0.45
 const MAX_RAISE := 0.35
 
+## A foot came down on the ground (footstep sounds): foot 0 left / 1 right, ground point, what it stands on.
+signal stepped(foot: int, pos: Vector3, collider: Object)
+
 ## 0..1, driven by the owner (0 in the air, in vehicles, ragdolled).
 var weight := 1.0
 var body: Node3D
@@ -24,6 +27,8 @@ var _offsets := [0.0, 0.0]
 var _feet := [-1, -1]
 var _knees := [-1, -1]
 var _hips := -1
+var _rest := [0.1, 0.1]      # lowest animated ankle height seen recently (planted)
+var _raised := [false, false]
 
 
 func _process_modification_with_delta(delta: float) -> void:
@@ -56,6 +61,14 @@ func _process_modification_with_delta(delta: float) -> void:
 			off = clampf(hit.position.y - root_y, -MAX_DROP, MAX_RAISE)
 			n = hit.normal
 		_offsets[i] = lerpf(_offsets[i], off, 1.0 - exp(-delta * 18.0))
+		# footstep: the animated ankle drops back to its planted height after lifting
+		var h := gp.origin.y - root_y
+		_rest[i] = minf(_rest[i] + delta * 0.03, h)
+		if h > _rest[i] + 0.06:
+			_raised[i] = true
+		elif _raised[i] and h < _rest[i] + 0.02 and hit and _w > 0.2:
+			_raised[i] = false
+			stepped.emit(i, hit.position, hit.collider)
 		ground_normals[i] = ground_normals[i].slerp(n, 1.0 - exp(-delta * 12.0))
 		lowest = minf(lowest, _offsets[i])
 	# lower the pelvis so the foot on lower ground can reach without hyper-extending

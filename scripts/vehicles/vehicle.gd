@@ -19,6 +19,9 @@ const SPECS := {
 	"pickup": {"mass": 1920, "force": 7800, "top": 50.0, "steer": 0.5, "grip": 2.5, "stiff": 40.0, "travel": 0.26, "drive": "rwd", "name": "Hauler 1500"},
 	"offroad": {"mass": 1820, "force": 7600, "top": 48.0, "steer": 0.54, "grip": 2.7, "stiff": 32.0, "travel": 0.34, "drive": "awd", "name": "Mesa Trailhound"},
 }
+## Engine sound character per body (small engines rev higher); heavy vehicles use the diesel loops.
+const ENGINE_PITCH := {"compact": 1.18, "hatchback": 1.12, "sedan": 0.96, "wagon": 0.94, "coupe": 1.05, "sport": 1.08,
+	"suv": 0.86, "minivan": 0.92, "pickup": 0.8, "offroad": 0.84}
 const GEARS := [0.2, 0.36, 0.53, 0.7, 0.86, 1.0]   # top speed fraction reached at the redline in each gear
 const GEAR_PULL := [1.55, 1.25, 1.05, 0.9, 0.78, 0.68]
 const IDLE_RPM := 850.0
@@ -64,6 +67,15 @@ var _last_mark := {}      # wheel -> last skid point
 var _driven := 2.0
 var _idle := false
 var _idle_time := 0.0
+var _put_to_sleep := false
+var damage: VehicleDamage
+var audio: VehicleAudio
+var horn_on := false
+var engine_dead := false
+var _prev_vel := Vector3.ZERO
+var _jolt := Vector3.ZERO     # velocity change accumulated over the ticks of one collision
+var _jolt_ticks := 0
+var _lit_was := false
 
 
 func _ready() -> void:
@@ -87,14 +99,29 @@ func _build() -> void:
 	var data := CarLibrary.get_model(model)
 	var aabb: AABB = data.aabb
 	_size = aabb.size
+	damage = VehicleDamage.new()
+	damage.name = "Damage"
+	add_child(damage)
+	damage.setup(self, aabb)
 	for p in data.parts:
 		var mi := MeshInstance3D.new()
 		mi.mesh = p[0]
 		mi.transform = p[1]
 		for s in mi.mesh.get_surface_count():
 			var m := mi.mesh.surface_get_material(s)
-			if m and String(m.resource_name).begins_with("Body"):
-				mi.set_surface_override_material(s, _paint_material((m as BaseMaterial3D).albedo_texture))
+			var mname := String(m.resource_name) if m else ""
+			if mname.begins_with("Body"):
+				var pm := _paint_material((m as BaseMaterial3D).albedo_texture)
+				pm.set_shader_parameter("part_xf", Projection(p[1]))
+				damage.materials.append(pm)
+				mi.set_surface_override_material(s, pm)
+			elif mname.begins_with("Glass"):
+				var gm := ShaderMaterial.new()
+				gm.shader = preload("res://assets/shaders/car_glass.gdshader")
+				gm.set_shader_parameter("part_xf", Projection(p[1]))
+				damage.materials.append(gm)
+				damage.glass.append(gm)
+				mi.set_surface_override_material(s, gm)
 		add_child(mi)
 	# collision: convex hull of the body (one per mesh part is overkill; use the main body part)
 	var hull := CollisionShape3D.new()
@@ -177,6 +204,7 @@ func _build_optics(data: Dictionary) -> void:
 		mi.mesh = data.optics[k]
 		mi.material_override = m
 		add_child(mi)
+		damage.materials.append(m)
 		if k == "rear":
 			_rear_light = m
 		else:
@@ -279,9 +307,98 @@ func set_indicator(sig: Blinker) -> void:
 
 
 func set_headlights(on: bool) -> void:
-	headlights_on = on
-	for l in _lights:
-		l.visible = on
+	headlights_on = on and not damage.wrecked
+	for i in _lights.size():
+		# lamps[0] is the left one (-X)
+		var b: Vector2 = damage.lamps_broken.front
+		_lights[i].visible = headlights_on and (b.x if i == 0 else b.y) < 0.5
+
+
+## Velocity jumps that aren't the car's own driving are collisions: accumulate one collision's change over its
+## ticks, then dent the body where it was hit (opposite the push) and play the impact.
+func _detect_impact(delta: float) -> void:
+	var dv := linear_velocity - _prev_vel
+	_prev_vel = linear_velocity
+	dv.y += 9.8 * delta
+	dv.y *= 0.35  # landings are mostly suspension work
+	if dv.length() > 1.2:
+		_jolt += dv
+		_jolt_ticks += 1
+		if _jolt_ticks < 5:
+			return
+	if _jolt_ticks == 0:
+		return
+	var j := _jolt
+	_jolt = Vector3.ZERO
+	_jolt_ticks = 0
+	var strength := j.length()
+	if strength < 2.5:
+		return
+	var local := global_basis.inverse() * j
+	var d := -local.normalized()
+	var c := (CarLibrary.get_model(model).aabb as AABB).get_center()
+	var half := _size * 0.5
+	var t := INF
+	for i in 3:
+		if absf(d[i]) > 0.001:
+			t = minf(t, half[i] / absf(d[i]))
+	var point := c + d * t
+	damage.hit(point, local.normalized(), strength)
+	var at := global_transform * point
+	var vol := clampf(-14.0 + strength * 1.6, -14.0, 4.0)
+	Audio.play_at(Audio.pick("vehicles/bump_%d.ogg", 3), at, vol, randf_range(0.85, 1.1))
+	if strength > 7.0:
+		Audio.play_at(Audio.pick("vehicles/crash_%d.ogg", 4), at, clampf(-8.0 + strength * 0.8, -8.0, 6.0), randf_range(0.85, 1.08))
+	if driver == Game.player and Game.player:
+		var cam: CameraRig = Game.player.get("cam")
+		if cam:
+			cam.shake = maxf(cam.shake, clampf(strength / 14.0, 0.0, 1.6))
+
+
+## Gunfire (Weapon calls this with the hit point and direction).
+func bullet_hit(pos: Vector3, dir: Vector3, amount: float, _from: Node = null) -> void:
+	sleeping = false
+	apply_impulse(dir * 4.0, pos - global_position)
+	damage.bullet(global_transform.affine_inverse() * pos, amount)
+
+
+func take_damage(amount: float, _from: Node = null) -> void:
+	damage._damage(amount)
+
+
+func _on_lamps_broken() -> void:
+	if _front_light:
+		_front_light.set_shader_parameter("broken", damage.lamps_broken.front)
+	if _rear_light:
+		_rear_light.set_shader_parameter("broken", damage.lamps_broken.rear)
+	set_headlights(headlights_on)
+
+
+func _on_engine_dead() -> void:
+	engine_dead = true
+	if audio:
+		audio.stop()
+
+
+func _on_wrecked() -> void:
+	engine_dead = true
+	# tyres burnt off, rims blackened
+	var charred := StandardMaterial3D.new()
+	charred.albedo_color = Color(0.025, 0.024, 0.023)
+	charred.roughness = 0.95
+	for w in _wheels:
+		for mi in w.get_children():
+			if mi is MeshInstance3D:
+				(mi as MeshInstance3D).material_override = charred
+		w.wheel_friction_slip = 0.6
+	set_headlights(false)
+	set_indicator(Blinker.OFF)
+	horn_on = false
+	if audio:
+		audio.stop()
+	# whoever is inside is thrown out
+	if driver and driver.has_method("bail_out"):
+		driver.bail_out(self)
 
 
 func driver_door_position() -> Vector3:
@@ -314,6 +431,16 @@ func set_driver(who: Node) -> void:
 		engine_force = 0.0
 		brake = max_brake * 0.3
 		_throttle = 0.0
+		horn_on = false
+		if audio:
+			audio.stop()
+	elif not engine_dead:
+		if audio == null:
+			audio = VehicleAudio.new()
+			audio.name = "Audio"
+			add_child(audio)
+			audio.setup(self, ENGINE_PITCH.get(model, 1.0), "car")
+		audio.start()
 	driver_changed.emit(who)
 
 
@@ -329,6 +456,7 @@ func speed_kmh() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	_detect_impact(delta)
 	# parked and at rest: apply no forces at all so the physics engine can put the body to sleep
 	if indicator != Blinker.OFF:
 		_blink += delta
@@ -342,9 +470,13 @@ func _physics_process(delta: float) -> void:
 			_update_lights()
 		if not _idle:
 			_go_idle()
+		if _put_to_sleep and not sleeping:
+			_idle_time = 0.0  # something woke it (a push, a blast): give it time to start moving
+			_put_to_sleep = false
 		_idle_time += delta
 		if _idle_time > 0.5 and not sleeping:
 			sleeping = true  # the suspension keeps nudging the body, so it never dozes off on its own
+			_put_to_sleep = true
 		return
 	_idle = false
 	_idle_time = 0.0
@@ -358,6 +490,7 @@ func _physics_process(delta: float) -> void:
 		brake_in = Input.get_action_strength("brake")
 		steer_in = Input.get_action_strength("steer_left") - Input.get_action_strength("steer_right")
 		handbrake = Input.is_action_pressed("handbrake")
+		horn_on = Input.is_action_pressed("horn")
 		if Input.is_action_just_pressed("headlights"):
 			set_headlights(not headlights_on)
 		if Input.is_action_just_pressed("indicator_left"):
@@ -368,6 +501,10 @@ func _physics_process(delta: float) -> void:
 			set_indicator(Blinker.OFF if indicator == Blinker.HAZARD else Blinker.HAZARD)
 
 	# brake pedal reverses once (almost) stopped
+	if engine_dead:
+		throttle = 0.0
+		if brake_in > 0.05 and fwd_speed <= 1.0:
+			brake_in = 0.0
 	var drive := throttle
 	var braking := 0.0
 	if brake_in > 0.05:
@@ -406,7 +543,9 @@ func _physics_process(delta: float) -> void:
 	var torque := clampf(0.55 + 0.6 * sin(clampf(rpm / RED_RPM, 0.0, 1.0) * PI * 0.9), 0.4, 1.15)
 	# VehicleBody3D drives along +Z; our cars face -Z, so forward thrust is a negative engine force
 	# engine_force is applied at every driven wheel: normalise so AWD isn't twice as strong as RWD
-	engine_force = -_throttle * max_engine_force * pull * torque * (0.5 + 0.5 * speed_factor) / GEAR_PULL[2] * 2.0 / maxf(_driven, 1.0)
+	# a badly damaged engine loses power
+	var health_k := 1.0 if damage.health > 300.0 else 0.55 + 0.45 * damage.health / 300.0
+	engine_force = -_throttle * max_engine_force * health_k * pull * torque * (0.5 + 0.5 * speed_factor) / GEAR_PULL[2] * 2.0 / maxf(_driven, 1.0)
 	braking_now = braking > 0.05 or (handbrake and v > 1.0)
 	reversing = _throttle < -0.05
 	# nobody at the controls (parked, or a driver getting in/out): hold the car firmly
@@ -488,7 +627,11 @@ func _update_lights() -> void:
 	if driver != null and not headlights_on and night > 0.5:
 		set_headlights(true)
 	var on := 1.0 if headlights_on else 0.0
-	var lit := indicator != Blinker.OFF and fmod(_blink, 0.75) < 0.4
+	var lit := indicator != Blinker.OFF and fmod(_blink, 0.75) < 0.4 and not damage.wrecked
+	if lit != _lit_was:
+		_lit_was = lit
+		if audio and driver != null and driver == Game.player:
+			audio.tick()
 	var il := 1.0 if lit and indicator in [Blinker.LEFT, Blinker.HAZARD] else 0.0
 	var ir := 1.0 if lit and indicator in [Blinker.RIGHT, Blinker.HAZARD] else 0.0
 	for m: ShaderMaterial in [_front_light, _rear_light]:

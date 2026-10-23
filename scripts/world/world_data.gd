@@ -60,6 +60,38 @@ func _load() -> void:
 		nature.decompress()
 
 
+var _splat: Image
+var _wood: Array[Rect2] = []
+
+
+## What the ground at x/z is made of, for footsteps: "concrete", "grass", "sand" or "wood".
+## `natural` = standing on the terrain itself (not a building, road kerb or prop).
+func ground_kind(x: float, z: float, natural: bool) -> String:
+	if _wood.is_empty():
+		for l: Dictionary in lots:
+			if l.kind in ["boardwalk", "pier", "lifeguard"]:
+				_wood.append(Rect2(l.x0, l.z0, l.x1 - l.x0, l.z1 - l.z0).grow(0.5))
+		if _wood.is_empty():
+			_wood.append(Rect2(1e9, 1e9, 1, 1))
+	for r in _wood:
+		if r.has_point(Vector2(x, z)):
+			return "wood"
+	if not natural:
+		return "concrete"
+	if _splat == null:
+		_splat = (load(DIR + "splat.png") as Texture2D).get_image()
+		if _splat.is_compressed():
+			_splat.decompress()
+	var px := clampi(int((x + half) / (2.0 * half) * _splat.get_width()), 0, _splat.get_width() - 1)
+	var pz := clampi(int((z + half) / (2.0 * half) * _splat.get_height()), 0, _splat.get_height() - 1)
+	var c := _splat.get_pixel(px, pz)
+	if c.r > 0.45:
+		return "sand"
+	if nature_at(x, z) < 0.03 and c.r < 0.2:
+		return "concrete"  # town ground under the streets
+	return "concrete" if c.b > maxf(c.g, c.a) else "grass"
+
+
 ## Wild vegetation density 0..1 at world x/z (hills, shores; 0 in the city).
 func nature_at(x: float, z: float) -> float:
 	var px := clampi(int((x + half) / (step * 2.0)), 0, nature.get_width() - 1)

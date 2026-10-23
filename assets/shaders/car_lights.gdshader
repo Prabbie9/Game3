@@ -2,6 +2,8 @@ shader_type spatial;
 // Car light clusters (the model's "Optics" texture), in the car frame (forward -Z, right +X).
 // front: headlights glow with `head`. rear: red parts glow with tail (lights on) and brake, white parts with reverse.
 // Indicators blink on the amber lenses of their side, or on the outer part of the cluster when it has none.
+// A smashed side (broken.x left, broken.y right) goes dark and grey; dents follow the body.
+#include "res://assets/shaders/car_dents.gdshaderinc"
 uniform sampler2D tex : source_color, filter_linear_mipmap;
 uniform bool rear = false;
 uniform float head = 0.0;
@@ -12,11 +14,14 @@ uniform float ind_left = 0.0;
 uniform float ind_right = 0.0;
 uniform bool has_amber = true;
 uniform float outer_x = 0.6;
+uniform vec2 broken = vec2(0.0);
+uniform float burnt = 0.0;
 
 varying vec3 lp;
 
 void vertex() {
 	lp = VERTEX;
+	apply_dents(VERTEX);
 }
 
 void fragment() {
@@ -36,7 +41,10 @@ void fragment() {
 		e = mix(c, vec3(1.0, 0.96, 0.88), 0.5) * bright * head * 4.0 * (1.0 - amber) * (1.0 - zone * ind);
 	}
 	e += vec3(1.0, 0.5, 0.06) * zone * ind * 5.0;
-	ALBEDO = mix(c, vec3(1.0, 0.55, 0.1), zone * ind * 0.5);
+	float smashed = max(lp.x < 0.0 ? broken.x : broken.y, burnt);
+	e *= 1.0 - smashed;
+	c = mix(c, c * 0.25 + vec3(0.08), smashed);
+	ALBEDO = mix(c, vec3(1.0, 0.55, 0.1), zone * ind * 0.5 * (1.0 - smashed));
 	ROUGHNESS = 0.08;
 	SPECULAR = 0.8;
 	EMISSION = e;

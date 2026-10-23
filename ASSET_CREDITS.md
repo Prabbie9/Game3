@@ -44,3 +44,24 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Boulder 01 (model) | city props | Rico Cilliers | https://polyhaven.com/a/boulder_01 | CC0 |
 | Realistic HD Blue jacaranda (1/40) (Sketchfab) | street and garden trees | PlantCatalog (PlantCatalog) | https://sketchfab.com/3d-models/realistic-hd-blue-jacaranda-140-502e2c6bf3f74e9b902e5bc6cdf24b68 | CC-BY 4.0 |
 | Oak tree (Sketchfab) | hill and park trees | evolveduk (evolveduk) | https://sketchfab.com/3d-models/oak-tree-6468dd4d3eb240ef902b9057d9913606 | CC-BY 4.0 |
+
+## Sounds
+Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.
+
+| Sound | Author | License | Source |
+|---|---|---|---|
+| crash_3.ogg, glass_1.ogg | rubberduck | CC0 | https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx |
+| indicator.wav | looneybits | CC0 | https://opengameart.org/content/car-blinker-sfx |
+| door_close.ogg, door_open.ogg, engine_start.ogg, engine_stop.ogg, horn.wav | GGBotNet | CC0 | https://opengameart.org/content/car-sound-effects-pack-low-quality |
+| explosion_0.ogg | Joth | CC0 | https://opengameart.org/content/chunky-explosion |
+| crash_0.ogg | qubodup | CC0 | https://opengameart.org/content/crash-collision |
+| fire_loop.ogg | PagDev | CC0 | https://opengameart.org/content/fireplace-sound-loop |
+| glass_0.ogg | TinyWorlds | CC0 | https://opengameart.org/content/glass-break |
+| heavy_fast.wav, heavy_mid.wav, heavy_slow.wav | Nayckron | CC-BY 3.0 | https://opengameart.org/content/engine-loop-heavy-vehicletank |
+| heli_loop.ogg | aquinn | CC0 | https://opengameart.org/content/helicopter-sounds |
+| body_fall.ogg, bump_0.ogg, bump_1.ogg, bump_2.ogg, punch_0.ogg, punch_1.ogg, punch_2.ogg, step_concrete_0.ogg, step_concrete_1.ogg, step_concrete_2.ogg, step_concrete_3.ogg, step_concrete_4.ogg, step_grass_0.ogg, step_grass_1.ogg, step_grass_2.ogg, step_grass_3.ogg, step_sand_0.ogg, step_sand_1.ogg, step_sand_2.ogg, step_sand_3.ogg, step_wood_0.ogg, step_wood_1.ogg, step_wood_2.ogg, step_wood_3.ogg | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
+| engine_high.wav, engine_idle.wav, engine_low.wav | domasx2 | CC0 | https://opengameart.org/content/racing-car-engine-sound-loops |
+| rain_loop.ogg | Kresiek The Furry | CC0 | https://opengameart.org/content/amb-rain-loop-1 |
+| crash_1.ogg, crash_2.ogg, explosion_1.ogg, splash.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
+| siren_loop.ogg | aquinn | CC0 | https://opengameart.org/content/sirens-and-alarm-noise |
+| tyre_squeal.wav | qubodup | CC-BY 3.0 | https://opengameart.org/content/car-tire-squeal-skid-loop |

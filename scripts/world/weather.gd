@@ -37,6 +37,7 @@ var _target: Array = PRESETS[Kind.CLEAR]
 var _timer := 300.0
 var _flash_timer := 8.0
 var _rain: GPUParticles3D
+var _rain_sound: AudioStreamPlayer
 var _collider: GPUParticlesCollisionHeightField3D
 
 
@@ -109,6 +110,18 @@ func _process(delta: float) -> void:
 		_rain.global_position = cam.global_position + Vector3(0, 16, 0)
 	_rain.emitting = rain > 0.03
 	_rain.amount_ratio = clampf(rain, 0.0, 1.0)
+	# rain ambience: fades in with the shower
+	if rain > 0.02:
+		if _rain_sound == null:
+			_rain_sound = AudioStreamPlayer.new()
+			_rain_sound.stream = Audio.stream("world/rain_loop.ogg", true)
+			_rain_sound.bus = &"Ambience"
+			add_child(_rain_sound)
+		if not _rain_sound.playing:
+			_rain_sound.play(randf() * 30.0)
+		_rain_sound.volume_db = linear_to_db(clampf(rain, 0.0, 1.0)) - 2.0
+	elif _rain_sound and _rain_sound.playing:
+		_rain_sound.stop()
 	# lightning
 	flash = move_toward(flash, 0.0, delta * 6.0)
 	if kind == Kind.STORM and rain > 0.6:
