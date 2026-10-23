@@ -229,7 +229,7 @@ func _update_sun() -> void:
 	sky_mat.set_shader_parameter("night", night)
 	sky_mat.set_shader_parameter("coverage", w.coverage if w else 0.2)
 	sky_mat.set_shader_parameter("cloud_dark", w.cloud_dark if w else 0.0)
-	sky_mat.set_shader_parameter("exposure", lerpf(1.0, 0.35, night) + flash * 3.0)
+	sky_mat.set_shader_parameter("exposure", lerpf(1.7, 0.4, night) * (1.0 - dim * 0.35) + flash * 3.0)
 	env.ambient_light_energy = lerpf(0.35, 1.0, day) * (1.0 - dim * 0.25) + flash * 2.0
 	env.volumetric_fog_albedo = Color(0.92, 0.9, 0.86).lerp(Color(1.0, 0.82, 0.64), low * 0.6)
 	env.volumetric_fog_density = 0.002 + fogw * 0.02 + (w.rain if w else 0.0) * 0.006

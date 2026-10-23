@@ -155,6 +155,41 @@ LOOKOUT = (840, -850)
 
 
 class Graph:
+    def split_long(self, max_len=160.0, piece=110.0):
+        """Cut long (already profiled, [x, y, z]) roads into pieces with extra degree-2 nodes so each piece
+        streams with its own cell; the new nodes take the profile's height."""
+        out = []
+        for rd in self.roads:
+            pts = rd["pts"]
+            L = sum(math.hypot(b[0] - a[0], b[2] - a[2]) for a, b in zip(pts[:-1], pts[1:]))
+            if L <= max_len:
+                out.append(rd)
+                continue
+            dense = _resample3(pts, 10.0) if len(pts) < 6 else [list(p) for p in pts]
+            n = max(int(round(L / piece)), 2)
+            target = L / n
+            seg = [dense[0]]
+            acc = 0.0
+            for i in range(1, len(dense)):
+                a, b = dense[i - 1], dense[i]
+                acc += math.hypot(b[0] - a[0], b[2] - a[2])
+                seg.append(b)
+                if acc >= target and i < len(dense) - 1:
+                    out.append(self._piece(rd, seg))
+                    seg = [b]
+                    acc = 0.0
+            if len(seg) > 1:
+                out.append(self._piece(rd, seg))
+        self.roads = out
+
+    def _piece(self, rd, seg):
+        a = self.node(seg[0][0], seg[0][2])
+        b = self.node(seg[-1][0], seg[-1][2])
+        for idx, p in ((a, seg[0]), (b, seg[-1])):
+            if len(self.nodes[idx]) < 3:
+                self.nodes[idx].append(float(p[1]))
+        return {**rd, "a": a, "b": b, "pts": [list(map(float, p)) for p in seg]}
+
     def __init__(self):
         self.nodes = []      # [x, z]
         self.index = {}
@@ -314,6 +349,18 @@ def _split_line(g, line, cuts, w, lanes, kind, walk, name):
 
 # ----------------------------------------------------------------------------------------- terrain
 
+def _resample3(pts, spacing):
+    """[x, y, z] polyline resampled every `spacing` metres (y interpolated)."""
+    out = [list(pts[0])]
+    for a, b in zip(pts[:-1], pts[1:]):
+        L = math.hypot(b[0] - a[0], b[2] - a[2])
+        k = max(int(L // spacing), 1)
+        for j in range(1, k + 1):
+            t = j / k
+            out.append([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t])
+    return out
+
+
 def rect_mask(X, Z, x0, z0, x1, z1, fall):
     return (smoothstep(x0 - fall, x0, X) * (1 - smoothstep(x1, x1 + fall, X)) *
             smoothstep(z0 - fall, z0, Z) * (1 - smoothstep(z1, z1 + fall, Z)))
@@ -375,8 +422,8 @@ def build_terrain(coast, graph):
     log("relief")
     hill_mask = smoothstep(-430, -680, Z) * smoothstep(330, 560, X)
     r2 = (X - 820) ** 2 + (Z + 860) ** 2
-    hills = 155.0 * np.exp(-r2 / (2 * 270.0 ** 2)) + 55.0 * np.exp(-((X - 1050) ** 2 + (Z + 420) ** 2) / (2 * 190.0 ** 2))
-    hills += 28.0 * fbm(X, Z, 1 / 260.0, 5, seed=7, ridged=True) * smoothstep(0, 60, hills)
+    hills = 120.0 * np.exp(-r2 / (2 * 290.0 ** 2)) + 55.0 * np.exp(-((X - 1050) ** 2 + (Z + 420) ** 2) / (2 * 190.0 ** 2))
+    hills += 18.0 * fbm(X, Z, 1 / 260.0, 5, seed=7, ridged=True) * smoothstep(0, 60, hills)
     north = 9.0 * smoothstep(-560, -1100, Z) * (1 - hill_mask) + 2.5 * fbm(X, Z, 1 / 180.0, 3, seed=3)
     relief = hills * hill_mask + north * smoothstep(-470, -620, Z)
     relief += 1.2 * fbm(X, Z, 1 / 90.0, 3, seed=5)
@@ -436,14 +483,15 @@ def _road_profile(rd, h, graph):
             if len(node) < 3:
                 node.append(float(raw[end]))
             sm[end] = node[2]
-    # grade limit (12 %) both directions
+    # grade limit (12 %, mountain roads 16 %) both directions
+    grade = 0.16 if rd["kind"] == "hill" else 0.12
     dist = np.concatenate([[0], np.cumsum(np.hypot(np.diff([p[0] for p in pts]), np.diff([p[1] for p in pts])))])
     for _ in range(3):
         for i in range(1, len(sm)):
-            lim = 0.12 * (dist[i] - dist[i - 1])
+            lim = grade * (dist[i] - dist[i - 1])
             sm[i] = np.clip(sm[i], sm[i - 1] - lim, sm[i - 1] + lim)
         for i in range(len(sm) - 2, -1, -1):
-            lim = 0.12 * (dist[i + 1] - dist[i])
+            lim = grade * (dist[i + 1] - dist[i])
             sm[i] = np.clip(sm[i], sm[i + 1] - lim, sm[i + 1] + lim)
     rd["pts"] = [[p[0], float(y), p[1]] for p, y in zip(pts, sm)]   # -> [x, y, z]
 
@@ -451,7 +499,7 @@ def _road_profile(rd, h, graph):
 def _carve_road(rd, h):
     """Flatten terrain across the road (plus sidewalks/shoulders) and blend embankments over 10 m."""
     half = rd["w"] * 0.5 + (SIDEWALK if rd["walk"] else 2.5)
-    bank = 10.0
+    bank = 60.0 if rd["kind"] == "hill" else 10.0
     pts = rd["pts"]
     for p, q in zip(pts[:-1], pts[1:]):
         ax, ay, az = p
@@ -540,8 +588,9 @@ def build_lots(graph):
             lots.append({"kind": "industrial", "x0": a + 12 + 3, "z0": c + 7 + 3, "x1": b - 7 - 3, "z1": d - 7 - 3,
                          "seed": int(rnd.integers(1 << 30))})
     # port: container yard + sheds between Harbor Blvd and the quay; cranes on the quay
-    lots.append({"kind": "port_sheds", "x0": -60, "z0": 640, "x1": 1060, "z1": 700, "seed": 7})
-    lots.append({"kind": "container_yard", "x0": -40, "z0": 712, "x1": 1060, "z1": 812, "seed": 8})
+    for xa in range(-40, 1060, 220):  # in pieces so each streams with its own cell
+        lots.append({"kind": "port_sheds", "x0": xa, "z0": 640, "x1": min(xa + 210, 1060), "z1": 700, "seed": 7 + xa})
+        lots.append({"kind": "container_yard", "x0": xa, "z0": 712, "x1": min(xa + 210, 1060), "z1": 812, "seed": 8 + xa})
     for x in (100, 200, 450, 550, 850, 950):
         lots.append({"kind": "crane", "x0": x - 10, "z0": 822, "x1": x + 10, "z1": 846, "seed": x})
     # suburbs: house plots along every E-W street, both sides
@@ -557,6 +606,17 @@ def build_lots(graph):
                     lots.append({"kind": "house", "x0": x - 9, "z0": zc - 9, "x1": x + 9, "z1": zc + 9,
                                  "yaw": 0.0 if side > 0 else math.pi, "seed": int(rnd.integers(1 << 30))})
                 x += 22.0 + float(rnd.uniform(0, 6))
+    # beach: boardwalk along Ocean Drive's sand side, a pier at the end of the main avenue, lifeguard towers
+    for za in range(-1040, 680, 200):  # in pieces so each streams with its own cell
+        lots.append({"kind": "boardwalk", "x0": OCEAN_DRIVE_X - 8 - SIDEWALK - 8, "z0": za, "x1": OCEAN_DRIVE_X - 8 - SIDEWALK,
+                     "z1": min(za + 200, 680), "seed": 3 + za})
+    lots.append({"kind": "pier", "x0": -1060, "z0": -6, "x1": OCEAN_DRIVE_X - 8 - SIDEWALK - 8, "z1": 6, "seed": 4})
+    for z in range(-900, 640, 190):
+        if abs(z) < 40:
+            continue
+        lots.append({"kind": "lifeguard", "x0": -858, "z0": z - 2, "x1": -854, "z1": z + 2, "seed": 100 + z})
+    lx, lz = LOOKOUT
+    lots.append({"kind": "lookout", "x0": lx - 18, "z0": lz - 18, "x1": lx + 18, "z1": lz + 18, "seed": 5})
     # mansions along the canyon road
     for (x, z, yaw) in ((520, -700, 0.3), (610, -735, 2.6), (735, -830, 1.2), (690, -950, 0.1)):
         lots.append({"kind": "mansion", "x0": x - 16, "z0": z - 14, "x1": x + 16, "z1": z + 14, "yaw": yaw, "seed": int(x)})
@@ -614,7 +674,7 @@ def build_splat(h, d, beach, X, Z, graph):
     slope = np.hypot(gx, gy)
     sand = np.clip(beach * smoothstep(150, 90, d) * (d > -60), 0, 1)
     sand = np.maximum(sand, smoothstep(2.5, 0.5, h - SEA) * (d > -40) * (1 - smoothstep(780, 800, Z) * smoothstep(-120, -40, X)))
-    rock = np.clip(smoothstep(0.5, 0.8, slope) + (h < SEA - 1.0) * 0.6, 0, 1)
+    rock = np.clip(smoothstep(0.7, 1.05, slope) + (h < SEA - 1.0) * 0.6, 0, 1)
     rest = np.clip(1 - sand - rock, 0, 1)
     low = smoothstep(16.0, 5.0, h) * smoothstep(0.35, 0.15, slope)
     lush = rest * np.clip(low * (0.75 + 0.5 * fbm(X, Z, 1 / 70.0, 3, seed=11)), 0, 1)
@@ -664,6 +724,8 @@ def paint_map(coast, graph, lots, h, splat, size=2048):
     for lot in lots:
         if lot["kind"] in ("block", "beachfront", "industrial", "port_sheds", "house", "mansion", "mall", "midrise", "gas_station"):
             dr.rectangle([P(lot["x0"], lot["z0"]), P(lot["x1"], lot["z1"])], fill=(86, 90, 96))
+        elif lot["kind"] in ("boardwalk", "pier"):
+            dr.rectangle([P(lot["x0"], lot["z0"]), P(lot["x1"], lot["z1"])], fill=(150, 120, 90))
         elif lot["kind"] == "parking":
             dr.rectangle([P(lot["x0"], lot["z0"]), P(lot["x1"], lot["z1"])], fill=(74, 76, 80))
         elif lot["kind"] == "container_yard":
@@ -680,6 +742,8 @@ def main():
     graph = build_roads()
     log(f"roads {len(graph.roads)} edges, {len(graph.nodes)} nodes")
     h, d, beach, X, Z = build_terrain(coast, graph)
+    graph.split_long()
+    log(f"roads split: {len(graph.roads)} edges")
     lots = build_lots(graph)
     log(f"lots {len(lots)}")
     # heights

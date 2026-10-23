@@ -24,6 +24,9 @@ var _jobs := {}         # Vector2i -> task id
 var _done: Array = []
 var _mutex := Mutex.new()
 var _hole_center := Vector2i(1 << 20, 1 << 20)
+var _col_jobs := {}
+var _col_done: Array = []
+var _col_keep := {}
 
 
 func _ready() -> void:
@@ -46,6 +49,8 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	for id in _jobs.values():
+		WorkerThreadPool.wait_for_task_completion(id)
+	for id in _col_jobs.values():
 		WorkerThreadPool.wait_for_task_completion(id)
 
 
@@ -80,6 +85,7 @@ func update(pos: Vector3) -> void:
 			_request(k, _want[k])
 		_update_collision(c)
 	_collect()
+	_collect_collision()
 	# swap the coarse mesh's hole once every wanted chunk is shown at its resolution
 	if _hole_center != _center and _all_ready():
 		_hole_center = _center
@@ -94,7 +100,7 @@ func update(pos: Vector3) -> void:
 
 
 func is_settled() -> bool:
-	return _hole_center == _center
+	return _hole_center == _center and _col_jobs.is_empty() and _col_done.is_empty()
 
 
 func _valid(k: Vector2i) -> bool:
@@ -121,12 +127,22 @@ func _request(k: Vector2i, stride: int) -> void:
 		_mutex.unlock())
 
 
+var _made_this_frame := 0
+
+
 func _collect() -> void:
+	_made_this_frame = 0
 	_mutex.lock()
 	var ready := _done
 	_done = []
 	_mutex.unlock()
 	for r: Array in ready:
+		if _made_this_frame >= 2:
+			_mutex.lock()
+			_done.append(r)
+			_mutex.unlock()
+			continue
+		_made_this_frame += 1
 		var k: Vector2i = r[0]
 		WorkerThreadPool.wait_for_task_completion(_jobs[k])
 		_jobs.erase(k)
@@ -146,34 +162,55 @@ func _collect() -> void:
 
 func _update_collision(c: Vector2i) -> void:
 	var keep := {}
-	var per := int(CHUNK / data.step)
 	for dz in range(-COL_R, COL_R + 1):
 		for dx in range(-COL_R, COL_R + 1):
 			var k := c + Vector2i(dx, dz)
 			if not _valid(k):
 				continue
 			keep[k] = true
-			if _cols.has(k):
+			if _cols.has(k) or _col_jobs.has(k):
 				continue
-			var hm := HeightMapShape3D.new()
-			hm.map_width = per + 1
-			hm.map_depth = per + 1
-			var f := PackedFloat32Array()
-			f.resize((per + 1) * (per + 1))
-			for j in per + 1:
-				for i in per + 1:
-					f[j * (per + 1) + i] = data.sample(k.x * per + i, k.y * per + j)
-			hm.map_data = f
-			var cs := CollisionShape3D.new()
-			cs.shape = hm
-			cs.scale = Vector3(data.step, 1.0, data.step)
-			cs.position = Vector3(-data.half + (k.x + 0.5) * CHUNK, 0.0, -data.half + (k.y + 0.5) * CHUNK)
-			_body.add_child(cs)
-			_cols[k] = cs
+			var d := data
+			var per := int(CHUNK / data.step)
+			_col_jobs[k] = WorkerThreadPool.add_task(func() -> void:
+				var f := PackedFloat32Array()
+				f.resize((per + 1) * (per + 1))
+				for j in per + 1:
+					for i in per + 1:
+						f[j * (per + 1) + i] = d.sample(k.x * per + i, k.y * per + j)
+				_mutex.lock()
+				_col_done.append([k, f])
+				_mutex.unlock())
 	for k: Vector2i in _cols.keys():
 		if not keep.has(k):
 			(_cols[k] as Node).queue_free()
 			_cols.erase(k)
+	_col_keep = keep
+
+
+## One finished collision chunk per frame (each is a single cheap shape).
+func _collect_collision() -> void:
+	_mutex.lock()
+	var item: Array = _col_done.pop_front() if not _col_done.is_empty() else []
+	_mutex.unlock()
+	if item.is_empty():
+		return
+	var k: Vector2i = item[0]
+	WorkerThreadPool.wait_for_task_completion(_col_jobs[k])
+	_col_jobs.erase(k)
+	if not _col_keep.has(k) or _cols.has(k):
+		return
+	var per := int(CHUNK / data.step)
+	var hm := HeightMapShape3D.new()
+	hm.map_width = per + 1
+	hm.map_depth = per + 1
+	hm.map_data = item[1]
+	var cs := CollisionShape3D.new()
+	cs.shape = hm
+	cs.scale = Vector3(data.step, 1.0, data.step)
+	cs.position = Vector3(-data.half + (k.x + 0.5) * CHUNK, 0.0, -data.half + (k.y + 0.5) * CHUNK)
+	_body.add_child(cs)
+	_cols[k] = cs
 
 
 ## Vertex/normal/tangent/index arrays for the sample rectangle [i0, i0 + w] x [j0, j0 + h] every `stride`

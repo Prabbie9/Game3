@@ -67,7 +67,13 @@ func _prop(name: String, pos: Vector3, yaw: float, scale := 1.0) -> void:
 	_prop_xf(name, Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale), pos))
 
 
+const VEGETATION := ["palm_crown", "palm_trunk", "date_palm", "jacaranda", "oak", "boulder"]
+
+
 func _prop_xf(name: String, xf: Transform3D) -> void:
+	# vegetation is grouped per 64 m so each group gets its own LOD (a whole cell would pick the nearest tree's)
+	if name in VEGETATION and not name.contains("@"):
+		name += "@%d,%d" % [floori(xf.origin.x / CHUNK), floori(xf.origin.z / CHUNK)]
 	if not props.has(name):
 		props[name] = []
 	props[name].append(xf)
@@ -424,14 +430,14 @@ const CHUNK := 64.0  # trees are grouped per 64 m so each group picks its own LO
 func _nature() -> void:
 	var x0 := key.x * SIZE
 	var z0 := key.y * SIZE
-	var g := 9.0
+	var g := 7.0
 	var n := int(SIZE / g)
 	for j in n:
 		for i in n:
 			var x := x0 + (i + rng.randf()) * g
 			var z := z0 + (j + rng.randf()) * g
 			var dens := data.nature_at(x, z)
-			if dens < 0.05 or rng.randf() > dens * 0.55:
+			if dens < 0.05 or rng.randf() > dens * 0.75:
 				continue
 			var y := _ground_y(x, z)
 			if y < data.sea + 1.0:
@@ -442,7 +448,7 @@ func _nature() -> void:
 			if nrm.y < 0.82 or rng.randf() < 0.12:
 				_prop("boulder" + ck, pos - Vector3(0, 0.3, 0), rng.randf() * TAU, rng.randf_range(0.8, 2.6))
 			else:
-				_prop("oak" + ck, pos, rng.randf() * TAU, rng.randf_range(0.55, 1.1))
+				_prop("oak" + ck, pos, rng.randf() * TAU, rng.randf_range(0.7, 1.3))
 
 
 # ------------------------------------------------------------------------------------------------ lots
@@ -481,6 +487,14 @@ func _lot(l: Dictionary) -> void:
 			_house(r, float(l.get("yaw", 0.0)), false)
 		"mansion":
 			_house(r, float(l.get("yaw", 0.0)), true)
+		"boardwalk":
+			_boardwalk(r)
+		"pier":
+			_pier(r)
+		"lifeguard":
+			_lifeguard(r)
+		"lookout":
+			_lookout(r)
 
 
 func _ground(r: Rect2, key := "ground", y := CURB_H) -> void:
@@ -576,14 +590,22 @@ func _roof(lot: Rect2, top: float) -> void:
 
 
 func _plaza_block(r: Rect2) -> void:
-	_ground(r)
+	var pr := Rect2(data.pool[0], data.pool[1], data.pool[2] - data.pool[0], data.pool[3] - data.pool[1]) if data.pool.size() == 4 else Rect2()
+	if pr.size != Vector2.ZERO:
+		# ground around the pool's coping only (the basin sits below it)
+		for q: Rect2 in _around(r, pr.grow(0.45)):
+			_plain()
+			b.flat("ground", q.position.x, q.position.y, q.end.x, q.end.y, CURB_H)
+		for q: Rect2 in _around(r, pr):
+			_col(Vector3(q.get_center().x, CURB_H * 0.5, q.get_center().y), Vector3(q.size.x, CURB_H, q.size.y))
+	else:
+		_ground(r)
 	var q := _quarters(r)
 	_building(q[0], CURB_H, 6, "white_stucco", Color(0.98, 0.9, 0.78), true, 0)
 	_building(q[1], CURB_H, 4, "brick_wall_09", Color(1, 1, 1), true, 0)
 	_building(q[2], CURB_H, 7, "plastered_wall_02", Color(1.0, 0.86, 0.74), true, 0)
 	var lot: Rect2 = q[3]
 	var c := lot.get_center()
-	var pr := Rect2(data.pool[0], data.pool[1], data.pool[2] - data.pool[0], data.pool[3] - data.pool[1]) if data.pool.size() == 4 else Rect2()
 	if pr.size != Vector2.ZERO:
 		_pool(pr, 2.0)
 		for sx: float in [-3.5, 3.5]:
@@ -957,3 +979,125 @@ func _flat_roof(corners: Array[Vector3], top: float, basis: Basis) -> void:
 	b.quad("roof", g[3], g[2], g[1], g[0], Vector2(g[3].x, g[3].z), Vector2(g[2].x, g[2].z), Vector2(g[1].x, g[1].z), Vector2(g[0].x, g[0].z))
 	for i in 4:
 		b.wall("roof", g[(i + 1) % 4] - Vector3(0, 0.45, 0), g[i] - Vector3(0, 0.45, 0), 0.9)
+
+
+# ------------------------------------------------------------------------------------------------ beach & lookout
+
+## Wooden promenade between Ocean Drive's sidewalk and the sand, with lamps and benches facing the sea.
+func _boardwalk(r: Rect2) -> void:
+	_plain()
+	var y := CURB_H + 0.05
+	b.flat("deck", r.position.x, r.position.y, r.end.x, r.end.y, y)
+	b.wall("deck", Vector3(r.position.x, y - 0.6, r.end.y), Vector3(r.position.x, y - 0.6, r.position.y), 0.6)
+	_col(Vector3(r.get_center().x, y * 0.5 - 0.2, r.get_center().y), Vector3(r.size.x, y + 0.4, r.size.y))
+	var z := r.position.y + 10.0
+	while z < r.end.y - 5.0:
+		if absf(z) > 12.0:
+			var lp := Vector3(r.position.x + 0.6, y, z)
+			_prop("street_lamp_01", lp, 0.0)
+			lights.append(lp + Vector3(0, 3.55, 0))
+			_prop("bench", Vector3(r.position.x + 2.2, y, z + 6.0), PI * 0.5)
+			if rng.randf() < 0.5:
+				_palm(Vector3(r.end.x - 1.0, y, z + 12.0))
+		z += 24.0
+
+
+## Long timber pier over the sea: ramp up from the boardwalk, deck on piles, railings, lamps, kiosks at the end.
+func _pier(r: Rect2) -> void:
+	_plain()
+	var deck_y := 2.2
+	var ramp := 40.0
+	var x_land := r.end.x
+	var x_sea := r.position.x
+	var z0 := r.position.y
+	var z1 := r.end.y
+	var w := z1 - z0
+	# ramp (from the boardwalk up to deck height)
+	var a := Vector3(x_land, CURB_H + 0.05, z0)
+	var b2 := Vector3(x_land - ramp, deck_y, z0)
+	b.quad("deck", Vector3(x_land, CURB_H + 0.05, z1), a, b2, Vector3(x_land - ramp, deck_y, z1),
+		Vector2(x_land, z1), Vector2(x_land, z0), Vector2(x_land - ramp, z0), Vector2(x_land - ramp, z1))
+	var ang := atan2(deck_y - CURB_H, ramp)
+	_col(Vector3(x_land - ramp * 0.5, (deck_y + CURB_H) * 0.5 - 0.15, (z0 + z1) * 0.5), Vector3(ramp / cos(ang), 0.3, w),
+		Basis(Vector3(0, 0, 1), ang))
+	# deck + edge boards
+	b.flat("deck", x_sea, z0, x_land - ramp, z1, deck_y)
+	b.wall("deck", Vector3(x_sea, deck_y - 0.5, z1), Vector3(x_land - ramp, deck_y - 0.5, z1), 0.5)
+	b.wall("deck", Vector3(x_land - ramp, deck_y - 0.5, z0), Vector3(x_sea, deck_y - 0.5, z0), 0.5)
+	_col(Vector3((x_sea + x_land - ramp) * 0.5, deck_y - 0.15, (z0 + z1) * 0.5), Vector3(x_land - ramp - x_sea, 0.3, w))
+	# piles down to the seabed and railings along both edges
+	var x := x_sea + 2.0
+	while x < x_land - 4.0:
+		var top := deck_y if x < x_land - ramp else lerpf(deck_y, CURB_H, (x - (x_land - ramp)) / ramp)
+		var gy := _ground_y(x, z0)
+		if gy < top - 0.6:
+			for zz: float in [z0 + 0.6, z1 - 0.6, (z0 + z1) * 0.5]:
+				b.box("piles", Vector3(x, (gy + top - 0.5) * 0.5, zz), Vector3(0.45, top - 0.5 - gy, 0.45))
+		for zz: float in [z0 + 0.15, z1 - 0.15]:
+			b.box("rail", Vector3(x, top + 0.55, zz), Vector3(0.12, 1.1, 0.12))
+		x += 5.0
+	for zz: float in [z0 + 0.15, z1 - 0.15]:
+		b.box("rail", Vector3((x_sea + x_land - ramp) * 0.5, deck_y + 1.05, zz), Vector3(x_land - ramp - x_sea, 0.08, 0.1))
+		_col(Vector3((x_sea + x_land - ramp) * 0.5, deck_y + 0.55, zz), Vector3(x_land - ramp - x_sea, 1.1, 0.2))
+	# lamps, benches and a couple of kiosks out at the end
+	var lx := x_sea + 8.0
+	while lx < x_land - ramp - 4.0:
+		for zz: float in [z0 + 0.7, z1 - 0.7]:
+			var lp := Vector3(lx, deck_y, zz)
+			_prop("street_lamp_01", lp, 0.0)
+			lights.append(lp + Vector3(0, 3.55, 0))
+		_prop("bench", Vector3(lx + 10.0, deck_y, z0 + 1.6), 0.0)
+		lx += 26.0
+	for k in 2:
+		var kx := x_sea + 14.0 + k * 16.0
+		_building(Rect2(kx, (z0 + z1) * 0.5 - 2.0 + (2.5 if k == 0 else -2.5), 7.0, 3.0), deck_y, 1, "plastered_wall_02",
+			HOUSE_TINTS[(k * 3) % HOUSE_TINTS.size()], true, 0)
+
+
+## Lifeguard tower on stilts on the sand.
+func _lifeguard(r: Rect2) -> void:
+	var c := Vector3(r.get_center().x, 0, r.get_center().y)
+	c.y = _ground_y(c.x, c.z)
+	_plain()
+	b.color = Color(0.86, 0.9, 0.95)
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			b.box("canopy", c + Vector3(sx * 1.1, 1.2, sz * 1.1), Vector3(0.2, 2.6, 0.2))
+	b.box("canopy", c + Vector3(0, 2.55, 0), Vector3(3.2, 0.15, 3.2), true)
+	b.color = Color(0.45, 0.68, 0.86)
+	b.box("canopy", c + Vector3(0, 3.65, 0), Vector3(2.6, 2.1, 2.4), true)
+	b.color = Color(0.95, 0.95, 0.95)
+	b.box("canopy", c + Vector3(0, 4.85, 0), Vector3(3.0, 0.2, 2.8), true)
+	# ramp down to the sand on the land side
+	b.color = Color(0.86, 0.9, 0.95)
+	b.quad("canopy", c + Vector3(1.6, 2.6, -0.5), c + Vector3(1.6, 2.6, 0.5), c + Vector3(5.0, 0.0, 0.5), c + Vector3(5.0, 0.0, -0.5),
+		Vector2.ZERO, Vector2(1, 0), Vector2(1, 1), Vector2(0, 1))
+	_plain()
+	_col(c + Vector3(0, 3.4, 0), Vector3(3.2, 2.6, 3.2))
+	_far_box(Rect2(c.x - 1.3, c.z - 1.2, 2.6, 2.4), c.y + 2.6, 2.3, Color(0.45, 0.68, 0.86), 0.0)
+
+
+## Hilltop lookout: paved platform with a low wall, benches, coin telescopes and lamps.
+func _lookout(r: Rect2) -> void:
+	var c := r.get_center()
+	var y := _ground_y(c.x, c.y) + 0.12
+	_plain()
+	b.flat("path", r.position.x, r.position.y, r.end.x, r.end.y, y)
+	_col(Vector3(c.x, y - 0.5, c.y), Vector3(r.size.x, 1.0, r.size.y))
+	for f: Array in [[Vector3(r.position.x, y - 1.0, r.end.y), Vector3(r.end.x, y - 1.0, r.end.y)], [Vector3(r.end.x, y - 1.0, r.end.y), Vector3(r.end.x, y - 1.0, r.position.y)],
+			[Vector3(r.end.x, y - 1.0, r.position.y), Vector3(r.position.x, y - 1.0, r.position.y)], [Vector3(r.position.x, y - 1.0, r.position.y), Vector3(r.position.x, y - 1.0, r.end.y)]]:
+		b.wall("barrier", f[0], f[1], 1.9)
+		var mid: Vector3 = (f[0] + f[1]) * 0.5 + Vector3(0, 1.45, 0)
+		var along: Vector3 = (f[1] - f[0])
+		_col(mid, Vector3(along.length(), 0.9, 0.4), _along(Vector2(along.x, along.z)))
+	for k in 4:
+		var a := TAU * k / 4.0 + PI * 0.25
+		var p := Vector3(c.x + cos(a) * 9.0, y, c.y + sin(a) * 9.0)
+		_prop("bench", p, -a + PI * 0.5)
+		var lp := Vector3(c.x + cos(a + 0.5) * 15.0, y, c.y + sin(a + 0.5) * 15.0)
+		_prop("street_lamp_01", lp, 0.0)
+		lights.append(lp + Vector3(0, 3.55, 0))
+	for k in 3:
+		var tp := Vector3(c.x - 6.0 + k * 6.0, y, r.end.y - 1.2)
+		b.box("metal", tp + Vector3(0, 0.55, 0), Vector3(0.12, 1.1, 0.12))
+		b.box("metal", tp + Vector3(0, 1.2, 0.1), Vector3(0.22, 0.22, 0.5))

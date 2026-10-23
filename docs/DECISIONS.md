@@ -22,3 +22,20 @@
 - 2026-10-22 — Street props get simple collision (cylinders for poles/hydrants/bins, bounds boxes otherwise) on layer 16;
   Poly Haven kits that stack clean + weathered variants keep one per instance (separate RNG so the layout is stable).
 - 2026-10-22 — Gamepad: A = sprint, X = jump (GTA layout); keyboard shoulder swap moved to MMB since Q is cover.
+- 2026-10-23 — World: a ~2.2 km island baked offline by `tools/world/gen_world.py` (numpy): coastline, district
+  layout, road graph (split into ≤160 m pieces), lots, 2 m heightmap with roads carved in, terrain splat, wild-vegetation
+  density and the painted map. The game builds everything from that data, so the layout is versioned and deterministic.
+- 2026-10-23 — Terrain: one coarse mesh for the whole map (16 m) plus 128 m detail chunks streamed around the camera
+  (2 m / 4 m), skirts against cracks; the coarse mesh discards the detail square. Collision = HeightMapShape3D chunks
+  around the focus, heights sampled on worker threads.
+- 2026-10-23 — City: 256 m cells built on worker threads (CityCell → merged mesh arrays per material, collision boxes,
+  MultiMesh prop instances, lights, occluders) and instantiated on the main thread in ≤3 ms steps; freed a few nodes
+  per frame. Facade/road shaders take per-building/per-road parameters per vertex so a cell has ~20 meshes in total.
+  Every cell also has a one-material far stand-in (boxes with a window grid) shown when it isn't loaded.
+  tests/stream_check.gd flies the benchmark route at 45 m/s and fails on hitches.
+- 2026-10-23 — Sky: custom sky shader (gradient from time-of-day colours, sun, clouds driven by the weather, stars)
+  instead of PhysicalSkyMaterial, which has no clouds. Weather drifts between clear/cloudy/overcast/rain/storm/fog.
+- 2026-10-23 — Street lights: thousands of lamps glow through their bulbs; a pool of 12–48 OmniLights (by preset)
+  is moved to the lamps nearest the camera.
+- 2026-10-23 — Trees: Sketchfab CC-BY jacaranda/oak (≈10k faces) rather than Poly Haven's scanned trees
+  (200–900 MB of geometry). Vegetation gets runtime LODs (ImporterMesh.generate_lods) and is grouped per 64 m.

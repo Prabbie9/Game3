@@ -20,7 +20,9 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   SHOT_DIR under `xvfb-run` it also saves a side-view picture of each pose.
 - `... -- res://tools/dev/pose_sheet.gd OUT.png TIME clip…` — front/side/back render of library clips (orientation checks);
   `... -- res://tools/dev/action_trace.gd ACTION` — root path + hand/feet positions through a root-motion action.
-- `tools/screenshots.sh OUT [day,aim,wide,pool,enter,car,night,rain,pause,menu]` — software-rendered review shots
+- `... -- res://tests/stream_check.gd` — streaming hitch check (fails on long frames while flying across the map).
+- `tools/screenshots.sh OUT [day,aim,wide,tour|tour_<name>,pool,enter,car,night,rain,pause,menu]` — software-rendered
+  review shots (~3 min each with the full world; run subsets)
   (+ draw-call/primitive stats in the log). ~1 min per shot.
 - `tools/export_windows.sh` then smoke test: copy `~/.local/share/godot/export_templates/4.7.2.stable/linux_release.x86_64`
   as `PortSolano.x86_64` next to a symlink of `build/PortSolano/PortSolano.pck` and run
@@ -65,12 +67,21 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   assembled from the modular kit, street props now solid (collision layer 16) with one weathering variant each.
 - Pause menu lists the controls for the current device; gamepad jump moved to X (A = sprint).
 
-**Next: Milestone 3 — World expansion** (see docs/PLAN.md): districts, road network + highway, terrain, ocean,
-day/night with street lights, weather, chunk streaming, LOD/HLOD, occluders; hit the perf budget.
+**Milestone 3 — World expansion: IN PROGRESS (target v0.3.0)**
+- `tools/world/gen_world.py` bakes the island (assets/world: height.bin, splat.png, nature.png, map.png, world.json):
+  coastline, districts, road graph (freeway ring, avenues/streets grid, Ocean Dr, Harbor Blvd, suburbs, Canyon Rd),
+  lots, heightmap with carved roads, terrain splat, vegetation density, painted map. Rerun after layout changes.
+- Runtime: `WorldData` (loader), `Terrain` (streamed LOD chunks + heightmap collision), `Ocean` (waves, foam,
+  swimmable), `City` + `CityCell` + `RoadNet` + `PropCatalog` (threaded cell builds, merged meshes, MultiMesh props,
+  collision, occluders, far stand-ins), `LightPool` (street lights), `Weather`, custom sky shader, `FullMap` (M key).
+- Districts: downtown towers/mid-rise, plaza pool, parks, fringe malls/parking/gas stations, beachfront hotels,
+  boardwalk, pier, lifeguard towers, industrial warehouses, port sheds/containers/cranes, suburbs (gable-roof houses,
+  driveways, yard trees), hill villas, lookout, oak/boulder scatter on the hills.
+- Checks: `tests/stream_check.gd` (hitches while flying the benchmark route at 45 m/s), screenshot `tour` shots.
+- Remaining before release: verify night/rain looks, triangle budget (vegetation LOD grouping), export + smoke test.
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
-- Night lighting not done (no street-light lights yet) — Milestone 3 day/night.
 - Wheels sit ~4 cm low on the road (suspension/visual offset) — check in M4 handling pass.
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).

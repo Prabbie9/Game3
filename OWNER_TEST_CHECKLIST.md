@@ -13,6 +13,18 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.3.0 — Milestone 3 world expansion
+Download `PortSolano-v0.3.0-windows-x86_64.zip` from the Releases page, unzip, run `PortSolano.exe`.
+
+1. **Benchmark (most important):** Graphics HIGH → Benchmark. The flight now crosses the whole island at speed
+   (downtown, freeway, beach, port) for 90 s. Paste the report — especially the "1% low" and any hitches you saw.
+2. Explore: **M** (or D-pad down) opens the full map — right-click sets a waypoint, which shows on the minimap.
+   Districts: Downtown, Playa Solano beach (pier, boardwalk), Port of Solano (cranes, containers), Eastside
+   warehouses, Las Lomas suburbs, Mirador Hills (Canyon Road up to the lookout).
+3. Time passes (a full day takes 48 minutes) and the weather changes on its own (clouds, overcast, rain, storms,
+   fog). Tell me if night is too dark/bright, if street lights look right, and how rain looks.
+4. Drive the freeway fast: any stutter when new areas load in? Anything popping in late or missing?
+
 ## v0.2.0 — Milestone 2 player polish
 Download `PortSolano-v0.2.0-windows-x86_64.zip` from the Releases page, unzip, run `PortSolano.exe`.
 Esc shows all controls for keyboard or gamepad.

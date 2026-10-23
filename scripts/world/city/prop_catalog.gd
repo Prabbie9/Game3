@@ -180,3 +180,70 @@ static func _palm_trunk() -> Dictionary:
 	var am := st.commit()
 	am.surface_set_material(0, m)
 	return {"mesh": am, "aabb": AABB(Vector3(-0.26, 0, -0.26), Vector3(0.52, 1, 0.52)), "col": ["cyl", 0.25, 4.0]}
+
+
+# ------------------------------------------------------------------------------------------------ impostors
+
+## Trees far away are drawn as camera-facing cards with a pre-rendered picture of the model (leaf cards don't
+## survive mesh LOD). Baked once at load by rendering each tree into a viewport; skipped without a renderer.
+const IMPOSTOR_NAMES := ["palm_crown", "date_palm", "jacaranda", "oak"]
+static var _impostors := {}  # name -> QuadMesh
+
+
+static func impostor(name: String) -> Mesh:
+	return _impostors.get(name)
+
+
+static func bake_impostors(host: Node) -> void:
+	if not _impostors.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	for name: String in IMPOSTOR_NAMES:
+		var b: AABB = _entries[name].aabb
+		var size := maxf(maxf(b.size.x, b.size.z), b.size.y)
+		var vp := SubViewport.new()
+		vp.size = Vector2i(256, 256)
+		vp.transparent_bg = true
+		vp.own_world_3d = true
+		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		host.add_child(vp)
+		var mi := MeshInstance3D.new()
+		mi.mesh = _entries[name].mesh
+		vp.add_child(mi)
+		var cam := Camera3D.new()
+		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+		cam.size = size * 1.02
+		cam.position = Vector3(b.get_center().x, b.get_center().y, b.get_center().z + size * 2.0)
+		cam.far = size * 5.0
+		vp.add_child(cam)
+		cam.current = true
+		var sun := DirectionalLight3D.new()
+		sun.rotation_degrees = Vector3(-35, 25, 0)
+		sun.light_energy = 1.1
+		vp.add_child(sun)
+		var we := WorldEnvironment.new()
+		var env := Environment.new()
+		env.background_mode = Environment.BG_CLEAR_COLOR
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.ambient_light_color = Color(0.62, 0.66, 0.7)
+		env.ambient_light_energy = 0.9
+		we.environment = env
+		vp.add_child(we)
+		RenderingServer.force_draw(false)
+		var img := vp.get_texture().get_image()
+		vp.queue_free()
+		if img == null or img.is_empty():
+			continue
+		img.generate_mipmaps()
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = ImageTexture.create_from_image(img)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		m.alpha_scissor_threshold = 0.45
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+		m.billboard_keep_scale = true
+		m.roughness = 0.9
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		var q := QuadMesh.new()
+		q.size = Vector2(size, size)
+		q.center_offset = Vector3(b.get_center().x, b.get_center().y, 0)
+		q.material = m
+		_impostors[name] = q

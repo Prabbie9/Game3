@@ -39,7 +39,6 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Rocky Terrain 02 (texture) | surfaces | Amal Kumar | https://polyhaven.com/a/rocky_terrain_02 | CC0 |
 | Rock Face (texture) | surfaces | Greg Zaal, Dario Barresi | https://polyhaven.com/a/rock_face | CC0 |
 | Corrugated Iron 02 (texture) | surfaces | Jenelle van Heerden, Sergej Majboroda | https://polyhaven.com/a/corrugated_iron_02 | CC0 |
-| Container Side (texture) | surfaces | Dimitrios Savva | https://polyhaven.com/a/container_side | CC0 |
 | Wood Floor Deck (texture) | surfaces | Dimitrios Savva | https://polyhaven.com/a/wood_floor_deck | CC0 |
 | Painted Metal Shutter (texture) | surfaces | Dario Barresi, Rico Cilliers, Charlotte Baglioni | https://polyhaven.com/a/painted_metal_shutter | CC0 |
 | Boulder 01 (model) | city props | Rico Cilliers | https://polyhaven.com/a/boulder_01 | CC0 |

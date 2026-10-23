@@ -82,7 +82,7 @@ func _run() -> void:
 		await _snap("aerial")
 		c.queue_free()
 		p.cam.camera.make_current()
-	if _want("tour"):
+	if _want("tour") or only.any(func(n): return String(n).begins_with("tour_")):
 		# district overview shots from fixed cameras (streaming follows the active camera)
 		var shots := [
 			["tour_beach", Vector3(-700, 14, 60), Vector3(-860, 0, -40)],
@@ -91,8 +91,15 @@ func _run() -> void:
 			["tour_suburbs", Vector3(-300, 16, -600), Vector3(-200, 2, -760)],
 			["tour_freeway", Vector3(-520, 9, 300), Vector3(-560, 0, 120)],
 			["tour_downtown", Vector3(150, 60, 220), Vector3(0, 20, 0)],
+			["tour_yard", Vector3(470, 14, 690), Vector3(520, 2, 760)],
+			["tour_oaks", Vector3(560, 0, -620), Vector3(700, 0, -760)],
 		]
 		for sh: Array in shots:
+			if not (_want("tour") or _want(sh[0])):
+				continue
+			if sh[0] == "tour_oaks":
+				sh[1].y = world.data.height_at(sh[1].x, sh[1].z) + 12.0
+				sh[2].y = world.data.height_at(sh[2].x, sh[2].z)
 			var c := Camera3D.new()
 			world.add_child(c)
 			c.look_at_from_position(sh[1], sh[2])
@@ -123,6 +130,9 @@ func _run() -> void:
 		await _frames(40)
 		await _snap("swim")
 		p.state = Player.State.ON_FOOT
+		p.collision_layer = 2
+		p.collision_mask = Player.MASK_ON_FOOT
+		p.velocity = Vector3.ZERO
 		p.global_transform = keep
 		p.visual.jump_to("ground")
 		await _frames(10)

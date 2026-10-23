@@ -5,14 +5,18 @@ extends Node3D
 
 const LOAD_R := 380.0     # cells whose rect is within this distance of the focus are shown in detail
 const UNLOAD_R := 520.0
-const BUDGET_MS := 6.0    # main-thread time per frame for creating cell nodes
+const BUDGET_MS := 3.0    # main-thread time per frame for creating cell nodes
 const PROP_RANGE := {"fire_hydrant": 140.0, "fire_hydrant_aged": 140.0, "metal_trash_can": 140.0, "metal_trash_can_rust": 140.0,
-	"utility_box_01": 160.0, "utility_box_02": 160.0, "bench": 160.0, "exterior_aircon_unit": 180.0}
+	"utility_box_01": 160.0, "utility_box_02": 160.0, "bench": 160.0, "exterior_aircon_unit": 180.0,
+	"palm_crown": 700.0, "palm_trunk": 700.0, "date_palm": 600.0, "jacaranda": 450.0, "oak": 900.0, "boulder": 500.0}
+const IMPOSTOR_AT := 130.0  # trees switch to picture cards beyond this distance
 const MESH_FLAGS := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
 
 var data: WorldData
 var net: RoadNet
 var lights: Array = []          # bulb positions of all loaded cells (for the street-light pool)
+var _lights_dirty := false
+var _trash: Array[Node] = []     # unloaded cells, freed a few nodes per frame
 var _cell_roads := {}           # Vector2i -> Array[int]
 var _cell_nodes := {}
 var _cell_lots := {}
@@ -21,6 +25,8 @@ var _far := {}                  # Vector2i -> MeshInstance3D
 var _jobs := {}                 # Vector2i -> task id
 var _done: Array = []
 var _queue: Array = []          # built CityCells waiting to be instantiated
+var _steps: Array[Callable] = []  # pending node-creation steps (spread over frames)
+var _stepping := Vector2i(1 << 20, 1 << 20)
 var _mutex := Mutex.new()
 var _mats := {}
 var _far_mat: ShaderMaterial
@@ -34,6 +40,7 @@ func _ready() -> void:
 	net = RoadNet.new()
 	net.build(data)
 	PropCatalog.prepare()
+	PropCatalog.bake_impostors(self)
 	_index()
 	_far_mat = ShaderMaterial.new()
 	_far_mat.shader = preload("res://assets/shaders/far_city.gdshader")
@@ -43,6 +50,10 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	for id in _jobs.values():
 		WorkerThreadPool.wait_for_task_completion(id)
+	for n in _trash:
+		if is_instance_valid(n) and not n.is_inside_tree():
+			n.free()
+	_trash.clear()
 
 
 func cell_of(x: float, z: float) -> Vector2i:
@@ -117,9 +128,37 @@ func update(focus: Vector3) -> void:
 		if _rect_dist(k, focus) > UNLOAD_R:
 			_unload(k)
 	_collect()
+	_free_some(40)
+	if _lights_dirty:
+		_lights_dirty = false
+		lights = []
+		for k: Vector2i in _cells:
+			if is_instance_valid(_cells[k]):
+				lights.append_array(_cells[k].get_meta("lights", []))
 	var t0 := Time.get_ticks_usec()
-	while not _queue.is_empty() and (Time.get_ticks_usec() - t0) < BUDGET_MS * 1000.0:
-		_instantiate(_queue.pop_front())
+	while (Time.get_ticks_usec() - t0) < BUDGET_MS * 1000.0:
+		if _steps.is_empty():
+			if _queue.is_empty():
+				break
+			_steps = _steps_for(_queue.pop_front())
+		_steps.pop_front().call()
+
+
+## Frees up to n nodes of unloaded cells (freeing a whole cell at once costs tens of milliseconds).
+func _free_some(n: int) -> void:
+	while n > 0 and not _trash.is_empty():
+		var node: Node = _trash[-1]
+		if node.get_child_count() == 0:
+			_trash.pop_back()
+			node.free()
+			n -= 1
+			continue
+		var child := node.get_child(node.get_child_count() - 1)
+		if child.get_child_count() > 0:
+			_trash.append(child)
+			continue
+		child.free()
+		n -= 1
 
 
 func _queued(k: Vector2i) -> bool:
@@ -182,94 +221,123 @@ func _collect() -> void:
 
 
 func _unload(k: Vector2i) -> void:
+	if k == _stepping and not _steps.is_empty():
+		_steps.clear()
 	var node: Node3D = _cells[k]
-	for l: Vector3 in node.get_meta("lights", []):
-		lights.erase(l)
-	node.queue_free()
+	node.visible = false
+	_trash.append(node)
+	_lights_dirty = true
 	_cells.erase(k)
 	if _far.has(k):
 		_far[k].visible = true
 
 
-func _instantiate(c: CityCell) -> void:
+## Turns a built cell into nodes as a list of small steps, so update() can spread the work over frames.
+func _steps_for(c: CityCell) -> Array[Callable]:
+	var steps: Array[Callable] = []
 	var root := Node3D.new()
 	root.name = "Cell_%d_%d" % [c.key.x, c.key.y]
-	if not c.meshes.is_empty():
-		var mats := {}
-		for key: String in c.meshes:
-			mats[key] = _mat(key)
-		# one mesh instance per material so shadows/culling stay per surface type
-		for key: String in c.meshes:
+	root.visible = false
+	steps.append(func() -> void: add_child(root))
+	for key: String in c.meshes:
+		steps.append(func() -> void:
 			var mi := MeshInstance3D.new()
-			mi.mesh = _mesh_from({key: c.meshes[key]}, mats)
+			mi.mesh = _mesh_from({key: c.meshes[key]}, {key: _mat(key)})
 			mi.name = key.replace(":", "_")
-			if key in ["road", "sidewalk", "ground", "grass", "path", "coping", "curb", "pool_tiles"]:
+			if key in ["road", "sidewalk", "ground", "grass", "path", "coping", "curb", "pool_tiles", "deck"]:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			root.add_child(mi)
-	# collision
-	if not c.boxes.is_empty():
-		var sb := StaticBody3D.new()
-		sb.name = "Collision"
-		sb.collision_layer = 1
-		sb.collision_mask = 0
-		for bx: Array in c.boxes:
-			var cs := CollisionShape3D.new()
-			var shape := BoxShape3D.new()
-			shape.size = bx[1]
-			cs.shape = shape
-			cs.transform = bx[0]
-			sb.add_child(cs)
-		root.add_child(sb)
-	# props: one MultiMesh per kind, solid ones get collision on the props layer
-	var psb := StaticBody3D.new()
-	psb.name = "PropCollision"
-	psb.collision_layer = 16
-	psb.collision_mask = 0
+			root.add_child(mi))
+	# collision in small bodies built off-tree (adding shapes to a live body rebuilds its compound each time)
+	for i0 in range(0, c.boxes.size(), 32):
+		steps.append(func() -> void:
+			var sb := StaticBody3D.new()
+			sb.collision_layer = 1
+			sb.collision_mask = 0
+			for bx: Array in c.boxes.slice(i0, i0 + 32):
+				var cs := CollisionShape3D.new()
+				var shape := BoxShape3D.new()
+				shape.size = bx[1]
+				cs.shape = shape
+				cs.transform = bx[0]
+				sb.add_child(cs)
+			root.add_child(sb))
 	for pname: String in c.props:
 		var xfs: Array = c.props[pname]
-		var name := pname.get_slice("@", 0)
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = PropCatalog.mesh(name)
-		mm.instance_count = xfs.size()
-		for i in xfs.size():
-			mm.set_instance_transform(i, xfs[i])
-		var mmi := MultiMeshInstance3D.new()
-		mmi.name = pname.replace(",", "_").replace("@", "_")
-		mmi.multimesh = mm
-		mmi.visibility_range_end = PROP_RANGE.get(name, 450.0 if not pname.contains("@") else 900.0)
-		mmi.visibility_range_end_margin = 20.0
-		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-		root.add_child(mmi)
-		for xf: Transform3D in xfs:
-			var sc := xf.basis.get_scale()
-			var col := PropCatalog.collision(name, sc.x)
-			if col.is_empty():
-				continue
-			var cs := CollisionShape3D.new()
-			cs.shape = col[0]
-			cs.transform = Transform3D(Basis(xf.basis.get_rotation_quaternion()), xf.origin + xf.basis.get_rotation_quaternion() * col[1])
-			psb.add_child(cs)
-	root.add_child(psb)
-	for o: Array in c.occluders:
-		var oi := OccluderInstance3D.new()
-		var bo := BoxOccluder3D.new()
-		bo.size = o[1]
-		oi.occluder = bo
-		oi.position = o[0]
-		root.add_child(oi)
-	for w: Array in c.waters:
-		var vol := WaterVolume.new()
-		vol.size = w[1]
-		vol.position = w[0]
-		root.add_child(vol)
-	root.set_meta("lights", c.lights)
-	lights.append_array(c.lights)
-	add_child(root)
+		for i0 in range(0, xfs.size(), 40):
+			steps.append(func() -> void: _add_props(root, pname, xfs.slice(i0, i0 + 40)))
+	steps.append(func() -> void:
+		for o: Array in c.occluders:
+			var oi := OccluderInstance3D.new()
+			var bo := BoxOccluder3D.new()
+			bo.size = o[1]
+			oi.occluder = bo
+			oi.position = o[0]
+			root.add_child(oi)
+		for w: Array in c.waters:
+			var vol := WaterVolume.new()
+			vol.size = w[1]
+			vol.position = w[0]
+			root.add_child(vol)
+		root.set_meta("lights", c.lights)
+		_lights_dirty = true
+		root.visible = true
+		if _far.has(c.key):
+			_far[c.key].visible = false
+		ready_cells += 1)
 	_cells[c.key] = root
-	if _far.has(c.key):
-		_far[c.key].visible = false
-	ready_cells += 1
+	_stepping = c.key
+	return steps
+
+
+func _add_props(root: Node3D, pname: String, xfs: Array) -> void:
+	var name := pname.get_slice("@", 0)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = PropCatalog.mesh(name)
+	mm.instance_count = xfs.size()
+	for i in xfs.size():
+		mm.set_instance_transform(i, xfs[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = pname.replace(",", "_").replace("@", "_")
+	mmi.multimesh = mm
+	mmi.visibility_range_end = PROP_RANGE.get(name, 450.0)
+	mmi.visibility_range_end_margin = 20.0
+	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	root.add_child(mmi)
+	var imp := PropCatalog.impostor(name)
+	if imp:
+		# full trees up close, picture cards beyond (with a cross-fade between the two)
+		mmi.visibility_range_end = IMPOSTOR_AT
+		var mm2 := MultiMesh.new()
+		mm2.transform_format = MultiMesh.TRANSFORM_3D
+		mm2.mesh = imp
+		mm2.instance_count = xfs.size()
+		for i in xfs.size():
+			mm2.set_instance_transform(i, Transform3D(Basis.from_scale((xfs[i] as Transform3D).basis.get_scale()), (xfs[i] as Transform3D).origin))
+		var far := MultiMeshInstance3D.new()
+		far.multimesh = mm2
+		far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		far.visibility_range_begin = IMPOSTOR_AT - 10.0
+		far.visibility_range_begin_margin = 20.0
+		far.visibility_range_end = PROP_RANGE.get(name, 450.0) * 1.6
+		far.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		root.add_child(far)
+	var psb := StaticBody3D.new()
+	psb.collision_layer = 16
+	psb.collision_mask = 0
+	for xf: Transform3D in xfs:
+		var col := PropCatalog.collision(name, xf.basis.get_scale().x)
+		if col.is_empty():
+			continue
+		var cs := CollisionShape3D.new()
+		cs.shape = col[0]
+		var q := xf.basis.get_rotation_quaternion()
+		cs.transform = Transform3D(Basis(q), xf.origin + q * col[1])
+		psb.add_child(cs)
+	if psb.get_child_count() > 0:
+		root.add_child(psb)
+	else:
+		psb.free()
 
 
 func _mesh_from(arrays: Dictionary, mats: Dictionary) -> ArrayMesh:
@@ -282,14 +350,16 @@ func _mesh_from(arrays: Dictionary, mats: Dictionary) -> ArrayMesh:
 
 ## True once every cell around the focus is shown in detail (used while loading).
 func is_settled() -> bool:
-	return _jobs.is_empty() and _queue.is_empty()
+	return _jobs.is_empty() and _queue.is_empty() and _steps.is_empty()
 
 
 ## Instantiate everything already built, ignoring the per-frame budget (loading screens).
 func flush() -> void:
 	_collect()
-	while not _queue.is_empty():
-		_instantiate(_queue.pop_front())
+	while not _steps.is_empty() or not _queue.is_empty():
+		if _steps.is_empty():
+			_steps = _steps_for(_queue.pop_front())
+		_steps.pop_front().call()
 
 
 # ------------------------------------------------------------------------------------------------ materials
@@ -366,8 +436,14 @@ func _mat(key: String) -> Material:
 				m = _pbr("corrugated_iron_02", 3.0)
 			"canopy":
 				m = _pbr("concrete_pavement", 2.0, Color(0.95, 0.95, 0.95))
+			"deck":
+				m = _pbr("wood_floor_deck", 2.0)
+			"piles":
+				m = _pbr("wood_floor_deck", 1.0, Color(0.55, 0.45, 0.36))
+			"rail":
+				m = _pbr("wood_floor_deck", 1.0, Color(0.92, 0.9, 0.86))
 			"container":
-				m = _pbr("container_side", 2.6)
+				m = _pbr("corrugated_iron_02", 1.2, Color(1.3, 1.3, 1.3))
 			"crane":
 				m = _pbr("rusty_metal_sheet", 3.0, Color(1.4, 1.4, 1.4))
 			_:

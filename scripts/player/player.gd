@@ -88,6 +88,10 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_combo_window -= delta
+	# safety net: fell out of the world (e.g. through a gap while streaming) -> back onto the nearest road
+	if global_position.y < -60.0 and state != State.DRIVING:
+		_rescue()
+		return
 	match state:
 		State.ON_FOOT:
 			_on_foot(delta)
@@ -725,6 +729,25 @@ func _get_up() -> void:
 	_start_action("get_up_front" if down else "get_up_back", true)
 	collision_layer = 2
 	collision_mask = MASK_ON_FOOT
+
+
+func _rescue() -> void:
+	var d := WorldData.get_data()
+	var best := Vector3(26, 0.2, 9)
+	var bd := INF
+	for n: Array in d.nodes:
+		var dd := Vector2(n[0], n[1]).distance_squared_to(Vector2(global_position.x, global_position.z))
+		if dd < bd:
+			bd = dd
+			best = Vector3(n[0], n[2] + 1.0, n[1])
+	ragdoll.stop()
+	cam.ragdolled = false
+	velocity = Vector3.ZERO
+	collision_layer = 2
+	collision_mask = MASK_ON_FOOT
+	state = State.ON_FOOT
+	global_position = best
+	visual.jump_to("ground")
 
 
 func _respawn() -> void:
