@@ -18,7 +18,7 @@ void fragment() {
 	vec2 uv = UV / tile;
 	vec3 arm = texture(arm_tex, uv).rgb;
 	float macro = noise(UV * 0.1) * 0.6 + noise(UV * 0.5) * 0.4;
-	vec3 col = texture(albedo_tex, uv).rgb * tint * mix(0.86, 1.08, macro);
+	vec3 col = texture(albedo_tex, uv).rgb * tint * COLOR.rgb * mix(0.86, 1.08, macro);
 	ALBEDO = col * mix(1.0, 0.6, wetness * 0.8);
 	ROUGHNESS = mix(arm.g, 0.12, wetness * 0.6);
 	AO = arm.r;

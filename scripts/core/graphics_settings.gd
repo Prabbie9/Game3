@@ -78,11 +78,13 @@ static func apply_to(world: Node) -> void:
 		env.sdfgi_cascades = 6 if preset == Preset.ULTRA else 4
 		env.volumetric_fog_enabled = values.volumetric_fog
 		env.glow_enabled = values.glow
-		RenderingServer.environment_set_ssr_roughness_quality(RenderingServer.ENV_SSR_ROUGHNESS_QUALITY_MEDIUM if preset >= Preset.HIGH else RenderingServer.ENV_SSR_ROUGHNESS_QUALITY_LOW)
 		RenderingServer.environment_set_ssao_quality(RenderingServer.ENV_SSAO_QUALITY_HIGH if preset >= Preset.ULTRA else RenderingServer.ENV_SSAO_QUALITY_MEDIUM, true, 0.5, 2, 50, 300)
 		RenderingServer.environment_set_ssil_quality(RenderingServer.ENV_SSIL_QUALITY_MEDIUM, preset < Preset.ULTRA, 0.5, 4, 50, 300)
 		RenderingServer.environment_set_volumetric_fog_volume_size(96 if preset >= Preset.ULTRA else 64, 64 if preset >= Preset.ULTRA else 48)
 		world.sun.directional_shadow_max_distance = values.shadow_distance
+		# street lights that cast real light scale with the preset
+		if world.street_lights:
+			world.street_lights.set_count([12, 20, 32, 48][mini(preset, 3)])
 	var cam := vp.get_camera_3d()
 	if cam:
 		cam.fov = display.fov

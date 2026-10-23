@@ -86,6 +86,8 @@ func _cycle_preset() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if Game.world and Game.world.full_map and Game.world.full_map.is_open():
+		return
 	if event.is_action_pressed("pause"):
 		if _root.visible:
 			resume()

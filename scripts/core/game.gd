@@ -60,6 +60,8 @@ func _exit_tree() -> void:
 	UITheme.body_bold = null
 	AnimLib._lib = null
 	WaterVolume._mat = null
+	WorldData.release()
+	PropCatalog.release()
 
 
 func message(text: String) -> void:

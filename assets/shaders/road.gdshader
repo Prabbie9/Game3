@@ -54,6 +54,7 @@ void fragment() {
 	float lane_w = road_width / float(lanes_per_side * 2);
 	float lane_pos = fract(across / lane_w);
 	float tracks = smoothstep(0.12, 0.0, abs(lane_pos - 0.28)) + smoothstep(0.12, 0.0, abs(lane_pos - 0.72));
+	if (flag(flags, 128)) { tracks = 0.0; }
 	base *= 1.0 - tracks * 0.12;
 	float rough = arm.g * (1.0 - tracks * 0.15);
 
@@ -81,6 +82,13 @@ void fragment() {
 	if (in_cw > 0.5) {
 		float stripe = step(fract(across / 1.2), 0.5) * step(0.6, across) * step(across, road_width - 0.6);
 		paint = max(paint, stripe);
+	}
+	if (flag(flags, 256)) {
+		// parking bays: rows 5 m deep either side of a 6 m aisle, bays 2.6 m wide
+		float row = mod(along, 16.0);
+		float in_row = step(row, 5.0) + step(11.0, row);
+		paint = max(paint, band(fract(across / 2.6) * 2.6, 0.06, 0.12) * in_row);
+		paint = max(paint, band(row, 5.0, 0.12) + band(row, 11.0, 0.12));
 	}
 	if (flag(flags, 32)) {
 		paint = max(paint, band(along, 4.6, 0.45) * step(across, road_width * 0.5));

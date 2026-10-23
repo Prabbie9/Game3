@@ -52,6 +52,9 @@ func _run() -> void:
 	get_tree().root.add_child(world)
 	get_tree().current_scene = world
 	Game.controls_enabled = false
+	world.time_scale = 0.0
+	world.weather.auto_change = false
+	world.weather.set_weather(Weather.Kind.CLEAR, true)
 	await _frames(30)
 	var p: Player = world.player
 	p.cam.camera.make_current()
@@ -79,8 +82,31 @@ func _run() -> void:
 		await _snap("aerial")
 		c.queue_free()
 		p.cam.camera.make_current()
+	if _want("tour"):
+		# district overview shots from fixed cameras (streaming follows the active camera)
+		var shots := [
+			["tour_beach", Vector3(-700, 14, 60), Vector3(-860, 0, -40)],
+			["tour_docks", Vector3(420, 30, 540), Vector3(560, 4, 800)],
+			["tour_hills", Vector3(420, 40, -420), Vector3(800, 90, -850)],
+			["tour_suburbs", Vector3(-300, 16, -600), Vector3(-200, 2, -760)],
+			["tour_freeway", Vector3(-520, 9, 300), Vector3(-560, 0, 120)],
+			["tour_downtown", Vector3(150, 60, 220), Vector3(0, 20, 0)],
+		]
+		for sh: Array in shots:
+			var c := Camera3D.new()
+			world.add_child(c)
+			c.look_at_from_position(sh[1], sh[2])
+			c.far = 4000.0
+			c.make_current()
+			world.warm_up(sh[1])
+			await _frames(20)
+			await _snap(sh[0])
+			c.queue_free()
+		p.cam.camera.make_current()
+		world.warm_up(p.global_position)
 	if _want("pool"):
-		var pr: Rect2 = world.city.pool_rect
+		var pl: Array = world.data.pool
+		var pr := Rect2(pl[0], pl[1], pl[2] - pl[0], pl[3] - pl[1])
 		var pc := Vector3(pr.get_center().x, 0.0, pr.get_center().y)
 		var c := Camera3D.new()
 		world.add_child(c)
@@ -139,10 +165,10 @@ func _run() -> void:
 	if _want("rain"):
 		world.time_of_day = 15.0
 		world._update_sun()
-		RenderingServer.global_shader_parameter_set("wetness", 1.0)
-		await _frames(20)
+		world.weather.set_weather(Weather.Kind.RAIN, true)
+		await _frames(40)
 		await _snap("wet")
-		RenderingServer.global_shader_parameter_set("wetness", 0.0)
+		world.weather.set_weather(Weather.Kind.CLEAR, true)
 	if _want("pause"):
 		var pm: CanvasLayer = load("res://scripts/ui/pause_menu.gd").new()
 		world.add_child(pm)

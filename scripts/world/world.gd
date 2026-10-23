@@ -5,29 +5,58 @@ extends Node3D
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 
 @export var time_of_day := 16.9  # hours
-@export var time_scale := 0.0     # game hours per real second (M3: day/night cycle)
+@export var time_scale := 1.0 / 120.0  # game hours per real second: a full day takes 48 minutes
 
 var env: Environment
 var sun: DirectionalLight3D
-var sky_mat: PhysicalSkyMaterial
-var city: CityBuilder
+var sky_mat: ShaderMaterial
+var weather: Weather
+var street_lights: LightPool
+var full_map: FullMap
+var data: WorldData
+var terrain: Terrain
+var ocean: Ocean
+var city: City
 var player: Player
 
 
 func _ready() -> void:
 	Game.world = self
 	_build_environment()
-	city = CityBuilder.new()
+	data = WorldData.get_data()
+	terrain = Terrain.new()
+	terrain.name = "Terrain"
+	add_child(terrain)
+	ocean = Ocean.new()
+	ocean.name = "Ocean"
+	add_child(ocean)
+	ocean.setup(data.sea, data.half)
+	city = City.new()
 	city.name = "City"
 	add_child(city)
+	weather = Weather.new()
+	weather.name = "Weather"
+	add_child(weather)
+	street_lights = LightPool.new()
+	street_lights.name = "StreetLights"
+	add_child(street_lights)
+	street_lights.setup(city, 32)
+	if Game.benchmark_mode:
+		time_scale = 0.0
+		weather.auto_change = false
+	var spawn := Vector3(26.0, CityCell.CURB_H + 0.05, 9.0)
+	warm_up(spawn)
 	_spawn_vehicles()
 	player = PLAYER_SCENE.instantiate()
-	player.position = Vector3(26.0, CityBuilder.CURB_H + 0.05, 9.0)
+	player.position = spawn
 	player.rotation.y = deg_to_rad(90)
 	add_child(player)
 	var hud: CanvasLayer = preload("res://scripts/ui/hud.gd").new()
 	hud.name = "HUD"
 	add_child(hud)
+	full_map = FullMap.new()
+	full_map.name = "FullMap"
+	add_child(full_map)
 	var perf: CanvasLayer = preload("res://scripts/ui/perf_overlay.gd").new()
 	perf.name = "PerfOverlay"
 	add_child(perf)
@@ -59,14 +88,8 @@ func _spawn_vehicles() -> void:
 
 func _build_environment() -> void:
 	env = Environment.new()
-	sky_mat = PhysicalSkyMaterial.new()
-	sky_mat.rayleigh_coefficient = 2.2
-	sky_mat.mie_coefficient = 0.006
-	sky_mat.mie_eccentricity = 0.82
-	sky_mat.turbidity = 9.0
-	sky_mat.sun_disk_scale = 1.4
-	sky_mat.ground_color = Color(0.35, 0.32, 0.3)
-	sky_mat.energy_multiplier = 1.0
+	sky_mat = ShaderMaterial.new()
+	sky_mat.shader = preload("res://assets/shaders/sky.gdshader")
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	sky.process_mode = Sky.PROCESS_MODE_REALTIME
@@ -139,10 +162,35 @@ func _build_environment() -> void:
 	add_child(sun)
 
 
+## Streams terrain and city detail around `focus` and blocks until it's all in place (loading, teleports).
+func warm_up(focus: Vector3) -> void:
+	terrain.update(focus)
+	for i in 600:
+		city.update(focus)
+		terrain.update(focus)
+		if city.is_settled() and terrain.is_settled():
+			break
+		OS.delay_msec(10)
+	city.flush()
+
+
+## What the streaming follows: the active camera (works for gameplay, menu orbit and the benchmark flight).
+func focus_point() -> Vector3:
+	var cam := get_viewport().get_camera_3d()
+	if player and (not cam or cam == player.cam.camera):
+		return player.vehicle.global_position if player.vehicle else player.global_position
+	return cam.global_position if cam else Vector3.ZERO
+
+
 func _process(delta: float) -> void:
+	var f := focus_point()
+	terrain.update(f)
+	city.update(f)
+	var cam := get_viewport().get_camera_3d()
+	ocean.follow(cam.global_position if cam else f)
 	if time_scale > 0.0:
 		time_of_day = fmod(time_of_day + delta * time_scale, 24.0)
-		_update_sun()
+	_update_sun()
 
 
 ## Sun path for a sunny coastal latitude; warm low sun at the ends of the day, moonlight at night.
@@ -164,7 +212,29 @@ func _update_sun() -> void:
 		sun.light_energy = 0.1
 	var night := 1.0 - day
 	RenderingServer.global_shader_parameter_set("night", night)
-	sky_mat.energy_multiplier = lerpf(0.05, 1.0, day)
-	env.ambient_light_energy = lerpf(0.35, 1.0, day)
+	var w := weather
+	var dim := w.dim if w else 0.0
+	var fogw := w.fog if w else 0.0
+	var flash := w.flash if w else 0.0
+	sun.light_energy *= 1.0 - dim * 0.7
+	sun.shadow_opacity = 1.0 - dim * 0.6
+	# sky colours: day blue -> warm low sun -> night, greyed by cloud
+	var zen := Color(0.2, 0.4, 0.76).lerp(Color(0.24, 0.3, 0.52), low * 0.7).lerp(Color(0.012, 0.018, 0.04), night)
+	var hor := Color(0.66, 0.77, 0.9).lerp(Color(0.98, 0.62, 0.38), low * 0.85).lerp(Color(0.045, 0.055, 0.09), night)
+	var grey := Color(0.56, 0.59, 0.63) * lerpf(1.0, 0.08, night)
+	zen = zen.lerp(grey * 0.9, dim)
+	hor = hor.lerp(grey, dim)
+	sky_mat.set_shader_parameter("zenith", zen)
+	sky_mat.set_shader_parameter("horizon", hor)
+	sky_mat.set_shader_parameter("night", night)
+	sky_mat.set_shader_parameter("coverage", w.coverage if w else 0.2)
+	sky_mat.set_shader_parameter("cloud_dark", w.cloud_dark if w else 0.0)
+	sky_mat.set_shader_parameter("exposure", lerpf(1.0, 0.35, night) + flash * 3.0)
+	env.ambient_light_energy = lerpf(0.35, 1.0, day) * (1.0 - dim * 0.25) + flash * 2.0
 	env.volumetric_fog_albedo = Color(0.92, 0.9, 0.86).lerp(Color(1.0, 0.82, 0.64), low * 0.6)
-	env.fog_light_color = Color(0.7, 0.76, 0.86).lerp(Color(0.95, 0.78, 0.62), low * 0.5).lerp(Color(0.04, 0.05, 0.09), night)
+	env.volumetric_fog_density = 0.002 + fogw * 0.02 + (w.rain if w else 0.0) * 0.006
+	env.fog_density = 0.6 + fogw * 2.5
+	env.fog_depth_end = lerpf(1400.0, 380.0, fogw)
+	env.fog_light_color = Color(0.7, 0.76, 0.86).lerp(Color(0.95, 0.78, 0.62), low * 0.5).lerp(grey, dim).lerp(Color(0.04, 0.05, 0.09), night)
+	if street_lights:
+		street_lights.night = maxf(night, clampf((dim - 0.6) * 1.5, 0.0, 0.5))

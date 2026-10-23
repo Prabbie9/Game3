@@ -2,13 +2,17 @@ extends Node
 ## Benchmark: scripted camera fly-through of the heaviest areas. Records every frame time plus render
 ## stats and writes a report (avg / 1% low / min FPS, frame-time graph, stats) next to the executable.
 
-const DURATION := 75.0
+const DURATION := 90.0
 const WARMUP := 3.0
-## Route through the city: [position, look-at offset]
+## Route (x, height above ground, z): downtown streets, round the freeway, along the beach, through the port,
+## then a high pass back over downtown. Fast enough to stress cell streaming like a car at speed.
 const ROUTE := [
-	Vector3(12, 2.2, 12), Vector3(40, 2.0, 3), Vector3(75, 2.5, 2), Vector3(80, 6.0, -30), Vector3(78, 3.0, -76),
-	Vector3(40, 2.2, -80), Vector3(3, 2.0, -78), Vector3(-2, 14.0, -40), Vector3(-3, 2.5, -5), Vector3(-40, 2.0, 2),
-	Vector3(-78, 3.0, 4), Vector3(-80, 2.2, 45), Vector3(-45, 2.2, 79), Vector3(-5, 30.0, 70), Vector3(2, 2.5, 40), Vector3(12, 2.2, 12),
+	Vector3(12, 2.2, 12), Vector3(40, 2.0, 3), Vector3(75, 2.5, 2), Vector3(160, 3.0, 0), Vector3(400, 3.0, 0), Vector3(560, 3.0, 0),
+	Vector3(560, 3.0, -220), Vector3(525, 3.0, -465), Vector3(300, 3.0, -500), Vector3(0, 3.0, -500), Vector3(-300, 3.0, -500),
+	Vector3(-525, 3.0, -465), Vector3(-560, 3.0, -240), Vector3(-650, 3.0, -240), Vector3(-745, 4.0, -230), Vector3(-745, 4.0, 0),
+	Vector3(-745, 4.0, 240), Vector3(-745, 4.0, 560), Vector3(-500, 4.0, 700), Vector3(-240, 4.0, 690), Vector3(0, 4.0, 612),
+	Vector3(300, 6.0, 612), Vector3(500, 25.0, 700), Vector3(600, 40.0, 500), Vector3(300, 60.0, 200), Vector3(100, 30.0, 60),
+	Vector3(12, 2.2, 12),
 ]
 
 var _cam: Camera3D
@@ -21,15 +25,19 @@ var _done := false
 
 func _ready() -> void:
 	_curve = Curve3D.new()
-	for i in ROUTE.size():
-		var p: Vector3 = ROUTE[i]
-		var prev: Vector3 = ROUTE[maxi(i - 1, 0)]
-		var nxt: Vector3 = ROUTE[mini(i + 1, ROUTE.size() - 1)]
+	var d := WorldData.get_data()
+	var pts := []
+	for q: Vector3 in ROUTE:
+		pts.append(Vector3(q.x, d.height_at(q.x, q.z) + q.y, q.z))
+	for i in pts.size():
+		var p: Vector3 = pts[i]
+		var prev: Vector3 = pts[maxi(i - 1, 0)]
+		var nxt: Vector3 = pts[mini(i + 1, pts.size() - 1)]
 		var tangent := (nxt - prev) * 0.25
 		_curve.add_point(p, -tangent, tangent)
 	_cam = Camera3D.new()
 	_cam.fov = 70
-	_cam.far = 2500
+	_cam.far = 4000
 	get_parent().add_child.call_deferred(_cam)
 	_cam.make_current.call_deferred()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

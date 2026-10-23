@@ -339,6 +339,16 @@ def signed_coast_distance(poly, res=8.0):
     return np.asarray(img, dtype=np.float64)
 
 
+def pool_rect():
+    """The public pool in the palm plaza (block x -80..0, z 0..80, south-east quarter): x0, z0, x1, z1."""
+    bx0, bx1 = -80 + 6 + SIDEWALK, 0 - 7 - SIDEWALK
+    bz0, bz1 = 0 + 7 + SIDEWALK, 80 - 6 - SIDEWALK
+    hw, hd = (bx1 - bx0) / 2, (bz1 - bz0) / 2
+    cx = bx0 + hw + 2.5 + (hw - 2.5) / 2
+    cz = bz0 + hd + 2.5 + (hd - 2.5) / 2
+    return (cx - 6.0, cz - 3.25, cx + 6.0, cz + 3.25)
+
+
 def build_terrain(coast, graph):
     xs = np.linspace(-HALF, HALF, N)
     X, Z = np.meshgrid(xs, xs)
@@ -389,6 +399,10 @@ def build_terrain(coast, graph):
         _road_profile(rd, h, graph)
     for rd in graph.roads:
         _carve_road(rd, hmap)
+    # the plaza pool's pit (its basin walls are city meshes; the terrain must not cover the water)
+    px0, pz0, px1, pz1 = pool_rect()
+    pit = (X > px0 - 0.6) & (X < px1 + 0.6) & (Z > pz0 - 0.6) & (Z < pz1 + 0.6)
+    hmap[pit] = -2.3
     # lookout plateau
     lx, lz = LOOKOUT
     m = smoothstep(46, 30, np.hypot(X - lx, Z - lz))
@@ -456,7 +470,7 @@ def _carve_road(rd, h):
         zs = -HALF + np.arange(j0, j1) * STEP
         PX, PZ = np.meshgrid(xs, zs)
         dist, t = seg_dist(PX, PZ, ax, az, bx, bz)
-        y = ay + (by - ay) * t - 0.04  # terrain just under the road surface
+        y = ay + (by - ay) * t  # terrain at the road surface (the road shader draws a hair in front)
         w = 1 - smoothstep(half, half + bank, dist)
         sub = h[j0:j1, i0:i1]
         h[j0:j1, i0:i1] = np.where(w > 0, sub * (1 - w) + y * w, sub)
@@ -483,8 +497,10 @@ def build_lots(graph):
             cx, cz = (xa + xb) / 2, (za + zb) / 2
             r = max(abs(cx), abs(cz))
             kind = "block"
-            if (i, j) in ((4, 5), (6, 3), (2, 7), (7, 8)):
+            if (i, j) in ((6, 3), (2, 7), (7, 8)):
                 kind = "park"
+            elif (i, j) == (4, 5):
+                kind = "plaza"
             lots.append({"kind": kind, "x0": bx0, "z0": bz0, "x1": bx1, "z1": bz1, "core": r < 170, "ring": int(r // 80),
                          "seed": int(rnd.integers(1 << 30))})
     # fringe between the downtown grid and the freeway: strips cut by the avenues -> big-footprint uses
@@ -503,6 +519,10 @@ def build_lots(graph):
             lots.append({"kind": FRINGE_KINDS[(k + 3) % len(FRINGE_KINDS)], "x0": xa, "z0": max(a, -edge) + 7 + SIDEWALK,
                          "x1": xb, "z1": min(b, edge) - 7 - SIDEWALK, "seed": int(rnd.integers(1 << 30))})
             k += 1
+    # between the freeway's south leg and Harbor Blvd: warehouses and yards cut by the avenues
+    for xa, xb in ((-520, -240), (-240, 0), (0, 240), (240, 540)):
+        lots.append({"kind": "industrial", "x0": xa + 8 + SIDEWALK, "z0": z1r + 12 + 6, "x1": xb - 8 - SIDEWALK, "z1": 590,
+                     "seed": int(rnd.integers(1 << 30))})
     # south-west: low-rise beach town between Ocean Drive's south end, Harbor Blvd and the ring
     for xa, xb in ((-740, -560), (-560, -400), (-400, -240)):
         lots.append({"kind": "beachfront", "x0": xa + 10 + SIDEWALK, "z0": 560 + 6 + SIDEWALK, "x1": xb - 8 - SIDEWALK,
@@ -544,6 +564,48 @@ def build_lots(graph):
 
 
 # ----------------------------------------------------------------------------------------- splat + map
+
+def build_nature(h, d, X, Z, graph, lots):
+    """Where wild vegetation may grow (L8, 4 m/px): inland, away from roads, lots and the flat districts;
+    clumped with noise and densest on the hills."""
+    k = 2  # 2 m samples -> 4 m pixels
+    hs = h[::k, ::k]
+    ds = d[::k, ::k]
+    Xs = X[::k, ::k]
+    Zs = Z[::k, ::k]
+    dens = smoothstep(20, 60, ds) * (hs > 0.5)
+    hill = smoothstep(-430, -680, Zs) * smoothstep(330, 560, Xs)
+    dens *= 0.35 + 0.65 * hill
+    dens *= np.clip(0.4 + 0.9 * fbm(Xs, Zs, 1 / 120.0, 3, seed=21), 0, 1)
+    flat = np.maximum.reduce([rect_mask(Xs, Zs, -600, -540, 600, 540, 10), rect_mask(Xs, Zs, -110, 560, 1100, 850, 10),
+                              rect_mask(Xs, Zs, 560, -280, 1120, 640, 10), rect_mask(Xs, Zs, -772, -1080, -560, 760, 10),
+                              rect_mask(Xs, Zs, -760, 560, 0, 740, 10), rect_mask(Xs, Zs, -760, -1180, 220, -540, 10)])
+    dens *= 1 - flat
+    step = STEP * k
+    n = dens.shape[0]
+    for rd in graph.roads:
+        half = rd["w"] * 0.5 + 6.0
+        for p, q in zip(rd["pts"][:-1], rd["pts"][1:]):
+            x0 = int((min(p[0], q[0]) - half + HALF) / step)
+            x1 = int((max(p[0], q[0]) + half + HALF) / step) + 2
+            z0 = int((min(p[2], q[2]) - half + HALF) / step)
+            z1 = int((max(p[2], q[2]) + half + HALF) / step) + 2
+            x0, z0 = max(x0, 0), max(z0, 0)
+            x1, z1 = min(x1, n), min(z1, n)
+            if x0 >= x1 or z0 >= z1:
+                continue
+            dist, _ = seg_dist(Xs[z0:z1, x0:x1], Zs[z0:z1, x0:x1], p[0], p[2], q[0], q[2])
+            dens[z0:z1, x0:x1] *= smoothstep(half, half + 4, dist)
+    for l in lots:
+        x0 = max(int((l["x0"] - 4 + HALF) / step), 0)
+        x1 = min(int((l["x1"] + 4 + HALF) / step) + 1, n)
+        z0 = max(int((l["z0"] - 4 + HALF) / step), 0)
+        z1 = min(int((l["z1"] + 4 + HALF) / step) + 1, n)
+        dens[z0:z1, x0:x1] = 0
+    lx, lz = LOOKOUT
+    dens *= smoothstep(50, 70, np.hypot(Xs - lx, Zs - lz))
+    return (np.clip(dens, 0, 1) * 255).astype(np.uint8)
+
 
 def build_splat(h, d, beach, X, Z, graph):
     """RGBA weights: R sand, G dry grass (hills), B rock, A green grass (lowlands, verges).
@@ -625,6 +687,7 @@ def main():
     q.tofile(os.path.join(OUT, "height.bin"))
     splat = build_splat(h, d, beach, X, Z, graph)
     Image.fromarray(splat[:-1, :-1], mode="RGBA").save(os.path.join(OUT, "splat.png"), optimize=True)
+    Image.fromarray(build_nature(h, d, X, Z, graph, lots)[:-1, :-1], mode="L").save(os.path.join(OUT, "nature.png"), optimize=True)
     paint_map(coast, graph, lots, h, splat).save(os.path.join(OUT, "map.png"), optimize=True)
     for n in graph.nodes:
         if len(n) < 3:
@@ -641,10 +704,11 @@ def main():
             {"name": "Las Lomas", "x": -260, "z": -820}, {"name": "Mirador Hills", "x": 800, "z": -760},
         ],
         "lookout": list(LOOKOUT) + [round(_sample(h, *LOOKOUT), 2)],
+        "pool": list(pool_rect()),
     }
     with open(os.path.join(OUT, "world.json"), "w") as f:
         json.dump(world, f, separators=(",", ":"))
-    log("done: " + ", ".join(f"{n} {os.path.getsize(os.path.join(OUT, n)) / 1e6:.1f} MB" for n in ("height.bin", "splat.png", "map.png", "world.json")))
+    log("done: " + ", ".join(f"{n} {os.path.getsize(os.path.join(OUT, n)) / 1e6:.1f} MB" for n in ("height.bin", "splat.png", "nature.png", "map.png", "world.json")))
 
 
 if __name__ == "__main__":

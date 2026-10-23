@@ -1,0 +1,377 @@
+class_name City
+extends Node3D
+## The streamed city: cells of CityCell geometry around the focus (built on worker threads, instantiated on
+## the main thread a little per frame) and a cheap merged stand-in for every other cell.
+
+const LOAD_R := 380.0     # cells whose rect is within this distance of the focus are shown in detail
+const UNLOAD_R := 520.0
+const BUDGET_MS := 6.0    # main-thread time per frame for creating cell nodes
+const PROP_RANGE := {"fire_hydrant": 140.0, "fire_hydrant_aged": 140.0, "metal_trash_can": 140.0, "metal_trash_can_rust": 140.0,
+	"utility_box_01": 160.0, "utility_box_02": 160.0, "bench": 160.0, "exterior_aircon_unit": 180.0}
+const MESH_FLAGS := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+
+var data: WorldData
+var net: RoadNet
+var lights: Array = []          # bulb positions of all loaded cells (for the street-light pool)
+var _cell_roads := {}           # Vector2i -> Array[int]
+var _cell_nodes := {}
+var _cell_lots := {}
+var _cells := {}                # Vector2i -> Node3D (detail)
+var _far := {}                  # Vector2i -> MeshInstance3D
+var _jobs := {}                 # Vector2i -> task id
+var _done: Array = []
+var _queue: Array = []          # built CityCells waiting to be instantiated
+var _mutex := Mutex.new()
+var _mats := {}
+var _far_mat: ShaderMaterial
+var _focus := Vector3.ZERO
+var _cell_set := {}
+var ready_cells := 0
+
+
+func _ready() -> void:
+	data = WorldData.get_data()
+	net = RoadNet.new()
+	net.build(data)
+	PropCatalog.prepare()
+	_index()
+	_far_mat = ShaderMaterial.new()
+	_far_mat.shader = preload("res://assets/shaders/far_city.gdshader")
+	_build_far()
+
+
+func _exit_tree() -> void:
+	for id in _jobs.values():
+		WorkerThreadPool.wait_for_task_completion(id)
+
+
+func cell_of(x: float, z: float) -> Vector2i:
+	return Vector2i(floori(x / CityCell.SIZE), floori(z / CityCell.SIZE))
+
+
+func _index() -> void:
+	for r in data.roads.size():
+		var pts: Array = data.roads[r].pts
+		var m: Array = pts[pts.size() / 2]
+		_add(_cell_roads, cell_of(m[0], m[2]), r)
+	for n: int in net.ends:
+		var p: Array = data.nodes[n]
+		_add(_cell_nodes, cell_of(p[0], p[1]), n)
+	for i in data.lots.size():
+		var l: Dictionary = data.lots[i]
+		_add(_cell_lots, cell_of((l.x0 + l.x1) * 0.5, (l.z0 + l.z1) * 0.5), i)
+
+
+static func _add(d: Dictionary, k: Vector2i, v: int) -> void:
+	if not d.has(k):
+		d[k] = []
+	d[k].append(v)
+
+
+func _all_cells() -> Array:
+	var keys := {}
+	# every cell over land (wild vegetation grows outside the road/lot cells too)
+	var c0 := cell_of(-1100.0, -1420.0)
+	var c1 := cell_of(1300.0, 1100.0)
+	for z in range(c0.y, c1.y + 1):
+		for x in range(c0.x, c1.x + 1):
+			keys[Vector2i(x, z)] = true
+	for d: Dictionary in [_cell_roads, _cell_nodes, _cell_lots]:
+		for k: Vector2i in d:
+			keys[k] = true
+	return keys.keys()
+
+
+## Builds every cell once on worker threads to collect the far stand-ins (blocks until done; part of loading).
+func _build_far() -> void:
+	var cells := _all_cells()
+	var results := []
+	results.resize(cells.size())
+	var d := data
+	var n := net
+	var group := WorkerThreadPool.add_group_task(func(i: int) -> void:
+		var k: Vector2i = cells[i]
+		var c := CityCell.new(k, d, n)
+		c.build(_cell_roads.get(k, []), _cell_nodes.get(k, []), _cell_lots.get(k, []))
+		results[i] = c.far_meshes, cells.size())
+	WorkerThreadPool.wait_for_group_task_completion(group)
+	for i in cells.size():
+		var fm: Dictionary = results[i]
+		if not fm.has("far"):
+			continue
+		var mi := MeshInstance3D.new()
+		mi.mesh = _mesh_from({"far": fm.far}, {"far": _far_mat})
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.name = "Far_%d_%d" % [cells[i].x, cells[i].y]
+		add_child(mi)
+		_far[cells[i]] = mi
+
+
+## Keep detail cells around a world position; call every frame.
+func update(focus: Vector3) -> void:
+	_focus = focus
+	for k: Vector2i in _all_cells_near(focus, LOAD_R):
+		if not _cells.has(k) and not _jobs.has(k) and not _queued(k):
+			_request(k)
+	for k: Vector2i in _cells.keys():
+		if _rect_dist(k, focus) > UNLOAD_R:
+			_unload(k)
+	_collect()
+	var t0 := Time.get_ticks_usec()
+	while not _queue.is_empty() and (Time.get_ticks_usec() - t0) < BUDGET_MS * 1000.0:
+		_instantiate(_queue.pop_front())
+
+
+func _queued(k: Vector2i) -> bool:
+	for c: CityCell in _queue:
+		if c.key == k:
+			return true
+	return false
+
+
+func _all_cells_near(p: Vector3, r: float) -> Array:
+	var out := []
+	var c0 := cell_of(p.x - r, p.z - r)
+	var c1 := cell_of(p.x + r, p.z + r)
+	for z in range(c0.y, c1.y + 1):
+		for x in range(c0.x, c1.x + 1):
+			var k := Vector2i(x, z)
+			if _rect_dist(k, p) <= r and _known(k):
+				out.append(k)
+	return out
+
+
+func _known(k: Vector2i) -> bool:
+	if _cell_set.is_empty():
+		for c: Vector2i in _all_cells():
+			_cell_set[c] = true
+	return _cell_set.has(k)
+
+
+func _rect_dist(k: Vector2i, p: Vector3) -> float:
+	var s := CityCell.SIZE
+	var dx := maxf(maxf(k.x * s - p.x, p.x - (k.x + 1) * s), 0.0)
+	var dz := maxf(maxf(k.y * s - p.z, p.z - (k.y + 1) * s), 0.0)
+	return Vector2(dx, dz).length()
+
+
+func _request(k: Vector2i) -> void:
+	var d := data
+	var n := net
+	var roads: Array = _cell_roads.get(k, [])
+	var nodes: Array = _cell_nodes.get(k, [])
+	var lots: Array = _cell_lots.get(k, [])
+	_jobs[k] = WorkerThreadPool.add_task(func() -> void:
+		var c := CityCell.new(k, d, n)
+		c.build(roads, nodes, lots)
+		_mutex.lock()
+		_done.append(c)
+		_mutex.unlock())
+
+
+func _collect() -> void:
+	_mutex.lock()
+	var ready := _done
+	_done = []
+	_mutex.unlock()
+	for c: CityCell in ready:
+		WorkerThreadPool.wait_for_task_completion(_jobs[c.key])
+		_jobs.erase(c.key)
+		if _rect_dist(c.key, _focus) <= UNLOAD_R:
+			_queue.append(c)
+
+
+func _unload(k: Vector2i) -> void:
+	var node: Node3D = _cells[k]
+	for l: Vector3 in node.get_meta("lights", []):
+		lights.erase(l)
+	node.queue_free()
+	_cells.erase(k)
+	if _far.has(k):
+		_far[k].visible = true
+
+
+func _instantiate(c: CityCell) -> void:
+	var root := Node3D.new()
+	root.name = "Cell_%d_%d" % [c.key.x, c.key.y]
+	if not c.meshes.is_empty():
+		var mats := {}
+		for key: String in c.meshes:
+			mats[key] = _mat(key)
+		# one mesh instance per material so shadows/culling stay per surface type
+		for key: String in c.meshes:
+			var mi := MeshInstance3D.new()
+			mi.mesh = _mesh_from({key: c.meshes[key]}, mats)
+			mi.name = key.replace(":", "_")
+			if key in ["road", "sidewalk", "ground", "grass", "path", "coping", "curb", "pool_tiles"]:
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			root.add_child(mi)
+	# collision
+	if not c.boxes.is_empty():
+		var sb := StaticBody3D.new()
+		sb.name = "Collision"
+		sb.collision_layer = 1
+		sb.collision_mask = 0
+		for bx: Array in c.boxes:
+			var cs := CollisionShape3D.new()
+			var shape := BoxShape3D.new()
+			shape.size = bx[1]
+			cs.shape = shape
+			cs.transform = bx[0]
+			sb.add_child(cs)
+		root.add_child(sb)
+	# props: one MultiMesh per kind, solid ones get collision on the props layer
+	var psb := StaticBody3D.new()
+	psb.name = "PropCollision"
+	psb.collision_layer = 16
+	psb.collision_mask = 0
+	for pname: String in c.props:
+		var xfs: Array = c.props[pname]
+		var name := pname.get_slice("@", 0)
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = PropCatalog.mesh(name)
+		mm.instance_count = xfs.size()
+		for i in xfs.size():
+			mm.set_instance_transform(i, xfs[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = pname.replace(",", "_").replace("@", "_")
+		mmi.multimesh = mm
+		mmi.visibility_range_end = PROP_RANGE.get(name, 450.0 if not pname.contains("@") else 900.0)
+		mmi.visibility_range_end_margin = 20.0
+		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		root.add_child(mmi)
+		for xf: Transform3D in xfs:
+			var sc := xf.basis.get_scale()
+			var col := PropCatalog.collision(name, sc.x)
+			if col.is_empty():
+				continue
+			var cs := CollisionShape3D.new()
+			cs.shape = col[0]
+			cs.transform = Transform3D(Basis(xf.basis.get_rotation_quaternion()), xf.origin + xf.basis.get_rotation_quaternion() * col[1])
+			psb.add_child(cs)
+	root.add_child(psb)
+	for o: Array in c.occluders:
+		var oi := OccluderInstance3D.new()
+		var bo := BoxOccluder3D.new()
+		bo.size = o[1]
+		oi.occluder = bo
+		oi.position = o[0]
+		root.add_child(oi)
+	for w: Array in c.waters:
+		var vol := WaterVolume.new()
+		vol.size = w[1]
+		vol.position = w[0]
+		root.add_child(vol)
+	root.set_meta("lights", c.lights)
+	lights.append_array(c.lights)
+	add_child(root)
+	_cells[c.key] = root
+	if _far.has(c.key):
+		_far[c.key].visible = false
+	ready_cells += 1
+
+
+func _mesh_from(arrays: Dictionary, mats: Dictionary) -> ArrayMesh:
+	var am := ArrayMesh.new()
+	for key: String in arrays:
+		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays[key], [], {}, MESH_FLAGS)
+		am.surface_set_material(am.get_surface_count() - 1, mats[key])
+	return am
+
+
+## True once every cell around the focus is shown in detail (used while loading).
+func is_settled() -> bool:
+	return _jobs.is_empty() and _queue.is_empty()
+
+
+## Instantiate everything already built, ignoring the per-frame budget (loading screens).
+func flush() -> void:
+	_collect()
+	while not _queue.is_empty():
+		_instantiate(_queue.pop_front())
+
+
+# ------------------------------------------------------------------------------------------------ materials
+
+static func _tex(name: String, map: String) -> Texture2D:
+	return load("res://assets/textures/polyhaven/%s/%s.jpg" % [name, map])
+
+
+func _pbr(name: String, tile: float, tint := Color.WHITE) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = preload("res://assets/shaders/world_pbr.gdshader")
+	m.set_shader_parameter("albedo_tex", _tex(name, "albedo"))
+	m.set_shader_parameter("normal_tex", _tex(name, "normal"))
+	m.set_shader_parameter("arm_tex", _tex(name, "arm"))
+	m.set_shader_parameter("tile", tile)
+	m.set_shader_parameter("tint", Vector3(tint.r, tint.g, tint.b))
+	return m
+
+
+func _mat(key: String) -> Material:
+	if _mats.has(key):
+		return _mats[key]
+	var m: Material
+	if key.begins_with("facade"):
+		var wall := key.get_slice(":", 1)
+		var f := ShaderMaterial.new()
+		f.shader = preload("res://assets/shaders/facade.gdshader")
+		f.set_shader_parameter("wall_albedo", _tex(wall, "albedo"))
+		f.set_shader_parameter("wall_normal", _tex(wall, "normal"))
+		f.set_shader_parameter("wall_arm", _tex(wall, "arm"))
+		f.set_shader_parameter("wall_tile", 3.5 if wall != "concrete_tile_facade" else 6.0)
+		if key.begins_with("facade_res"):
+			f.set_shader_parameter("ground_floor", 0.0)
+			f.set_shader_parameter("floor_height", 3.0)
+		m = f
+	else:
+		match key:
+			"road":
+				var r := ShaderMaterial.new()
+				r.shader = preload("res://assets/shaders/road.gdshader")
+				r.set_shader_parameter("albedo_tex", _tex("asphalt_02", "albedo"))
+				r.set_shader_parameter("normal_tex", _tex("asphalt_02", "normal"))
+				r.set_shader_parameter("arm_tex", _tex("asphalt_02", "arm"))
+				m = r
+			"sidewalk":
+				m = _pbr("concrete_pavement", 2.5, Color(0.92, 0.9, 0.86))
+			"curb":
+				m = _pbr("concrete_pavement", 1.0, Color(0.8, 0.79, 0.76))
+			"ground":
+				m = _pbr("concrete_pavement", 3.0, Color(0.8, 0.78, 0.74))
+			"roof":
+				m = _pbr("concrete_pavement", 2.0, Color(0.72, 0.71, 0.69))
+			"barrier", "plinth":
+				m = _pbr("concrete_pavement", 1.5, Color(0.78, 0.77, 0.74))
+			"coping":
+				m = _pbr("concrete_pavement", 1.5, Color(0.97, 0.95, 0.9))
+			"grass":
+				m = _pbr("rocky_terrain_02", 5.0, Color(0.95, 1.0, 0.9))
+			"path":
+				m = _pbr("concrete_pavement", 1.2, Color(0.9, 0.86, 0.78))
+			"pool_tiles":
+				var p := ShaderMaterial.new()
+				p.shader = preload("res://assets/shaders/pool_tiles.gdshader")
+				m = p
+			"roof_tiles":
+				m = _pbr("clay_roof_tiles", 2.0)
+			"roof_under", "door":
+				m = _pbr("wood_floor_deck", 1.5, Color(0.55, 0.42, 0.32) if key == "door" else Color(0.9, 0.88, 0.84))
+			"gable":
+				m = _pbr("white_stucco", 3.5)
+			"shutter":
+				m = _pbr("painted_metal_shutter", 2.5, Color(0.92, 0.92, 0.9))
+			"metal":
+				m = _pbr("corrugated_iron_02", 3.0)
+			"canopy":
+				m = _pbr("concrete_pavement", 2.0, Color(0.95, 0.95, 0.95))
+			"container":
+				m = _pbr("container_side", 2.6)
+			"crane":
+				m = _pbr("rusty_metal_sheet", 3.0, Color(1.4, 1.4, 1.4))
+			_:
+				push_warning("City: no material for key %s" % key)
+				m = StandardMaterial3D.new()
+	_mats[key] = m
+	return m

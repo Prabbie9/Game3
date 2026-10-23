@@ -19,6 +19,8 @@ var lots: Array = []       # {kind, x0, z0, x1, z1, ...}
 var coast := PackedVector2Array()
 var districts: Array = []
 var lookout := Vector3.ZERO
+var pool: Array = []       # plaza pool rect [x0, z0, x1, z1]
+var nature: Image          # wild vegetation density, 4 m per pixel
 var _h := PackedByteArray()
 var _scale := 1.0
 
@@ -50,8 +52,19 @@ func _load() -> void:
 		coast.append(Vector2(p[0], p[1]))
 	var lo: Array = j.lookout
 	lookout = Vector3(lo[0], lo[2], lo[1])
+	pool = j.get("pool", [])
 	_h = FileAccess.get_file_as_bytes(DIR + "height.bin")
 	_scale = (h_max - h_min) / 65535.0
+	nature = (load(DIR + "nature.png") as Texture2D).get_image()
+	if nature.is_compressed():
+		nature.decompress()
+
+
+## Wild vegetation density 0..1 at world x/z (hills, shores; 0 in the city).
+func nature_at(x: float, z: float) -> float:
+	var px := clampi(int((x + half) / (step * 2.0)), 0, nature.get_width() - 1)
+	var pz := clampi(int((z + half) / (step * 2.0)), 0, nature.get_height() - 1)
+	return nature.get_pixel(px, pz).r
 
 
 ## Height of grid sample (i = column along X, j = row along Z).

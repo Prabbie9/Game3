@@ -38,3 +38,10 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Aerial Grass Rock (texture) | surfaces | Rob Tuytel | https://polyhaven.com/a/aerial_grass_rock | CC0 |
 | Rocky Terrain 02 (texture) | surfaces | Amal Kumar | https://polyhaven.com/a/rocky_terrain_02 | CC0 |
 | Rock Face (texture) | surfaces | Greg Zaal, Dario Barresi | https://polyhaven.com/a/rock_face | CC0 |
+| Corrugated Iron 02 (texture) | surfaces | Jenelle van Heerden, Sergej Majboroda | https://polyhaven.com/a/corrugated_iron_02 | CC0 |
+| Container Side (texture) | surfaces | Dimitrios Savva | https://polyhaven.com/a/container_side | CC0 |
+| Wood Floor Deck (texture) | surfaces | Dimitrios Savva | https://polyhaven.com/a/wood_floor_deck | CC0 |
+| Painted Metal Shutter (texture) | surfaces | Dario Barresi, Rico Cilliers, Charlotte Baglioni | https://polyhaven.com/a/painted_metal_shutter | CC0 |
+| Boulder 01 (model) | city props | Rico Cilliers | https://polyhaven.com/a/boulder_01 | CC0 |
+| Realistic HD Blue jacaranda (1/40) (Sketchfab) | street and garden trees | PlantCatalog (PlantCatalog) | https://sketchfab.com/3d-models/realistic-hd-blue-jacaranda-140-502e2c6bf3f74e9b902e5bc6cdf24b68 | CC-BY 4.0 |
+| Oak tree (Sketchfab) | hill and park trees | evolveduk (evolveduk) | https://sketchfab.com/3d-models/oak-tree-6468dd4d3eb240ef902b9057d9913606 | CC-BY 4.0 |

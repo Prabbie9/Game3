@@ -14,7 +14,8 @@ uniform sampler2D lush_alb : source_color, filter_linear_mipmap_anisotropic, rep
 uniform sampler2D lush_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float world_half = 2048.0;
 uniform vec4 hole = vec4(0.0);
-uniform vec3 sand_tint : source_color = vec3(1.18, 1.1, 0.95);
+uniform vec3 sand_tint : source_color = vec3(1.25, 1.16, 1.0);
+uniform vec3 dry_tint : source_color = vec3(0.78, 0.86, 0.6);
 uniform float sea_level = -2.0;
 
 varying vec3 wpos;
@@ -46,7 +47,7 @@ void fragment() {
 	vec2 uv = wpos.xz;
 	float m = vnoise(uv * 0.02) * 0.6 + vnoise(uv * 0.07) * 0.4;
 	vec3 sand = layer(sand_alb, uv, 4.0, m * 0.5) * sand_tint;
-	vec3 dry = layer(dry_alb, uv, 7.0, m * 0.6);
+	vec3 dry = layer(dry_alb, uv, 7.0, m * 0.6) * dry_tint;
 	vec3 lush = layer(lush_alb, uv, 6.0, m * 0.6);
 	// rock: blend planar projections by the normal (no stretching on cliffs)
 	vec3 an = abs(wnrm);

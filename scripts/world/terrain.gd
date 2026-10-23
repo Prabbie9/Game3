@@ -93,6 +93,10 @@ func update(pos: Vector3) -> void:
 		_mat_far.set_shader_parameter("hole", Vector4(x0, z0, x0 + size, z0 + size))
 
 
+func is_settled() -> bool:
+	return _hole_center == _center
+
+
 func _valid(k: Vector2i) -> bool:
 	var cnt := int((data.n - 1) * data.step / CHUNK)
 	return k.x >= 0 and k.y >= 0 and k.x < cnt and k.y < cnt
