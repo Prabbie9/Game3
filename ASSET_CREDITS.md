@@ -55,6 +55,14 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Yellow bicycle (Sketchfab) | bicycle | Tatyana Volkova (volkovatatyana) | https://sketchfab.com/3d-models/yellow-bicycle-4cc719f387cb4cb4aea6e12a27e06e2e | CC-BY 4.0 |
 | SpeedBoat (Sketchfab) | boat | hsinpa (hsinpa) | https://sketchfab.com/3d-models/speedboat-df5db2118b1944e0915441012c89527c | CC-BY 4.0 |
 | Police Helicopter 1 (Unity3D) (Sketchfab) | helicopter | r34maxpro (unitygtt34) | https://sketchfab.com/3d-models/police-helicopter-1-unity3d-1413af2d442c4b729d7ba2ec3500872e | CC-BY 4.0 |
+| Low-Poly M4a1 (Sketchfab) | assault_rifle | TastyTony (TastyTony) | https://sketchfab.com/3d-models/low-poly-m4a1-8cab1cbeb82c4396a154f9fc8771417b | CC-BY 4.0 |
+| Low-Poly HK MP5SD (Sketchfab) | smg | TastyTony (TastyTony) | https://sketchfab.com/3d-models/low-poly-hk-mp5sd-a79689d37bb547c4a1ab6628f60dd05f | CC-BY 4.0 |
+| Remington 870 Shotgun (Sketchfab) | shotgun | Andrei Milin (milinam2002) | https://sketchfab.com/3d-models/remington-870-shotgun-6db0ad4764d14eee8f063eea3600071b | CC-BY 4.0 |
+| Low-Poly SVD Dragunov (Sketchfab) | sniper_rifle | TastyTony (TastyTony) | https://sketchfab.com/3d-models/low-poly-svd-dragunov-fe40c5c2696441bc8696ed042056709e | CC-BY 4.0 |
+| Low-Poly RPG-7 (Sketchfab) | rocket_launcher | TastyTony (TastyTony) | https://sketchfab.com/3d-models/low-poly-rpg-7-5243ac034391491f9a47f797ea212afe | CC-BY 4.0 |
+| M69 Frag Grenade (Sketchfab) | grenade | Riley Lewand (rileylewandowski) | https://sketchfab.com/3d-models/m69-frag-grenade-e94d90f68bdb4fd68d7a0aac6d9c5dd0 | CC-BY 4.0 |
+| Combat Knife (Sketchfab) | knife | OverLord (San.Dro) | https://sketchfab.com/3d-models/combat-knife-48e00da7aeb94530a5d0e0c3d58ca274 | CC-BY 4.0 |
+| Baseball bat (Sketchfab) | baseball_bat | DVLT (k_dvlt) | https://sketchfab.com/3d-models/baseball-bat-2669cf86386747449611396c0409db47 | CC-BY 4.0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low-Poly HK MP5SD
+* source:	https://sketchfab.com/3d-models/low-poly-hk-mp5sd-a79689d37bb547c4a1ab6628f60dd05f
+* author:	TastyTony (https://sketchfab.com/TastyTony)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low-Poly HK MP5SD" (https://sketchfab.com/3d-models/low-poly-hk-mp5sd-a79689d37bb547c4a1ab6628f60dd05f) by TastyTony (https://sketchfab.com/TastyTony) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

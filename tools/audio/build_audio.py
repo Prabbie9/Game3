@@ -33,10 +33,19 @@ PACKS = {
     "rain": (OGA + "amb_rain_loop_1.ogg", "Kresiek The Furry", "CC0", "https://opengameart.org/content/amb-rain-loop-1"),
     "heli": (OGA + "helicopter.mp3", "aquinn", "CC0", "https://opengameart.org/content/helicopter-sounds"),
     "siren": (OGA + "siren.mp3", "aquinn", "CC0", "https://opengameart.org/content/sirens-and-alarm-noise"),
+    "tabasco": (OGA + "sounds.zip", "Tabasco", "CC0", "https://opengameart.org/content/gunshot-sounds"),
+    "bart_ak": (OGA + "ak47.ogg", "bart", "CC0", "https://opengameart.org/content/the-free-firearm-sound-library"),
+    "bart_sil": (OGA + "silencer.wav", "bart", "CC0", "https://opengameart.org/content/hollywood-style-pistol-silencer-sound-effect"),
+    "reloads": (None, "SpringySpringo", "CC0", "https://opengameart.org/content/gun-reload-sounds"),
+    "launch": (OGA + "la.mp3", "qubodup", "CC-BY 3.0", "https://opengameart.org/content/4-projectile-launches"),
+    "explo4": (None, "EZduzziteh", "CC0", "https://opengameart.org/content/explosions-4"),
+    "swish": (OGA + "swishes.zip", "artisticdude", "CC0", "https://opengameart.org/content/swishes-sound-pack"),
 }
 SINGLE_FILES = {
     "race": ["loop_0.wav", "loop_1_0.wav", "loop_2_0.wav", "loop_3_0.wav", "loop_4_0.wav", "loop_5_0.wav"],
     "heavy": ["engine_heavy_slow_loop_0.ogg", "engine_heavy_average_loop_0.ogg", "engine_heavy_fast_loop_0.ogg"],
+    "reloads": ["assaultriflereload1_0.wav", "gunreload1.wav", "shotguncock_0.wav"],
+    "explo4": ["explosion1_0.ogg", "explosion3.ogg"],
 }
 
 # output (relative to assets/audio, .wav = 16-bit PCM, .ogg = Vorbis) -> (pack, file in pack, options)
@@ -92,6 +101,30 @@ JOBS = {
     "player/punch_2.ogg": ("kenney", "Audio/impactPunch_heavy_000.ogg", {"peak": -2, "fade": 0.04}),
     "player/body_fall.ogg": ("kenney", "Audio/impactSoft_heavy_001.ogg", {"peak": -3, "fade": 0.05}),
     "player/splash.ogg": ("sfx100", "splash_01.ogg", {"peak": -3, "fade": 0.1}),
+    # weapons: single shots cut from multi-shot recordings (start/dur), tails faded
+    "weapons/pistol_0.ogg": ("tabasco", "cz.wav", {"start": 0.21, "dur": 0.9, "peak": -1, "fade": 0.35}),
+    "weapons/pistol_1.ogg": ("tabasco", "cz.wav", {"start": 2.80, "dur": 0.9, "peak": -1, "fade": 0.35}),
+    "weapons/smg_0.ogg": ("bart_sil", "silencer.wav", {"start": 0.0, "dur": 0.55, "peak": -2, "fade": 0.2}),
+    "weapons/rifle_0.ogg": ("bart_ak", "ak47.ogg", {"start": 0.25, "dur": 0.55, "peak": -1, "fade": 0.3}),
+    "weapons/rifle_1.ogg": ("bart_ak", "ak47.ogg", {"start": 5.73, "dur": 0.55, "peak": -1, "fade": 0.3}),
+    "weapons/shotgun_0.ogg": ("tabasco", "shotty.wav", {"peak": -1, "fade": 0.25}),
+    "weapons/sniper_0.ogg": ("tabasco", "mosin.wav", {"start": 0.42, "dur": 1.3, "peak": -1, "fade": 0.6}),
+    "weapons/launcher_0.ogg": ("launch", "la.mp3", {"start": 0.08, "dur": 1.3, "peak": -1, "fade": 0.5}),
+    "weapons/explosion_0.ogg": ("explo4", "explosion1_0.ogg", {"peak": -1, "fade": 0.8}),
+    "weapons/explosion_1.ogg": ("explo4", "explosion3.ogg", {"peak": -1, "fade": 0.4}),
+    "weapons/reload_rifle.ogg": ("reloads", "assaultriflereload1_0.wav", {"peak": -4, "fade": 0.05}),
+    "weapons/reload_pistol.ogg": ("reloads", "gunreload1.wav", {"peak": -4, "fade": 0.05}),
+    "weapons/pump.ogg": ("reloads", "shotguncock_0.wav", {"peak": -4, "fade": 0.05}),
+    "weapons/swing_0.ogg": ("swish", "swish-1.wav", {"peak": -4, "fade": 0.03}),
+    "weapons/swing_1.ogg": ("swish", "swish-4.wav", {"peak": -4, "fade": 0.03}),
+    "weapons/swing_2.ogg": ("swish", "swish-8.wav", {"peak": -4, "fade": 0.03}),
+    "weapons/bullet_metal_0.ogg": ("kenney", "Audio/impactMetal_light_000.ogg", {"peak": -6, "fade": 0.04}),
+    "weapons/bullet_metal_1.ogg": ("kenney", "Audio/impactMetal_light_003.ogg", {"peak": -6, "fade": 0.04}),
+    "weapons/bullet_hard_0.ogg": ("kenney", "Audio/impactGeneric_light_000.ogg", {"peak": -7, "fade": 0.04}),
+    "weapons/bullet_hard_1.ogg": ("kenney", "Audio/impactGeneric_light_002.ogg", {"peak": -7, "fade": 0.04}),
+    "weapons/bullet_flesh_0.ogg": ("kenney", "Audio/impactSoft_medium_000.ogg", {"peak": -5, "fade": 0.04}),
+    "weapons/bullet_flesh_1.ogg": ("kenney", "Audio/impactSoft_medium_002.ogg", {"peak": -5, "fade": 0.04}),
+    "weapons/dry_fire.ogg": ("reloads", "gunreload1.wav", {"start": 1.27, "dur": 0.12, "peak": -10, "fade": 0.03}),
 }
 
 
@@ -204,6 +237,8 @@ def main() -> None:
     if "--credits" in sys.argv:
         credits()
         return
+    os.makedirs(CACHE, exist_ok=True)
+    open(os.path.join(CACHE, ".gdignore"), "w").close()  # raw sources: Godot shouldn't import them
     for out, (pack, name, o) in JOBS.items():
         d = fetch(pack)
         rate = o.get("rate", SR)
