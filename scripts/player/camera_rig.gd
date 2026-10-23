@@ -25,8 +25,13 @@ var sprinting := false
 var ragdolled := false
 ## Hidden when the camera is squeezed against the character (back to a wall, tight corners).
 var hide_when_close: Node3D
-## Vehicle views cycled with camera_mode: 0 chase, 1 far chase, 2 hood.
+## Vehicle views cycled with camera_mode: 0 chase, 1 far chase, 2 hood, 3 cinematic.
 var vehicle_view := 0
+const VEHICLE_VIEWS := 4
+var _looking_back := false
+var _cine_kind := -1          # cinematic shot: 0 roadside (fixed in the world), 1 low side tracking, 2 high chase
+var _cine_t := 0.0
+var _cine_pos := Vector3.ZERO
 
 var _dist := 3.4
 var _height := 1.55
@@ -57,7 +62,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("shoulder_swap"):
 		shoulder = -shoulder
 	elif event.is_action_pressed("camera_mode") and mode == Mode.VEHICLE:
-		vehicle_view = (vehicle_view + 1) % 3
+		vehicle_view = (vehicle_view + 1) % VEHICLE_VIEWS
+		_cine_kind = -1
 
 
 func add_recoil(amount: float) -> void:
@@ -88,9 +94,17 @@ func _process(delta: float) -> void:
 			v = (target as RigidBody3D).linear_velocity
 		var spd := Vector2(v.x, v.z).length()
 		# swing back behind the car when driving and the player isn't steering the camera
-		if _idle_look > 1.2 and spd > 3.0:
-			var fwd := -tgt_xf.basis.z
-			var want := atan2(-fwd.x, -fwd.z)
+		var fwd := -tgt_xf.basis.z
+		var want := atan2(-fwd.x, -fwd.z)
+		var back := Input.is_action_pressed("look_behind")
+		if back:
+			yaw = want + PI
+			_focus = Vector3.ZERO
+		elif _looking_back:
+			yaw = want
+			_focus = Vector3.ZERO
+		_looking_back = back
+		if not back and _idle_look > 1.2 and spd > 3.0:
 			yaw = lerp_angle(yaw, want, 1.0 - exp(-delta * 2.5))
 		p.fov = 72.0 + clampf(spd - 15.0, 0.0, 25.0) * 0.35
 	pitch = clampf(pitch, deg_to_rad(-70), deg_to_rad(55) if mode != Mode.VEHICLE else deg_to_rad(30))
@@ -124,11 +138,13 @@ func _process(delta: float) -> void:
 		var vt := target.get_global_transform_interpolated()
 		var hood: Vector3 = target.get_meta("hood_cam", Vector3(0, 1.3, -0.6))
 		var car_yaw := atan2(vt.basis.z.x, vt.basis.z.z)
-		var free := Basis(Vector3.UP, wrapf(yaw - car_yaw, -PI, PI) if _idle_look < 1.5 else 0.0)
+		var free := Basis(Vector3.UP, PI if _looking_back else (wrapf(yaw - car_yaw, -PI, PI) if _idle_look < 1.5 else 0.0))
 		global_transform = Transform3D(vt.basis * free * Basis(Vector3.RIGHT, clampf(pitch, -0.4, 0.3)), vt * hood)
 		spring.spring_length = 0.0
 		spring.position = Vector3.ZERO
 		camera.fov = lerpf(camera.fov, p.fov, k)
+	if mode == Mode.VEHICLE and vehicle_view == 3 and target:
+		_cinematic(delta)
 	if hide_when_close:
 		hide_when_close.visible = (mode == Mode.VEHICLE and vehicle_view != 2) or (mode != Mode.VEHICLE and spring.get_hit_length() > 0.55)
 	if shake > 0.0:
@@ -138,6 +154,47 @@ func _process(delta: float) -> void:
 	else:
 		camera.h_offset = 0.0
 		camera.v_offset = 0.0
+
+
+## Cinematic vehicle view: cuts between a fixed roadside camera the car drives past, a low tracking shot
+## beside the wheels and a high chase. Cuts when a shot has run its course or loses sight of the car.
+func _cinematic(delta: float) -> void:
+	var vt := target.get_global_transform_interpolated()
+	var vel := (target as RigidBody3D).linear_velocity if target is RigidBody3D else Vector3.ZERO
+	var car := vt.origin + Vector3(0, 0.9, 0)
+	_cine_t += delta
+	var space := get_world_3d().direct_space_state
+	var cut := _cine_kind < 0 or _cine_t > (7.0 if _cine_kind == 0 else 5.0)
+	if _cine_kind == 0 and _cine_pos.distance_to(car) > 45.0 and _cine_t > 1.0:
+		cut = true
+	if not cut and _cine_t > 0.5:
+		var q := PhysicsRayQueryParameters3D.create(camera.global_position, car, 1)
+		if not space.intersect_ray(q).is_empty():
+			cut = true
+	if cut:
+		_cine_kind = (_cine_kind + 1 + randi() % 2) % 3
+		_cine_t = 0.0
+		if _cine_kind == 0:
+			# ahead of the car, off to one side, at about head height
+			var ahead := vel * 2.2 if vel.length() > 4.0 else -vt.basis.z * 12.0
+			var side := vt.basis.x * (6.0 if randf() < 0.5 else -6.0)
+			_cine_pos = car + ahead + side + Vector3(0, 0.4, 0)
+			var down := PhysicsRayQueryParameters3D.create(_cine_pos + Vector3(0, 10, 0), _cine_pos + Vector3(0, -20, 0), 1)
+			var hit := space.intersect_ray(down)
+			if hit:
+				_cine_pos.y = maxf(_cine_pos.y, hit.position.y + 1.3)
+	var pos := _cine_pos
+	match _cine_kind:
+		1:
+			pos = vt * Vector3(2.6, 0.45, -1.2)
+		2:
+			pos = vt.origin + vt.basis.z * 12.0 + Vector3(0, 7.5, 0)
+	global_transform = Transform3D(Basis.IDENTITY, pos)
+	spring.spring_length = 0.0
+	spring.position = Vector3.ZERO
+	if pos.distance_to(car) > 0.5:
+		look_at(car + (-vt.basis.z * 2.0 if _cine_kind == 1 else Vector3.ZERO), Vector3.UP)
+	camera.fov = lerpf(camera.fov, 50.0 if _cine_kind == 0 else 62.0, 1.0 - exp(-delta * 6.0))
 
 
 ## Horizontal camera basis (yaw only) for camera-relative movement.

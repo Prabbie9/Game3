@@ -144,6 +144,33 @@ func _run() -> void:
 			c.queue_free()
 		p.cam.camera.make_current()
 		world.warm_up(p.global_position)
+	if _want("signals"):
+		# hazards + tail lights at dusk, from behind and from the front
+		world.time_of_day = 19.4
+		world._update_sun()
+		var cars: Array = world.get_tree().get_nodes_in_group("vehicles").slice(0, 2)
+		for v: Vehicle in cars:
+			v.set_headlights(true)
+			v.set_indicator(Vehicle.Blinker.HAZARD)
+		var v0: Vehicle = cars[0]
+		for view: Array in [["signals_rear", Vector3(-2.5, 1.4, 7.0)], ["signals_front", Vector3(2.5, 1.3, -7.0)]]:
+			var c := Camera3D.new()
+			world.add_child(c)
+			c.look_at_from_position(v0.global_transform * view[1], v0.global_position + Vector3(0, 0.7, 0))
+			c.make_current()
+			await _frames(10)
+			for v: Vehicle in cars:
+				v._blink = 0.1
+				v._update_lights()
+			await _frames(2)
+			await _snap(view[0])
+			c.queue_free()
+		for v: Vehicle in cars:
+			v.set_indicator(Vehicle.Blinker.OFF)
+			v.set_headlights(false)
+		world.time_of_day = 16.9
+		world._update_sun()
+		p.cam.camera.make_current()
 	if _want("pool"):
 		var pl: Array = world.data.pool
 		var pr := Rect2(pl[0], pl[1], pl[2] - pl[0], pl[3] - pl[1])

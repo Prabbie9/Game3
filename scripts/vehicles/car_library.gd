@@ -63,6 +63,7 @@ static func get_model(model: String) -> Dictionary:
 		for m in MODELS:
 			_cache[m] = _extract(pack, m)
 		pack.free()
+		_optics_img = null
 	return _cache[model]
 
 
@@ -127,6 +128,7 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 
 	var parts := []
 	var optics := {"front": SurfaceTool.new(), "rear": SurfaceTool.new()}
+	var amber := {"front": 0, "rear": 0}
 	var optics_mat: Material = null
 	for st: SurfaceTool in optics.values():
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -139,7 +141,7 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 			if mat and String(mat.resource_name).begins_with("Optics"):
 				# lights: split into front (headlights) and rear (tail/brake/reverse) in the car frame
 				optics_mat = mat
-				_split_optics(mesh.surface_get_arrays(s), xf, optics)
+				_split_optics(mesh.surface_get_arrays(s), xf, optics, amber, _optics_image(mat))
 				continue
 			keep.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh.surface_get_arrays(s))
 			keep.surface_set_material(keep.get_surface_count() - 1, mat)
@@ -167,11 +169,30 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 		var a := (inv * _gxf(mi)) * mi.get_aabb()
 		local_aabb = a if first else local_aabb.merge(a)
 		first = false
-	return {"parts": parts, "wheels": wheel_data, "aabb": local_aabb, "optics": optic_meshes, "optics_mat": optics_mat}
+	# indicators blink on the amber lenses; a cluster without any uses its outer third instead
+	var has_amber := {"front": amber.front >= 4, "rear": amber.rear >= 4}
+	return {"parts": parts, "wheels": wheel_data, "aabb": local_aabb, "optics": optic_meshes, "optics_mat": optics_mat,
+		"amber": has_amber}
 
 
-## Triangles of a light surface into the front/rear SurfaceTools (car frame: forward = -Z).
-static func _split_optics(arr: Array, xf: Transform3D, out: Dictionary) -> void:
+static var _optics_img: Image
+
+
+static func _optics_image(mat: Material) -> Image:
+	if _optics_img == null and mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture:
+		_optics_img = (mat as BaseMaterial3D).albedo_texture.get_image()
+		if _optics_img and _optics_img.is_compressed():
+			_optics_img.decompress()
+	return _optics_img
+
+
+## Orange indicator lens colour (sRGB); the same test runs in car_lights.gdshader.
+static func is_amber(c: Color) -> bool:
+	return c.r > 0.45 and c.g > 0.32 * c.r and c.g < 0.78 * c.r and c.b < 0.55 * c.g
+
+
+## Triangles of a light surface into the front/rear SurfaceTools (car frame: forward = -Z); counts amber triangles.
+static func _split_optics(arr: Array, xf: Transform3D, out: Dictionary, amber: Dictionary, img: Image) -> void:
 	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] else PackedVector2Array()
 	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] else PackedInt32Array(range(v.size()))
@@ -179,7 +200,14 @@ static func _split_optics(arr: Array, xf: Transform3D, out: Dictionary) -> void:
 		var a := xf * v[idx[t]]
 		var b := xf * v[idx[t + 1]]
 		var c := xf * v[idx[t + 2]]
-		var st: SurfaceTool = out["front" if (a.z + b.z + c.z) < 0.0 else "rear"]
+		var side := "front" if (a.z + b.z + c.z) < 0.0 else "rear"
+		var st: SurfaceTool = out[side]
+		if img and uv.size() > 0:
+			var m := (uv[idx[t]] + uv[idx[t + 1]] + uv[idx[t + 2]]) / 3.0
+			var px := Vector2i(clampi(int(fposmod(m.x, 1.0) * img.get_width()), 0, img.get_width() - 1),
+				clampi(int(fposmod(m.y, 1.0) * img.get_height()), 0, img.get_height() - 1))
+			if is_amber(img.get_pixelv(px)):
+				amber[side] += 1
 		for k in 3:
 			if uv.size() > 0:
 				st.set_uv(uv[idx[t + k]])

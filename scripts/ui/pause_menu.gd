@@ -7,7 +7,9 @@ const CONTROLS := [
 	["Aim / shoot", "aim|fire"], ["Reload", "reload"], ["Fists / pistol", "weapon_next"], ["Swap shoulder", "shoulder_swap"],
 	["Enter vehicle", "interact"],
 	["VEHICLE", ""],
-	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Exit vehicle", "interact"],
+	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
+	["Indicators / hazards", "indicator_left|indicator_right|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
+	["Exit vehicle", "interact"],
 ]
 
 var _root: Control

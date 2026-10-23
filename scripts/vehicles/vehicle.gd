@@ -39,6 +39,10 @@ var camera_distance := 6.5
 var camera_height := 1.7
 var input_enabled := false
 var headlights_on := false
+enum Blinker { OFF, LEFT, RIGHT, HAZARD }
+var indicator := Blinker.OFF
+var _blink := 0.0
+var _turned := 0.0         # yaw turned since the indicator went on (auto-cancel after the turn)
 
 var _throttle := 0.0
 var _steer := 0.0
@@ -166,6 +170,9 @@ func _build_optics(data: Dictionary) -> void:
 		m.shader = preload("res://assets/shaders/car_lights.gdshader")
 		m.set_shader_parameter("tex", tex)
 		m.set_shader_parameter("rear", k == "rear")
+		m.set_shader_parameter("has_amber", data.get("amber", {}).get(k, false))
+		var ab: AABB = (data.optics[k] as Mesh).get_aabb()
+		m.set_shader_parameter("outer_x", maxf(absf(ab.position.x), absf(ab.end.x)) * 0.55)
 		var mi := MeshInstance3D.new()
 		mi.mesh = data.optics[k]
 		mi.material_override = m
@@ -262,6 +269,15 @@ func _build_lights(aabb: AABB) -> void:
 		_lights.append(l)
 
 
+func set_indicator(sig: Blinker) -> void:
+	indicator = sig
+	_blink = 0.0
+	_turned = 0.0
+	if sig != Blinker.OFF:
+		sleeping = false  # keep ticking so the lamps blink
+	_update_lights()
+
+
 func set_headlights(on: bool) -> void:
 	headlights_on = on
 	for l in _lights:
@@ -314,7 +330,16 @@ func speed_kmh() -> float:
 
 func _physics_process(delta: float) -> void:
 	# parked and at rest: apply no forces at all so the physics engine can put the body to sleep
+	if indicator != Blinker.OFF:
+		_blink += delta
+		if indicator != Blinker.HAZARD:
+			_turned += angular_velocity.y * delta * (1.0 if indicator == Blinker.LEFT else -1.0)
+			# cancel once the turn in the signalled direction is done and the wheel is straight again
+			if _turned > 0.9 and absf(_steer) < 0.05:
+				set_indicator(Blinker.OFF)
 	if driver == null and linear_velocity.length_squared() < 0.0625 and angular_velocity.length_squared() < 0.01:
+		if indicator != Blinker.OFF:
+			_update_lights()
 		if not _idle:
 			_go_idle()
 		_idle_time += delta
@@ -335,6 +360,12 @@ func _physics_process(delta: float) -> void:
 		handbrake = Input.is_action_pressed("handbrake")
 		if Input.is_action_just_pressed("headlights"):
 			set_headlights(not headlights_on)
+		if Input.is_action_just_pressed("indicator_left"):
+			set_indicator(Blinker.OFF if indicator == Blinker.LEFT else Blinker.LEFT)
+		if Input.is_action_just_pressed("indicator_right"):
+			set_indicator(Blinker.OFF if indicator == Blinker.RIGHT else Blinker.RIGHT)
+		if Input.is_action_just_pressed("hazards"):
+			set_indicator(Blinker.OFF if indicator == Blinker.HAZARD else Blinker.HAZARD)
 
 	# brake pedal reverses once (almost) stopped
 	var drive := throttle
@@ -457,6 +488,13 @@ func _update_lights() -> void:
 	if driver != null and not headlights_on and night > 0.5:
 		set_headlights(true)
 	var on := 1.0 if headlights_on else 0.0
+	var lit := indicator != Blinker.OFF and fmod(_blink, 0.75) < 0.4
+	var il := 1.0 if lit and indicator in [Blinker.LEFT, Blinker.HAZARD] else 0.0
+	var ir := 1.0 if lit and indicator in [Blinker.RIGHT, Blinker.HAZARD] else 0.0
+	for m: ShaderMaterial in [_front_light, _rear_light]:
+		if m:
+			m.set_shader_parameter("ind_left", il)
+			m.set_shader_parameter("ind_right", ir)
 	if _front_light:
 		_front_light.set_shader_parameter("head", on)
 	if _rear_light:

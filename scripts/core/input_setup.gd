@@ -8,6 +8,7 @@ const KEYS := {
 	"interact": [KEY_F], "reload": [KEY_R], "cover": [KEY_Q], "shoulder_swap": [],
 	"accelerate": [KEY_W], "brake": [KEY_S], "steer_left": [KEY_A], "steer_right": [KEY_D],
 	"handbrake": [KEY_SPACE], "horn": [KEY_H], "headlights": [KEY_L], "camera_mode": [KEY_V],
+	"indicator_left": [KEY_Z], "indicator_right": [KEY_X], "hazards": [KEY_B], "look_behind": [KEY_E],
 	"pause": [KEY_ESCAPE], "perf_overlay": [KEY_F3], "map": [KEY_M],
 	"weapon_next": [], "weapon_prev": [],
 }
@@ -18,7 +19,7 @@ const MOUSE := {
 const PAD_BUTTONS := {
 	"jump": [JOY_BUTTON_X], "sprint": [JOY_BUTTON_A], "crouch": [JOY_BUTTON_LEFT_STICK],
 	"interact": [JOY_BUTTON_Y], "reload": [JOY_BUTTON_B], "shoulder_swap": [JOY_BUTTON_RIGHT_STICK], "cover": [JOY_BUTTON_RIGHT_SHOULDER],
-	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "headlights": [JOY_BUTTON_DPAD_LEFT],
+	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "headlights": [JOY_BUTTON_DPAD_LEFT], "hazards": [JOY_BUTTON_DPAD_UP],
 	"camera_mode": [JOY_BUTTON_BACK], "pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],
 	"weapon_next": [JOY_BUTTON_DPAD_RIGHT], "weapon_prev": [JOY_BUTTON_LEFT_SHOULDER],
 }
