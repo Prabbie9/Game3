@@ -127,7 +127,7 @@ func _ready() -> void:
 		display_name = spec.name
 	mass = vehicle_mass
 	collision_layer = 8
-	collision_mask = 1 | 2 | 4 | 8 | 16
+	collision_mask = 1 | 2 | 4 | 8 | 16 | 32
 	center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
 	continuous_cd = true
 	_build()

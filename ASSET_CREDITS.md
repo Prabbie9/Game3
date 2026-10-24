@@ -63,6 +63,9 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | M69 Frag Grenade (Sketchfab) | grenade | Riley Lewand (rileylewandowski) | https://sketchfab.com/3d-models/m69-frag-grenade-e94d90f68bdb4fd68d7a0aac6d9c5dd0 | CC-BY 4.0 |
 | Combat Knife (Sketchfab) | knife | OverLord (San.Dro) | https://sketchfab.com/3d-models/combat-knife-48e00da7aeb94530a5d0e0c3d58ca274 | CC-BY 4.0 |
 | Baseball bat (Sketchfab) | baseball_bat | DVLT (k_dvlt) | https://sketchfab.com/3d-models/baseball-bat-2669cf86386747449611396c0409db47 | CC-BY 4.0 |
+| vending machine (Sketchfab) | Street vending machine | wilsz95 (wilsz95) | https://sketchfab.com/3d-models/vending-machine-fb0516c9c6954e5dbeb420aaa48059c0 | CC-BY 4.0 |
+| ATM Machine (Sketchfab) | Street ATM | local.yany (local.yany) | https://sketchfab.com/3d-models/atm-machine-a46268e7c6ad4950bf5b346ce3981568 | CC-BY 4.0 |
+| Street phone (Sketchfab) | Street payphone | Henry VIII (henryviii) | https://sketchfab.com/3d-models/street-phone-3d0294a547cb46ba83e16faeba8aaa04 | CC-BY 4.0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.
@@ -84,3 +87,7 @@ Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) 
 | crash_1.ogg, crash_2.ogg, explosion_1.ogg, splash.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
 | siren_loop.ogg | aquinn | CC0 | https://opengameart.org/content/sirens-and-alarm-noise |
 | tyre_squeal.wav | qubodup | CC-BY 3.0 | https://opengameart.org/content/car-tire-squeal-skid-loop |
+| metal_fall_0.ogg, metal_fall_1.ogg, metal_hit_0.ogg, metal_hit_1.ogg, glass_break.ogg | rubberduck | CC0 | https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx |
+| bin_0.ogg, bin_1.ogg, bin_2.ogg | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
+| machine_0.ogg, can_drop.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
+| water_jet.ogg, coins.ogg, payphone.ogg (assets/audio/world) | synthesised by tools/audio/build_world_sfx.py | own work | — |

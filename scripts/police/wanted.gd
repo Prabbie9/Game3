@@ -138,6 +138,16 @@ func evade_time() -> float:
 	return 8.0 + 4.0 * stars
 
 
+## One star less (a favour from a payphone); none left: the police stand down.
+func drop_star() -> void:
+	if stars <= 1:
+		clear()
+		return
+	stars -= 1
+	heat = float(stars)
+	stars_changed.emit(stars)
+
+
 func clear() -> void:
 	if stars == 0:
 		return

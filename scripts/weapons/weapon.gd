@@ -481,6 +481,8 @@ static func apply_hit(scene: Node, hit: Dictionary, dir: Vector3, damage: float,
 		col.take_damage(damage, source)
 	elif col is RigidBody3D:
 		(col as RigidBody3D).apply_impulse(dir * 6.0, pos - (col as RigidBody3D).global_position)
+	elif col is StaticBody3D and (col as StaticBody3D).has_meta("prop") and PropWorld.get_props():
+		PropWorld.get_props().on_hit(hit, dir, damage)
 	FX.impact(scene, pos, hit.normal, surface)
 	var kind := "flesh" if surface == FX.Surface.FLESH else ("metal" if surface == FX.Surface.METAL else "hard")
 	if randf() < 0.7 or kind == "flesh":

@@ -154,7 +154,10 @@ func _on_body(b: Node) -> void:
 	if not took:
 		return
 	Game.message(text)
-	Audio.play_at(Audio.stream("weapons/reload_pistol.ogg" if kind == Kind.WEAPON else "player/punch_0.ogg"), global_position, -6.0, 1.3 if kind != Kind.WEAPON else 1.0)
+	if kind == Kind.CASH:
+		Audio.play_at(Audio.stream("world/coins.ogg"), global_position, -4.0, randf_range(0.95, 1.08))
+	else:
+		Audio.play_at(Audio.stream("weapons/reload_pistol.ogg" if kind == Kind.WEAPON else "player/punch_0.ogg"), global_position, -6.0, 1.3 if kind != Kind.WEAPON else 1.0)
 	_gone = 0.0
 	visible = false
 	set_deferred("monitoring", false)

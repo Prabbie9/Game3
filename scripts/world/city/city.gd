@@ -307,6 +307,9 @@ func _add_props(root: Node3D, pname: String, xfs: Array) -> void:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.name = pname.replace(",", "_").replace("@", "_")
 	mmi.multimesh = mm
+	# instance transforms kept on the CPU side (PropWorld reads them; the renderer's copy isn't readable everywhere)
+	mmi.set_meta("prop", name)
+	mmi.set_meta("xfs", xfs)
 	mmi.visibility_range_end = PROP_RANGE.get(name, 450.0)
 	mmi.visibility_range_end_margin = 20.0
 	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
@@ -332,7 +335,11 @@ func _add_props(root: Node3D, pname: String, xfs: Array) -> void:
 	var psb := StaticBody3D.new()
 	psb.collision_layer = 16
 	psb.collision_mask = 0
-	for xf: Transform3D in xfs:
+	# PropWorld breaks single instances: which prop / MultiMesh / instance each shape stands for
+	psb.set_meta("prop", name)
+	psb.set_meta("mmi", mmi)
+	for i in xfs.size():
+		var xf: Transform3D = xfs[i]
 		var col := PropCatalog.collision(name, xf.basis.get_scale().x)
 		if col.is_empty():
 			continue
@@ -340,6 +347,7 @@ func _add_props(root: Node3D, pname: String, xfs: Array) -> void:
 		cs.shape = col[0]
 		var q := xf.basis.get_rotation_quaternion()
 		cs.transform = Transform3D(Basis(q), xf.origin + q * col[1])
+		cs.set_meta("inst", i)
 		psb.add_child(cs)
 	if psb.get_child_count() > 0:
 		root.add_child(psb)

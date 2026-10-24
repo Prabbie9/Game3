@@ -72,6 +72,9 @@ func _ready() -> void:
 	population.name = "Population"
 	add_child(population)
 	population.traffic = traffic
+	var props := PropWorld.new()
+	props.name = "Props"
+	add_child(props)
 	wanted = Wanted.new()
 	wanted.name = "Wanted"
 	wanted.traffic = traffic

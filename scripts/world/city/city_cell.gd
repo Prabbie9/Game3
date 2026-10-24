@@ -334,6 +334,13 @@ func _sidewalk(ss: Array, w: float, side: float, kind: String) -> void:
 					_prop("utility_box_01" if rng.randf() < 0.5 else "utility_box_02", at + rr * (outer - 0.5) + y, face + PI)
 				elif roll < 0.62 and kind != "residential":
 					_prop("bench", at + rr * (outer - 0.8) + y, atan2(dir.x, dir.y) + PI * 0.5)
+				elif roll < 0.67 and kind != "residential":
+					# payphone at the kerb, facing the pavement
+					_prop("payphone", at + rr * (inner + 0.55) + y, face + PI)
+				elif roll < 0.71 and kind != "residential":
+					_prop("vending_machine", at + rr * (outer - 0.5) + y, face)
+				elif roll < 0.74 and kind != "residential":
+					_prop("atm", at + rr * (outer - 0.45) + y, face)
 
 
 func _palm(pos: Vector3) -> void:

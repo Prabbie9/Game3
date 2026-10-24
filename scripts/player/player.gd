@@ -18,7 +18,7 @@ const SWIM_DEPTH := 1.25    # water deeper than this (at the feet) means swimmin
 const SWIM_BOOST := 2.6     # surface swim is faster than the slow underwater clip; playback scales with it
 const HARD_LANDING := 9.0   # fall speeds (m/s) for a hard landing / ragdoll
 const RAGDOLL_FALL := 15.0
-const MASK_ON_FOOT := 1 | 4 | 8 | 16
+const MASK_ON_FOOT := 1 | 4 | 8 | 16 | 32
 
 @export var character_file := "ch08_nonpbr"
 
@@ -550,6 +550,11 @@ func _traverse_offset(act: String, t: float, height: float) -> float:
 
 func _action(delta: float) -> void:
 	_act_t += delta
+	if _act == "sit":
+		var mv := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		if _act_t > 0.6 and Game.controls_enabled and (mv.length() > 0.3 or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("interact")):
+			_stand_up()
+		return
 	var k := minf(_act_t, _act_len)
 	if AnimLib.paths.has(_act):
 		var target := _act_start * visual.path_transform(_act, k)
@@ -670,6 +675,10 @@ func _melee_hit() -> void:
 			landed = true
 		elif c is RigidBody3D:
 			(c as RigidBody3D).apply_impulse(-global_basis.z * 60.0 + Vector3(0, 15, 0))
+			landed = true
+		elif c is StaticBody3D and (c as StaticBody3D).has_meta("prop") and PropWorld.get_props():
+			# a kick at a bin or a hydrant knocks it over; a whack at an ATM counts towards breaking it
+			PropWorld.get_props().on_hit({"collider": c, "shape": r.shape, "position": at}, -global_basis.z, dmg * 3.0)
 			landed = true
 	if landed:
 		if fists:
@@ -938,6 +947,32 @@ func _respawn(at := Transform3D(), text := "You woke up a little bruised.") -> v
 	Game.controls_enabled = true
 	if text != "":
 		Game.message(text)
+
+
+## Sit on a bench (seat transform: where the hips go, facing out). Any move / jump / use stands up again.
+func sit_at(seat: Transform3D) -> void:
+	if state != State.ON_FOOT or vehicle:
+		return
+	weapon.holster(true)
+	state = State.ACTION
+	_act = "sit"
+	_act_t = 0.0
+	_act_len = 1e9
+	_melee_at = 0.0
+	_act_next = ""
+	collision_mask = 0
+	velocity = Vector3.ZERO
+	global_transform = seat
+	cam.yaw = rotation.y
+	visual.set_aim(Vector2.ZERO, 0.0)
+	visual.play_loop("sit")
+
+
+func _stand_up() -> void:
+	global_position += -global_basis.z * 0.45
+	visual.jump_to("ground")
+	_end_action()
+	weapon.holster(false)
 
 
 ## Arrested: hands up on the knees, then (after BUSTED) out of the police station without the guns.

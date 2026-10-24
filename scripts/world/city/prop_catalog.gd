@@ -21,6 +21,11 @@ const SOURCES := {
 	"jacaranda": ["res://assets/models/sketchfab/jacaranda/scene.gltf", "", ["cyl", 0.07, 1.2]],
 	"oak": ["res://assets/models/sketchfab/oak/scene.gltf", "", ["cyl", 0.3, 3.0]],
 	"boulder": ["ph:boulder_01", "", ["box"]],
+	# [source, variant, collision, real height in m (scaled to it, centred, standing on y = 0), yaw (degrees) that
+	# turns its front to +Z]
+	"vending_machine": ["res://assets/models/sketchfab/vending_machine/scene.gltf", "", ["box"], 1.83, 180.0],
+	"atm": ["res://assets/models/sketchfab/atm/scene.gltf", "", ["box"], 1.62, -90.0],
+	"payphone": ["res://assets/models/sketchfab/payphone/scene.gltf", "", ["box"], 2.2, 0.0],
 }
 
 static var _entries := {}  # name -> {"mesh": Mesh, "aabb": AABB, "col": Array}
@@ -78,22 +83,35 @@ static func _extract(name: String) -> Dictionary:
 	var by_mat := {}  # Material -> SurfaceTool
 	var aabb := AABB()
 	var first := true
+	var parts := []   # [MeshInstance3D, xf]
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		var lname := String(mi.name).to_lower()
 		var weathered := lname.contains("aged") or lname.contains("rust")
 		if (src[1] == "clean" and weathered) or (src[1] == "aged" and not weathered):
 			continue
 		var xf := _xf_to_root(mi, root)
+		parts.append([mi, xf])
+		var b: AABB = xf * mi.mesh.get_aabb()
+		aabb = b if first else aabb.merge(b)
+		first = false
+	# a real height given: scale to it, centre on x/z, stand on y = 0
+	var norm := Transform3D()
+	if src.size() > 3 and aabb.size.y > 0.0:
+		var k := float(src[3]) / aabb.size.y
+		var c := aabb.get_center()
+		norm = Transform3D(Basis.from_scale(Vector3.ONE * k), Vector3(-c.x * k, -aabb.position.y * k, -c.z * k))
+		if src.size() > 4:
+			norm = Transform3D(Basis(Vector3.UP, deg_to_rad(float(src[4]))), Vector3.ZERO) * norm
+		aabb = norm * aabb
+	for part: Array in parts:
+		var mi: MeshInstance3D = part[0]
 		for s in mi.mesh.get_surface_count():
 			var mat := mi.get_active_material(s)
 			if not by_mat.has(mat):
 				var st := SurfaceTool.new()
 				st.begin(Mesh.PRIMITIVE_TRIANGLES)
 				by_mat[mat] = st
-			(by_mat[mat] as SurfaceTool).append_from(mi.mesh, s, xf)
-		var b: AABB = xf * mi.mesh.get_aabb()
-		aabb = b if first else aabb.merge(b)
-		first = false
+			(by_mat[mat] as SurfaceTool).append_from(mi.mesh, s, norm * (part[1] as Transform3D))
 	root.free()
 	var am := ArrayMesh.new()
 	for mat: Material in by_mat:

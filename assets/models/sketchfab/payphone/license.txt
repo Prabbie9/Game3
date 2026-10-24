@@ -1,0 +1,11 @@
+Model Information:
+* title:	Street phone
+* source:	https://sketchfab.com/3d-models/street-phone-3d0294a547cb46ba83e16faeba8aaa04
+* author:	Henry VIII (https://sketchfab.com/henryviii)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Street phone" (https://sketchfab.com/3d-models/street-phone-3d0294a547cb46ba83e16faeba8aaa04) by Henry VIII (https://sketchfab.com/henryviii) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
