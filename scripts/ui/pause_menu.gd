@@ -10,7 +10,7 @@ const CONTROLS := [
 	["VEHICLE", ""],
 	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
 	["Indicators / hazards", "indicator_left|indicator_right|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
-	["Shoot from the window", "vehicle_aim|vehicle_fire"], ["Exit vehicle", "interact"],
+	["Shoot from the window", "vehicle_aim|vehicle_fire"], ["Radio station", "radio_next|radio_prev"], ["Exit vehicle", "interact"],
 ]
 
 var _root: Control
@@ -23,6 +23,7 @@ var _first: Button
 
 
 func _ready() -> void:
+	add_to_group("pause_menu")
 	layer = 30
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_root = Control.new()

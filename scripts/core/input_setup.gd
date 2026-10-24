@@ -9,7 +9,7 @@ const KEYS := {
 	"accelerate": [KEY_W], "brake": [KEY_S], "steer_left": [KEY_A], "steer_right": [KEY_D],
 	"handbrake": [KEY_SPACE], "horn": [KEY_H], "headlights": [KEY_L], "camera_mode": [KEY_V],
 	"indicator_left": [KEY_Z], "indicator_right": [KEY_X], "hazards": [KEY_B], "look_behind": [KEY_E],
-	"ascend": [KEY_SPACE], "descend": [KEY_CTRL],
+	"ascend": [KEY_SPACE], "descend": [KEY_CTRL], "radio_next": [KEY_PERIOD], "radio_prev": [KEY_COMMA],
 	"pause": [KEY_ESCAPE], "perf_overlay": [KEY_F3], "map": [KEY_M],
 	"weapon_next": [], "weapon_prev": [], "weapon_wheel": [KEY_TAB],
 }
@@ -23,7 +23,7 @@ const PAD_BUTTONS := {
 	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "headlights": [JOY_BUTTON_DPAD_LEFT], "hazards": [JOY_BUTTON_DPAD_UP], "ascend": [JOY_BUTTON_RIGHT_SHOULDER], "descend": [JOY_BUTTON_LEFT_SHOULDER],
 	"camera_mode": [JOY_BUTTON_BACK], "pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],
 	"weapon_next": [JOY_BUTTON_DPAD_RIGHT], "weapon_prev": [JOY_BUTTON_DPAD_LEFT], "weapon_wheel": [JOY_BUTTON_LEFT_SHOULDER],
-	"vehicle_aim": [JOY_BUTTON_LEFT_SHOULDER], "vehicle_fire": [JOY_BUTTON_X],
+	"vehicle_aim": [JOY_BUTTON_LEFT_SHOULDER], "vehicle_fire": [JOY_BUTTON_X], "radio_next": [JOY_BUTTON_DPAD_RIGHT],
 }
 ## action -> [axis, direction]
 const PAD_AXES := {

@@ -268,6 +268,72 @@ func _run() -> void:
 		await _snap("police_scene")
 		c.queue_free()
 		p.cam.camera.make_current()
+	if _want("interiors"):
+		# the safehouse across the avenue and the diner behind the start, from the street and inside
+		for view: Array in [["safehouse_front", Vector3(-24.0, 1.7, 1.5), Vector3(-25.5, 2.6, 13.0)],
+				["safehouse_inside", Vector3(-31.0, 1.65, 14.2), Vector3(-20.5, 0.9, 21.5)],
+				["diner_front", Vector3(25.0, 1.7, 1.5), Vector3(24.5, 2.6, 13.0)],
+				["diner_inside", Vector3(32.5, 1.65, 13.6), Vector3(20.0, 1.0, 21.0)]]:
+			var c := Camera3D.new()
+			world.add_child(c)
+			c.look_at_from_position(view[1], view[2])
+			c.fov = 64
+			c.make_current()
+			await _frames(16)
+			await _snap(view[0])
+			c.queue_free()
+		p.cam.camera.make_current()
+	if _want("life"):
+		# a lucky coin in the park, pigeons on the plaza (pecking, then scattering), an airliner overhead
+		var col := world.collectibles
+		var c0: Node3D = col._coins[0]
+		var keep := p.global_transform
+		p.global_position = col.spots[0] + Vector3(8.0, 1.0, 0)
+		for i in 240:
+			await _frames(1)
+			if c0.get_meta("settled"):
+				break
+		var c := Camera3D.new()
+		world.add_child(c)
+		c.look_at_from_position(c0.global_position + Vector3(2.2, 0.6, 1.2), c0.global_position)
+		c.fov = 50
+		c.make_current()
+		await _frames(20)
+		await _snap("life_coin")
+		var flock: Dictionary = {}
+		for f: Dictionary in world.birds.flocks:
+			if f.kind == "pigeon" and Vector2(f.anchor.x, f.anchor.z).length() < 120.0:
+				flock = f
+				break
+		if not flock.is_empty():
+			var a: Vector3 = flock.anchor
+			p.global_position = a + Vector3(30.0, 1.0, 0)
+			c.look_at_from_position(a + Vector3(4.5, 1.2, 3.0), a + Vector3(0, 0.1, 0))
+			for i in 120:
+				await _frames(1)
+				if flock.ground > -INF:
+					break
+			c.look_at_from_position(a + Vector3(4.5, flock.ground + 1.2, 3.0), a + Vector3(0, flock.ground + 0.1, 0))
+			await _frames(30)
+			await _snap("life_pigeons")
+			Game.noise(a, 30.0, p)
+			await _frames(24)
+			c.look_at_from_position(a + Vector3(7.0, flock.ground + 1.5, 6.0), a + Vector3(0, flock.ground + 3.0, 0))
+			await _frames(2)
+			await _snap("life_pigeons_fly")
+		var ac := world.aircraft
+		ac.launch()
+		await _frames(2)
+		var eye := c.global_position
+		ac._plane.global_position = eye - ac._dir * 120.0 + Vector3(0, 700.0, 0)
+		ac._plane.look_at(ac._plane.global_position + ac._dir, Vector3.UP)
+		c.fov = 22
+		c.look_at_from_position(eye, ac._plane.global_position)
+		await _frames(3)
+		await _snap("life_plane")
+		c.queue_free()
+		p.global_transform = keep
+		p.cam.camera.make_current()
 	if _want("shop"):
 		# the gun shop from the street, then inside at the counter
 		for view: Array in [["shop_front", Vector3(30.0, 1.7, -2.0), Vector3(23.0, 2.2, -12.0)], ["shop_inside", Vector3(25.5, 1.65, -13.2), Vector3(22.0, 1.3, -21.0)]]:

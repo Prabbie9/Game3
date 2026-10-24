@@ -187,8 +187,38 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Checks: tests/ui_check.gd (rebinding, prompts, audio volume, save/load round trip, GPS, settings tabs, pause
   panels); screenshots `menu`, `pause` (+ pause_stats, settings_graphics, settings_controls), `map`.
 
-**Next: Milestone 9 — Interactivity & life** (breakables, hydrants, physics props, interiors incl. safehouse with
-save point, ATMs / vending / phone booths, sittable benches, doors, money & collectibles, ambient life, radio).
+**Milestone 9 — Interactivity & life: DONE (v0.9.0)**
+- Street furniture (scripts/world/props/prop_world.gd): lamp posts, hydrants, bins, utility boxes, vending
+  machines, payphones and ATMs break when hit by a car, shot, kicked or blasted; the pieces become physics debris
+  (layer 32) and are tidied away later; a broken lamp's light goes out. Burst hydrants throw a water jet that
+  lifts cars (hydrant_jet.gd). New CC-BY props: vending machine, ATM, payphone (Sketchfab).
+- Using things (prop_use.gd): vending machine ($5, +15 health), ATM (balance; a beaten ATM spills cash),
+  payphone (pay $400 per star to have one dropped), benches (sit / get up).
+- Walk-in interiors (scripts/world/interiors/interior.gd + door.gd): hinged doors that swing open for the player
+  and pedestrians and close behind them. The safehouse across 6th Ave (sofa, TV, kitchenette, day bed: "Sleep and
+  save" passes the night, heals and opens the save slots) and the Solano Diner (counter, stools, booths, a
+  waitress: $12 meal = full health). Furniture is Poly Haven CC0. The gun shop now has a pair of glazed doors.
+- Collectibles (scripts/world/collectibles.gd): 30 lucky coins across all six districts (parks, plaza, pier,
+  lookout, lifeguard towers, boardwalk, port, hills, suburbs), $100 each, $10,000 for the set; saved with the game
+  and counted in the stats. A new game starts a fresh career (money, stats and coins reset).
+- Ambient life: pigeons on the plaza, in the parks and on downtown pavements that scatter from the player and
+  gunfire, circle and land again; gulls wheeling over the shore and the port (scripts/world/ambient/birds.gd, a
+  procedural bird with shader wing beats); an airliner crossing the sky every few minutes with navigation lights
+  and engine rumble (aircraft.gd).
+- Soundscape (scripts/audio/ambience.gd, tools/audio/build_ambience.py): beds that follow the place and the hour
+  (traffic where it is built up, surf near the sea, birdsong by day and crickets at night out of the centre, wind
+  on the hills), gull cries, construction sites working by day, ship horns in the port, distant sirens; indoors the
+  street is muffled, a room tone hums and effects get a short room reverb.
+- Car radio (scripts/audio/radio.gd, tools/audio/build_radio.py): five stations — VIBE 94.1 (funk & soul),
+  COSTA 101.3 (latin), THE REEF 88.5 (rock), NIGHT SHIFT 103.7 (electronic), LOW TIDE 99.9 (lounge & lo-fi) — of
+  CC-BY / CC0 music, each with a synthesised ident between songs. Stations play on a shared clock (tune back in
+  and the song has moved on); every vehicle keeps its station; `.` / `,` (D-pad right) steps through them and OFF.
+- Checks: tests/props_check.gd (breakables, hydrant, use, sit, payphone), tests/places_check.gd (door, safehouse
+  sleep, diner, coins placed on open ground, pickup, save state), tests/life_check.gd (soundscape by place and hour,
+  indoors, pigeons, gulls, aircraft, radio); screenshots `interiors`.
+
+**Next: Milestone 10 — Polish & optimisation** (every known issue, animation smoothing, audio mix, visual
+consistency pass, final perf pass on all presets, final export).
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
@@ -196,7 +226,6 @@ save point, ATMs / vending / phone booths, sittable benches, doors, money & coll
 - Bus/fire engine have no passenger door and are entered from the driver side like cars.
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).
-- Props are solid but not breakable yet (Milestone 9).
 - tests/emergency_check.gd still fails now and then (an ambulance taking a long way round or wedged before the
   out-of-sight recovery kicks in); traffic_check / police_chase_check pass 3/3 after the latest fixes.
 - Default branch is still `claude/tmp-push-test` (proxy blocks changing it) → owner checklist item.
@@ -212,3 +241,5 @@ save point, ATMs / vending / phone booths, sittable benches, doors, money & coll
 | v0.5.0 | 5 — combat | GitHub Release |
 | v0.6.0 | 6 — population | GitHub Release |
 | v0.7.0 | 7 — police | GitHub Release |
+| v0.8.0 | 8 — UI/UX | GitHub Release |
+| v0.9.0 | 9 — interactivity & life | GitHub Release |

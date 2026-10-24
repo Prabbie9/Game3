@@ -26,6 +26,13 @@ var game_over: GameOver
 var wanted: Wanted
 var hospital: Storefront
 var police_station: Storefront
+var safehouse: Safehouse
+var collectibles: Collectibles
+var birds: Birds
+var aircraft: Aircraft
+var ambience: Ambience
+var radio: Radio
+var diner: Diner
 
 
 func _ready() -> void:
@@ -83,6 +90,9 @@ func _ready() -> void:
 	player.position = spawn
 	player.rotation.y = deg_to_rad(90)
 	add_child(player)
+	radio = Radio.new()
+	radio.name = "Radio"
+	add_child(radio)
 	var hud: CanvasLayer = preload("res://scripts/ui/hud.gd").new()
 	hud.name = "HUD"
 	add_child(hud)
@@ -128,6 +138,31 @@ func _spawn_places() -> void:
 	hospital.sign_color = Color(1.0, 0.35, 0.35)
 	hospital.wall = "white_stucco"
 	add_child(hospital)
+	# the player's safehouse across the avenue and the diner behind the start, both facing 6th Ave
+	safehouse = Safehouse.new()
+	safehouse.name = "Safehouse"
+	safehouse.position = Vector3(-24.75, 0, 12.6)
+	safehouse.rotation.y = PI
+	add_child(safehouse)
+	diner = Diner.new()
+	diner.name = "Diner"
+	diner.position = Vector3(24.75, 0, 12.6)
+	diner.rotation.y = PI
+	add_child(diner)
+	if Game.pending_load.is_empty():
+		Game.new_career()
+	collectibles = Collectibles.new()
+	collectibles.name = "Collectibles"
+	add_child(collectibles)
+	birds = Birds.new()
+	birds.name = "Birds"
+	add_child(birds)
+	aircraft = Aircraft.new()
+	aircraft.name = "Aircraft"
+	add_child(aircraft)
+	ambience = Ambience.new()
+	ambience.name = "Ambience"
+	add_child(ambience)
 	var respray := Respray.new()
 	respray.name = "Respray"
 	respray.rect = Rect2(95.0, -28.0, 14.0, 16.0)
@@ -174,7 +209,8 @@ func place_name(pos: Vector3) -> String:
 
 ## Places shown on the minimap and the map: [world x/z, letter, colour, name].
 func places() -> Array:
-	var out := [[Vector2(23.0, -18.0), "G", UITheme.CORAL, "Gun shop"], [Vector2(102.0, -20.0), "R", UITheme.TEAL, "Respray"]]
+	var out := [[Vector2(-24.75, 19.0), "S", UITheme.SAND, "Safehouse"], [Vector2(23.0, -18.0), "G", UITheme.CORAL, "Gun shop"],
+		[Vector2(24.75, 18.5), "D", Color(1.0, 0.45, 0.4), "Diner"], [Vector2(102.0, -20.0), "R", UITheme.TEAL, "Respray"]]
 	if hospital:
 		out.append([hospital.rect.get_center(), "H", Color(0.9, 0.3, 0.32), "Hospital"])
 	if police_station:

@@ -29,7 +29,8 @@ const BINDABLE := [
 	["Indicator left", "indicator_left", true], ["Indicator right", "indicator_right", true],
 	["Hazard lights", "hazards", true], ["Aim from the window", "vehicle_aim", true],
 	["Shoot from the window", "vehicle_fire", true], ["Helicopter up", "ascend", true],
-	["Helicopter down", "descend", true],
+	["Helicopter down", "descend", true], ["Next radio station", "radio_next", true],
+	["Previous radio station", "radio_prev", true],
 ]
 
 var world: Node

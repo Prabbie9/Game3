@@ -66,6 +66,24 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | vending machine (Sketchfab) | Street vending machine | wilsz95 (wilsz95) | https://sketchfab.com/3d-models/vending-machine-fb0516c9c6954e5dbeb420aaa48059c0 | CC-BY 4.0 |
 | ATM Machine (Sketchfab) | Street ATM | local.yany (local.yany) | https://sketchfab.com/3d-models/atm-machine-a46268e7c6ad4950bf5b346ce3981568 | CC-BY 4.0 |
 | Street phone (Sketchfab) | Street payphone | Henry VIII (henryviii) | https://sketchfab.com/3d-models/street-phone-3d0294a547cb46ba83e16faeba8aaa04 | CC-BY 4.0 |
+| Sofa 02 (model) | safehouse and diner interiors | Kirill Sannikov | https://polyhaven.com/a/sofa_02 | CC0 |
+| Modern Coffee Table 01 (model) | safehouse and diner interiors | Amin | https://polyhaven.com/a/modern_coffee_table_01 | CC0 |
+| Television 01 (model) | safehouse and diner interiors | Gabriel Radić | https://polyhaven.com/a/Television_01 | CC0 |
+| Vintage Day Bed (model) | safehouse and diner interiors | Aron Łyczek | https://polyhaven.com/a/vintage_day_bed | CC0 |
+| Side Table 01 (model) | safehouse and diner interiors | James Ray Cock | https://polyhaven.com/a/side_table_01 | CC0 |
+| Potted Plant 02 (model) | safehouse and diner interiors | Rico Cilliers | https://polyhaven.com/a/potted_plant_02 | CC0 |
+| Wall Clock (model) | safehouse and diner interiors | PierreB3D | https://polyhaven.com/a/wall_clock | CC0 |
+| Steel Frame Shelves 01 (model) | safehouse and diner interiors | James Ray Cock | https://polyhaven.com/a/steel_frame_shelves_01 | CC0 |
+| Dining Table (model) | safehouse and diner interiors | Aron Łyczek | https://polyhaven.com/a/dining_table | CC0 |
+| Dining Chair 02 (model) | safehouse and diner interiors | James Ray Cock | https://polyhaven.com/a/dining_chair_02 | CC0 |
+| Bar Chair Round 01 (model) | safehouse and diner interiors | Dairon Sanchez | https://polyhaven.com/a/bar_chair_round_01 | CC0 |
+| Cash Register 01 (model) | safehouse and diner interiors | Joe Seabuhr | https://polyhaven.com/a/CashRegister_01 | CC0 |
+| Round Wooden Table 01 (model) | safehouse and diner interiors | Ulan Cabanilla | https://polyhaven.com/a/round_wooden_table_01 | CC0 |
+| Vintage Microwave (model) | safehouse and diner interiors | Adam Nekola | https://polyhaven.com/a/vintage_microwave | CC0 |
+| Electric Stove (model) | safehouse and diner interiors | Kuutti Siitonen | https://polyhaven.com/a/electric_stove | CC0 |
+| Throw Pillows 01 (model) | safehouse and diner interiors | Serhii Khromov | https://polyhaven.com/a/throw_pillows_01 | CC0 |
+| Checkered Pavement Tiles (texture) | interior floors | Amal Kumar | https://polyhaven.com/a/checkered_pavement_tiles | CC0 |
+| Laminate Floor 02 (texture) | interior floors | Dario Barresi, Charlotte Baglioni | https://polyhaven.com/a/laminate_floor_02 | CC0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.
@@ -91,3 +109,49 @@ Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) 
 | bin_0.ogg, bin_1.ogg, bin_2.ogg | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | machine_0.ogg, can_drop.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
 | water_jet.ogg, coins.ogg, payphone.ogg (assets/audio/world) | synthesised by tools/audio/build_world_sfx.py | own work | — |
+
+## Ambience
+Processed by `tools/audio/build_ambience.py` into `assets/audio/ambience/`.
+
+| Sound | Author | License | Source |
+|---|---|---|---|
+| city_loop.ogg (distant traffic), construction_loop.ogg, room_tone.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx-2 |
+| surf_loop.ogg (breakers) | jasinski (submitted by qubodup) | CC0 | https://opengameart.org/content/beach-ocean-waves |
+| birds_loop.ogg | isaiah658 | CC0 | https://opengameart.org/content/ambient-bird-sounds |
+| crickets_loop.ogg | Wolfgang_ | CC0 | https://opengameart.org/content/crickets-ambient-noise-loopable |
+| gull_0..4.ogg | Rango Mango | CC0 | https://opengameart.org/content/solo-seagull-sound-effects |
+| plane.ogg | freetousesounds | CC-BY 4.0 | https://opengameart.org/content/lax-airport-landing-sound-la-city-sounds |
+| siren_far.ogg (from siren.mp3) | aquinn | CC0 | https://opengameart.org/content/sirens-and-alarm-noise |
+| ship_horn.ogg, wind_loop.ogg, flutter.ogg | synthesised by tools/audio/build_ambience.py | own work | — |
+
+## Radio music
+Processed by `tools/audio/build_radio.py` into `assets/audio/radio/` (trimmed to 3.5 min, loudness-matched).
+Kevin MacLeod tracks: "Title" Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0
+License, http://creativecommons.org/licenses/by/4.0/. Station idents and tuning static are synthesised (own work).
+
+| Track | Artist | License | Source |
+|---|---|---|---|
+| Funkorama (VIBE 94.1) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funkorama.mp3 |
+| Funky Chunk (VIBE 94.1) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funky%20Chunk.mp3 |
+| Groove Grove (VIBE 94.1) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Groove%20Grove.mp3 |
+| Vibe Ace (VIBE 94.1) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Vibe%20Ace.mp3 |
+| Disco con Tutti (VIBE 94.1) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Disco%20con%20Tutti.mp3 |
+| Bossa Antigua (COSTA 101.3) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bossa%20Antigua.mp3 |
+| Samba Isobel (COSTA 101.3) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Samba%20Isobel.mp3 |
+| Latin Industries (COSTA 101.3) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Latin%20Industries.mp3 |
+| Arroz Con Pollo (COSTA 101.3) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Arroz%20Con%20Pollo.mp3 |
+| Big Rock (THE REEF 88.5) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Big%20Rock.mp3 |
+| Volatile Reaction (THE REEF 88.5) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Volatile%20Reaction.mp3 |
+| Severe Tire Damage (THE REEF 88.5) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Severe%20Tire%20Damage.mp3 |
+| Movement Proposition (THE REEF 88.5) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Movement%20Proposition.mp3 |
+| Cut and Run (THE REEF 88.5) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cut%20and%20Run.mp3 |
+| Midnight Drive (NIGHT SHIFT 103.7) | congusbongus | CC0 | https://opengameart.org/content/midnight-drive |
+| Cyborg Ninja (NIGHT SHIFT 103.7) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cyborg%20Ninja.mp3 |
+| Ouroboros (NIGHT SHIFT 103.7) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ouroboros.mp3 |
+| Midnight Cruiser (NIGHT SHIFT 103.7) | Zane Little Music | CC0 | https://opengameart.org/content/midnight-cruiser |
+| Club Diver (NIGHT SHIFT 103.7) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Club%20Diver.mp3 |
+| Night on the Docks - Sax (LOW TIDE 99.9) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Night%20on%20the%20Docks%20-%20Sax.mp3 |
+| Smooth Lovin (LOW TIDE 99.9) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Smooth%20Lovin.mp3 |
+| Chill Lofi (LOW TIDE 99.9) | omfgdude | CC0 | https://opengameart.org/content/chill-lofi-inspired |
+| Dirt Rhodes (LOW TIDE 99.9) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dirt%20Rhodes.mp3 |
+| Bass Walker (LOW TIDE 99.9) | Kevin MacLeod | CC-BY 4.0 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bass%20Walker.mp3 |

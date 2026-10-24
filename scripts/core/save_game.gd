@@ -43,6 +43,7 @@ static func save(slot: int) -> bool:
 		"money": Game.money,
 		"weapons": {"owned": p.weapon.owned.keys(), "ammo": ammo, "current": p.weapon.current},
 		"stats": Game.stats.duplicate(),
+		"collected": Game.collected.duplicate(),
 		"world": {"time": w.time_of_day, "weather": w.weather.kind if w.weather else 0},
 	}
 	var f := FileAccess.open(path(slot), FileAccess.WRITE)
@@ -100,6 +101,11 @@ static func apply(d: Dictionary) -> void:
 	Game.money = int(d.get("money", Game.money))
 	Game.loading = false
 	Game.stats = (d.get("stats", {}) as Dictionary).duplicate()
+	Game.collected = []
+	for id in d.get("collected", []):
+		Game.collected.append(int(id))
+	if w.collectibles:
+		w.collectibles.refresh()
 	var wd: Dictionary = d.get("world", {})
 	w.time_of_day = float(wd.get("time", w.time_of_day))
 	if w.weather:

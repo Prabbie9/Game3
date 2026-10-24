@@ -30,11 +30,12 @@ var stats := {}
 var loading := false   # restoring a save: money changes are not earnings
 var pending_load := {}  # a save to apply once the world has loaded (SaveGame)
 var autoplay := false   # main menu: go straight into the game (loading a save from the pause menu)
+var collected: Array = []   # lucky coins found (Collectibles ids; saved with the game)
 const STAT_LABELS := [["time_played", "Time played"], ["distance_foot", "Distance on foot"],
 	["distance_driven", "Distance driven"], ["vehicles_stolen", "Vehicles stolen"], ["shots", "Shots fired"],
 	["accuracy", "Accuracy"], ["headshots", "Head shots"], ["kills", "People killed"],
 	["cops_killed", "Police officers killed"], ["max_wanted", "Highest wanted level"], ["busted", "Times busted"],
-	["wasted", "Times wasted"], ["money_earned", "Money earned"], ["money_spent", "Money spent"]]
+	["wasted", "Times wasted"], ["lucky_coins", "Lucky coins found"], ["money_earned", "Money earned"], ["money_spent", "Money spent"]]
 var benchmark_mode := false
 var controls_enabled := true
 var mouse_sensitivity := 0.0025
@@ -129,6 +130,8 @@ func stat_text(key: String) -> String:
 		"accuracy":
 			var shots := float(stats.get("shots", 0.0))
 			return "%d%%" % int(round(100.0 * float(stats.get("hits", 0.0)) / shots)) if shots > 0.0 else "—"
+		"lucky_coins":
+			return "%d / %d" % [collected.size(), Collectibles.COUNT]
 		"max_wanted":
 			return "%d ★" % int(v) if v > 0.0 else "—"
 		"money_earned", "money_spent":
@@ -147,6 +150,15 @@ func crime(kind: String, pos: Vector3) -> void:
 
 func noise(pos: Vector3, radius: float, source: Node = null) -> void:
 	noise_made.emit(pos, radius, source)
+
+
+## A fresh career (a new world without a save to load): starting money, no stats, no coins found.
+func new_career() -> void:
+	loading = true
+	money = 500
+	loading = false
+	stats = {}
+	collected = []
 
 
 func message(text: String) -> void:

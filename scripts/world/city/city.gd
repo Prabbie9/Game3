@@ -376,6 +376,19 @@ func benches_near(pos: Vector3, radius: float) -> Array:
 	return out
 
 
+## Walkable ground height at x/z (a street, pavement, park, deck or pier, not a roof, canopy or tower top): a
+## ray down from just above the terrain (or the sea) once the detailed cell there and its collision are in.
+## NAN while that cell is still streaming in.
+func ground_y(x: float, z: float) -> float:
+	var k := cell_of(x, z)
+	if _known(k) and not (_cells.has(k) and (_cells[k] as Node3D).visible):
+		return NAN
+	var top := maxf(data.height_at(x, z), 0.0) + 3.0
+	var q := PhysicsRayQueryParameters3D.create(Vector3(x, top, z), Vector3(x, top - 80.0, z), 1 | 16)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return (hit.position as Vector3).y if hit else data.height_at(x, z)
+
+
 ## True once every cell around the focus is shown in detail (used while loading).
 func is_settled() -> bool:
 	return _jobs.is_empty() and _queue.is_empty() and _steps.is_empty()

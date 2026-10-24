@@ -13,6 +13,19 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.9.0 — Milestone 9 interactivity & life
+- [ ] Drive into lamp posts, hydrants and bins; shoot a vending machine; kick a bin. Do the pieces fly about
+      believably? Park on a burst hydrant's jet.
+- [ ] Use a vending machine, an ATM, a bench (sit, then move off) and, with a star or two, a payphone.
+- [ ] Walk into the safehouse (across the avenue from the start): do the doors open smoothly? Sleep in the bed and
+      save. Have a meal at the Solano Diner next door. Do the rooms look and sound like rooms (muffled street,
+      slight echo)?
+- [ ] Look for lucky coins (gold glints, 30 in all): any you can't reach or that sit inside something?
+- [ ] Listen around the island: traffic downtown, surf on the beach, gulls, birdsong by day, crickets at night out
+      of town, construction near the cranes, ship horns at the port. Anything too loud, too quiet or repetitive?
+- [ ] Pigeons on the plaza and in the parks: walk up to them or fire a shot. Watch the sky for an airliner.
+- [ ] Car radio: `.` and `,` (D-pad right) change station. Are the stations balanced in volume against the engine?
+
 ## v0.8.0 — Milestone 8 menus, settings, saving
 - [ ] Settings → Display: try windowed / borderless / fullscreen and a few window sizes. Does the UI scale well on
       your monitor (and on 1440p/4K if you have one)?

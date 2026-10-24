@@ -28,6 +28,7 @@ var _body: StaticBody3D
 
 func _ready() -> void:
 	add_to_group("interactables")
+	add_to_group("interiors")
 	var city: City = Game.world.city if Game.world else null
 	var b := MeshBatch.new()
 	var y0 := _base
@@ -58,8 +59,15 @@ func _ready() -> void:
 				_wall_piece(b, mid, w, 0.0, WIN_Y[0])
 				_wall_piece(b, mid, w, WIN_Y[1], H)
 				_glass(Vector3(mid.x, y0 + (WIN_Y[0] + WIN_Y[1]) * 0.5, Z1), Vector3(w, WIN_Y[1] - WIN_Y[0], 0.04))
-			3:  # door: lintel only
+			3:  # door: lintel over a pair of glazed doors
 				_wall_piece(b, mid, w, 2.6, H)
+				for k in 2:
+					var d := Door.new()
+					d.width = w * 0.5
+					d.height = 2.6
+					d.flip = k == 1
+					d.position = Vector3(a if k == 0 else c, y0, Z1)
+					add_child(d)
 			_:
 				_wall_piece(b, mid, w, 0.0, H)
 	# counter with a dark top; display case on it
@@ -106,6 +114,12 @@ func _ready() -> void:
 	_lights()
 	_rack()
 	_spawn_clerk()
+
+
+
+## True when `pos` is in the shop (ambience: muffled street, room reverb).
+func inside(pos: Vector3) -> bool:
+	return pos.x > X0 and pos.x < X1 and pos.z > Z0 and pos.z < Z1 and pos.y < H + 0.5
 
 
 func _material(city: City, key: String) -> Material:

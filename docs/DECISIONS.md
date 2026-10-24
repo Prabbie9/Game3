@@ -114,3 +114,16 @@
   light (those cars creep through the red for them) instead of swerving into turn lanes and re-routing.
   traffic_check measures jams (standstill not at a light longer than a signal cycle) rather than a fixed mean
   speed, which mostly measured light timing.
+- 2026-10-24 — City props stay MultiMesh instances; breaking one hides its instance (scale 0) and disables its
+  collision shape, then spawns a RigidBody copy on layer 32 (debris). Instance transforms are kept in node
+  metadata because the headless dummy renderer cannot read MultiMesh transforms back.
+- 2026-10-24 — Interiors are built procedurally in their own frame (front wall at z = 0) with Poly Haven CC0
+  furniture; doors are AnimatableBody3D leaves opened by proximity (no input needed, peds use them too).
+- 2026-10-24 — Collectibles and ground-level ambient things (pigeons) settle with City.ground_y(): a ray cast down
+  from 3 m above the terrain/sea once the cell's collision has streamed in, so nothing lands on a roof, a tree
+  canopy or a tower top, or falls to the seabed under a pier that hasn't loaded yet.
+- 2026-10-24 — Ambience is a handful of non-positional beds mixed by place (urban grid from lot kinds, distance to
+  the sea from the heightmap, altitude) and hour, plus positional one-shots; indoors is a low-pass on the Ambience
+  bus and a reverb on SFX, toggled by the camera being inside any node in the "interiors" group.
+- 2026-10-24 — Radio music is Kevin MacLeod (CC-BY 4.0, incompetech.com) plus CC0 tracks, loudness-matched to
+  -16 LUFS and trimmed to 3.5 min (46 MB in all). Stations run on a shared clock, GTA-style, rather than restarting.

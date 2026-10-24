@@ -12,6 +12,8 @@ var _hit_marker := 0.0
 var _speed: Label
 var _speed_unit: Label
 var _toast: Label
+var _radio: VBoxContainer
+var _radio_tween: Tween
 var _notify: Label
 var _subtitle: RichTextLabel
 var _sub_tween: Tween
@@ -144,6 +146,23 @@ func _ready() -> void:
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_toast.modulate.a = 0.0
 	root.add_child(_toast)
+
+	# radio station (top centre)
+	_radio = VBoxContainer.new()
+	_radio.anchor_left = 0.5
+	_radio.anchor_right = 0.5
+	_radio.offset_left = -500
+	_radio.offset_right = 500
+	_radio.offset_top = 40
+	_radio.modulate.a = 0.0
+	_radio.add_theme_constant_override("separation", 0)
+	root.add_child(_radio)
+	var rn := UITheme.label("", 34, UITheme.heading, UITheme.SAND)
+	rn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_radio.add_child(rn)
+	var rt := UITheme.label("", 18, UITheme.body_bold, UITheme.PAPER)
+	rt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_radio.add_child(rt)
 
 	# notifications (top-left)
 	var np := PanelContainer.new()
@@ -327,6 +346,18 @@ func _on_vehicle(v: Node) -> void:
 		tw.tween_property(_toast, "modulate:a", 1.0, 0.25)
 		tw.tween_interval(2.2)
 		tw.tween_property(_toast, "modulate:a", 0.0, 0.6)
+
+
+## Radio station toast: the station (or RADIO OFF) and the song.
+func show_radio(station: String, song: String) -> void:
+	(_radio.get_child(0) as Label).text = station
+	(_radio.get_child(1) as Label).text = song
+	if _radio_tween:
+		_radio_tween.kill()
+	_radio_tween = create_tween()
+	_radio_tween.tween_property(_radio, "modulate:a", 1.0, 0.15)
+	_radio_tween.tween_interval(3.5)
+	_radio_tween.tween_property(_radio, "modulate:a", 0.0, 0.6)
 
 
 func show_subtitle(speaker: String, text: String) -> void:

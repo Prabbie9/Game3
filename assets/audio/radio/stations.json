@@ -1,0 +1,186 @@
+[
+ {
+  "id": "vibe",
+  "name": "VIBE 94.1",
+  "tag": "Funk & Soul",
+  "ident": "radio/vibe/ident.ogg",
+  "tracks": [
+   {
+    "file": "radio/vibe/00.ogg",
+    "title": "Funkorama",
+    "artist": "Kevin MacLeod",
+    "length": 201.46
+   },
+   {
+    "file": "radio/vibe/01.ogg",
+    "title": "Funky Chunk",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   },
+   {
+    "file": "radio/vibe/02.ogg",
+    "title": "Groove Grove",
+    "artist": "Kevin MacLeod",
+    "length": 205.77
+   },
+   {
+    "file": "radio/vibe/03.ogg",
+    "title": "Vibe Ace",
+    "artist": "Kevin MacLeod",
+    "length": 61.44
+   },
+   {
+    "file": "radio/vibe/04.ogg",
+    "title": "Disco con Tutti",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   }
+  ]
+ },
+ {
+  "id": "costa",
+  "name": "COSTA 101.3",
+  "tag": "Latin Sounds",
+  "ident": "radio/costa/ident.ogg",
+  "tracks": [
+   {
+    "file": "radio/costa/00.ogg",
+    "title": "Bossa Antigua",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   },
+   {
+    "file": "radio/costa/01.ogg",
+    "title": "Samba Isobel",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   },
+   {
+    "file": "radio/costa/02.ogg",
+    "title": "Latin Industries",
+    "artist": "Kevin MacLeod",
+    "length": 200.72
+   },
+   {
+    "file": "radio/costa/03.ogg",
+    "title": "Arroz Con Pollo",
+    "artist": "Kevin MacLeod",
+    "length": 162.06
+   }
+  ]
+ },
+ {
+  "id": "reef",
+  "name": "THE REEF 88.5",
+  "tag": "Rock Radio",
+  "ident": "radio/reef/ident.ogg",
+  "tracks": [
+   {
+    "file": "radio/reef/00.ogg",
+    "title": "Big Rock",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   },
+   {
+    "file": "radio/reef/01.ogg",
+    "title": "Volatile Reaction",
+    "artist": "Kevin MacLeod",
+    "length": 165.36
+   },
+   {
+    "file": "radio/reef/02.ogg",
+    "title": "Severe Tire Damage",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   },
+   {
+    "file": "radio/reef/03.ogg",
+    "title": "Movement Proposition",
+    "artist": "Kevin MacLeod",
+    "length": 141.01
+   },
+   {
+    "file": "radio/reef/04.ogg",
+    "title": "Cut and Run",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   }
+  ]
+ },
+ {
+  "id": "night",
+  "name": "NIGHT SHIFT 103.7",
+  "tag": "Electronic",
+  "ident": "radio/night/ident.ogg",
+  "tracks": [
+   {
+    "file": "radio/night/00.ogg",
+    "title": "Midnight Drive",
+    "artist": "congusbongus",
+    "length": 203.57
+   },
+   {
+    "file": "radio/night/01.ogg",
+    "title": "Cyborg Ninja",
+    "artist": "Kevin MacLeod",
+    "length": 180.06
+   },
+   {
+    "file": "radio/night/02.ogg",
+    "title": "Ouroboros",
+    "artist": "Kevin MacLeod",
+    "length": 161.57
+   },
+   {
+    "file": "radio/night/03.ogg",
+    "title": "Midnight Cruiser",
+    "artist": "Zane Little Music",
+    "length": 144.41
+   },
+   {
+    "file": "radio/night/04.ogg",
+    "title": "Club Diver",
+    "artist": "Kevin MacLeod",
+    "length": 145.68
+   }
+  ]
+ },
+ {
+  "id": "lowtide",
+  "name": "LOW TIDE 99.9",
+  "tag": "Lounge & Lo-fi",
+  "ident": "radio/lowtide/ident.ogg",
+  "tracks": [
+   {
+    "file": "radio/lowtide/00.ogg",
+    "title": "Night on the Docks - Sax",
+    "artist": "Kevin MacLeod",
+    "length": 174.08
+   },
+   {
+    "file": "radio/lowtide/01.ogg",
+    "title": "Smooth Lovin",
+    "artist": "Kevin MacLeod",
+    "length": 210.0
+   },
+   {
+    "file": "radio/lowtide/02.ogg",
+    "title": "Chill Lofi",
+    "artist": "omfgdude",
+    "length": 125.15
+   },
+   {
+    "file": "radio/lowtide/03.ogg",
+    "title": "Dirt Rhodes",
+    "artist": "Kevin MacLeod",
+    "length": 120.06
+   },
+   {
+    "file": "radio/lowtide/04.ogg",
+    "title": "Bass Walker",
+    "artist": "Kevin MacLeod",
+    "length": 161.54
+   }
+  ]
+ }
+]

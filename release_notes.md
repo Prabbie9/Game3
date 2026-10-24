@@ -1,3 +1,34 @@
+## Port Solano v0.9.0 — Milestone 9: a city you can touch and listen to
+
+Unzip and run `PortSolano.exe`. **Esc** (START) pauses.
+
+**Knock it over, break it, use it**
+- Lamp posts, hydrants, bins, utility boxes, vending machines, payphones and ATMs break when you drive into them,
+  shoot them, kick them or blow them up; burst hydrants shoot a jet of water that can lift a car.
+- Buy a drink from a vending machine, check your balance at an ATM (or beat the cash out of it), sit on a bench,
+  and when the police are after you, a payphone call can make a star go away, for a price.
+
+**Places to go**
+- Your safehouse is across the avenue from where you start: walk in, put your feet up, sleep through the night in
+  the bed and save. The Solano Diner next door serves a meal that fixes you right up.
+- Doors swing open as you walk up to them, for you and for passers-by; the gun shop has proper doors now.
+- 30 lucky coins are hidden around the island, from the pier to the hilltop lookout: $100 each and a $10,000 bonus
+  for finding them all. Your count is in STATS and in your saves.
+
+**A living city**
+- Pigeons peck about on the plaza and in the parks and scatter when you come close or fire; gulls wheel over the
+  beach and the port; airliners cross the sky.
+- The soundscape follows where you are and the hour: traffic downtown, surf on the beach, birdsong by day and
+  crickets at night, wind on the hills, construction sites, ship horns, sirens across town. Indoors the street
+  goes quiet and rooms have their own sound.
+
+**Car radio**
+- Five stations: VIBE 94.1 (funk & soul), COSTA 101.3 (latin), THE REEF 88.5 (rock), NIGHT SHIFT 103.7
+  (electronic) and LOW TIDE 99.9 (lounge & lo-fi). Change station with `.` / `,` or D-pad right. Music by Kevin
+  MacLeod (incompetech.com, CC-BY 4.0) and CC0 artists from OpenGameArt.
+
+See `OWNER_TEST_CHECKLIST.md` in the zip for what to try and what to send back. Credits: `ASSET_CREDITS.md`.
+
 ## Port Solano v0.8.0 — Milestone 8: menus, settings and saving
 
 Unzip and run `PortSolano.exe`. **Esc** (START) pauses.
