@@ -202,7 +202,7 @@ func _spawn_vehicles() -> void:
 	# parked at the kerb of the streets round the start (not in the avenue's lanes, where traffic would have
 	# to go round them): Grand St to the east, 7th St to the north, 5th St to the south
 	var spots := [
-		["sedan", Vector3(75.2, 0.6, 16.0), PI], ["sport", Vector3(75.2, 0.6, 26.0), PI],
+		["sedan", Vector3(75.2, 0.6, 36.0), PI], ["sport", Vector3(75.2, 0.6, 46.0), PI],
 		["muscle", Vector3(75.2, 0.6, -34.0), PI], ["pickup", Vector3(84.8, 0.6, 30.0), 0.0],
 		["police", Vector3(-30.0, 0.6, 75.2), PI * 0.5], ["ambulance", Vector3(-48.0, 0.6, 75.2), PI * 0.5],
 		["firetruck", Vector3(-30.0, 0.6, 84.8), -PI * 0.5], ["bus", Vector3(30.0, 0.6, 74.7), PI * 0.5],

@@ -101,3 +101,16 @@
   real wheelbase (trucks no longer swing wide).
 - 2026-10-24 — Tests that exercise one system switch the others off where they would interfere (weapons_check: no
   police or traffic; stream_check: no traffic/crowd); each system has its own check.
+- 2026-10-24 — Settings share user://settings.cfg (graphics/display: GraphicsSettings; audio/gameplay/controls:
+  Settings); each saver loads the file first so sections survive. Rebinding stores only changed actions, per
+  device class, on top of the coded defaults (InputSetup).
+- 2026-10-24 — Window stretch mode canvas_items (base 1920×1080, aspect expand): the UI was laid out in pixels and
+  overflowed below 1080p / shrank on 4K. 3D still renders at the window's resolution (render scale setting).
+- 2026-10-24 — Saves are JSON in user://save_N.json; saving only on foot and not wanted (vehicles / police are
+  live simulation, not saved). Loading from the pause menu reloads the main scene and applies the save once the
+  world exists (Game.pending_load). The safehouse save point comes in M9.
+- 2026-10-24 — GPS reuses the traffic lane graph's A*: on foot it tries both directions of the nearest street.
+- 2026-10-24 — Long vehicles (wheelbase > 3.4 m) take turns at 5 m/s; emergency units wait behind cars stopped at a
+  light (those cars creep through the red for them) instead of swerving into turn lanes and re-routing.
+  traffic_check measures jams (standstill not at a light longer than a signal cycle) rather than a fixed mean
+  speed, which mostly measured light timing.

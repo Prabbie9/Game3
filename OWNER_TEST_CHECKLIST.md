@@ -13,6 +13,15 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.8.0 — Milestone 8 menus, settings, saving
+- [ ] Settings → Display: try windowed / borderless / fullscreen and a few window sizes. Does the UI scale well on
+      your monitor (and on 1440p/4K if you have one)?
+- [ ] Settings → Graphics: switch presets and single options; does anything fail to change or look broken?
+- [ ] Settings → Controls: rebind a key and a gamepad button, then check the pause-menu controls list. Reset.
+- [ ] Save in slot 1 somewhere away from the start, quit to the menu, CONTINUE: same place, money, weapons, time?
+- [ ] Set a waypoint on the map and drive along the GPS line. Does it pick sensible routes?
+- [ ] Gamepad only: can you reach everything in the menus with the D-pad, A, B, LB/RB?
+
 ## v0.7.0 — Milestone 7 police
 - [ ] Fire a gun near a police officer: one or two stars, officers and a patrol car arrive. Holster (mouse wheel to
       fists) and stand still next to an officer: BUSTED, you leave the police station without weapons.

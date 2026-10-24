@@ -108,6 +108,8 @@ static func impact(scene: Node, pos: Vector3, normal: Vector3, surface: int) -> 
 		d.global_basis = _basis_y(normal).rotated(normal, randf() * TAU)
 		d.global_position = pos
 	var kind := surface if _emitters.has(surface) else Surface.CONCRETE
+	if kind == Surface.FLESH and not Game.blood:
+		kind = Surface.CONCRETE   # blood off (settings): a plain puff instead of the spray
 	var arr: Array = _emitters[kind]
 	var e: GPUParticles3D = arr[_emitter_i[kind]]
 	_emitter_i[kind] = (_emitter_i[kind] + 1) % MAX_EMITTERS

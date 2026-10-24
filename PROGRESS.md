@@ -168,8 +168,27 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   tests/police_chase_check.gd (officers fire, patrol car arrives, roadblock on the road, SWAT, helicopter);
   screenshots `police` (police_hud, police_scene); tests/lineup.gd OUT police (uniforms front/back).
 
-**Next: Milestone 8 — UI/UX** (menus, settings incl. aim assist / blood / subtitles, rebinding, gamepad prompts,
-full map + GPS route, save/load).
+**Milestone 8 — UI/UX: DONE (v0.8.0)**
+- Settings (scripts/ui/settings_menu.gd, scripts/core/settings.gd, GraphicsSettings): GRAPHICS (preset or every
+  option: GI, AO, SSIL, SSR, fog, bloom, shadow quality/distance, model detail, AA, render scale, upscaler,
+  traffic / pedestrian / parked-car counts), DISPLAY (window mode, window size, V-sync, frame cap, field of view),
+  AUDIO (master, radio/music, effects, vehicles, ambience), GAMEPLAY (aim assist, blood, subtitles, HUD, invert
+  look, mouse / pad sensitivity), CONTROLS (rebind every action for keyboard/mouse and gamepad separately, reset).
+  Mouse, keyboard and gamepad navigable; applied at once and saved in user://settings.cfg.
+- Pause menu: resume, map, settings, stats, save, load, quit to menu, quit; the controls for the current device.
+  Main menu: continue (latest save), new game, load, settings, benchmark, quit. UI sounds (tools/audio/synth_ui.py).
+- Save/load (scripts/core/save_game.gd): 3 slots, position, health/armour, money, weapons + ammo, stats, time of
+  day and weather; refused while wanted or in a vehicle. Stats (Game.stats): time, distances, theft, shots,
+  accuracy, head shots, kills, police killed, highest wanted level, busted/wasted, money earned/spent.
+- GPS: road route (A* on the lane graph) to the map waypoint, drawn on the minimap and the full map, cleared on
+  arrival. Map places (gun shop, respray, hospital, police) with a legend.
+- Subtitles for police radio chatter (lines built from the chase: street, vehicle, sighting, backup) and
+  witnesses phoning the police. Prompts follow the player's bindings. UI scales with the window (canvas_items).
+- Checks: tests/ui_check.gd (rebinding, prompts, audio volume, save/load round trip, GPS, settings tabs, pause
+  panels); screenshots `menu`, `pause` (+ pause_stats, settings_graphics, settings_controls), `map`.
+
+**Next: Milestone 9 — Interactivity & life** (breakables, hydrants, physics props, interiors incl. safehouse with
+save point, ATMs / vending / phone booths, sittable benches, doors, money & collectibles, ambient life, radio).
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.

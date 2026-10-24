@@ -1,3 +1,33 @@
+## Port Solano v0.8.0 — Milestone 8: menus, settings and saving
+
+Unzip and run `PortSolano.exe`. **Esc** (START) pauses.
+
+**Settings for everything**
+- Graphics: pick a preset or set each option yourself (global illumination, ambient occlusion, reflections,
+  volumetric fog, shadows, anti-aliasing, render scale with FSR, model detail) plus how much traffic, how many
+  people and parked cars the city has.
+- Display: fullscreen, borderless or windowed, window size, V-sync, frame-rate limit and field of view.
+- Audio: separate volumes for radio/music, effects, vehicles and the city ambience.
+- Gameplay: aim assist, blood, subtitles, HUD on/off, invert look, mouse and gamepad sensitivity.
+- Controls: rebind every action, separately for keyboard/mouse and gamepad; button prompts follow your bindings.
+- The menus work with mouse, keyboard or gamepad (LB/RB switch tabs) and scale to any resolution.
+
+**Save and load**
+- Three save slots from the pause menu (on foot, with no police after you). CONTINUE on the main menu picks up the
+  latest one: where you were, your money, weapons and ammo, health and armour, the time of day and the weather.
+- STATS in the pause menu: time played, distances, cars stolen, shots and accuracy, head shots, kills, highest
+  wanted level, times busted and wasted, money earned and spent.
+
+**Finding your way**
+- Set a waypoint on the map (M) and a GPS route along the roads appears on the minimap and the map.
+- The map marks the gun shop, the respray garage, the hospital and the police station, with a legend.
+
+**Also**
+- Subtitles for the police radio and for witnesses calling the police.
+- Menu sounds.
+
+See `OWNER_TEST_CHECKLIST.md` in the zip for what to try and what to send back. Credits: `ASSET_CREDITS.md`.
+
 ## Port Solano v0.7.0 — Milestone 7: police
 
 Unzip and run `PortSolano.exe`. **Esc** lists all controls.

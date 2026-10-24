@@ -55,6 +55,7 @@ class TrafficCar:
 	var change_side := 0    # -1 left / 1 right: the lane change just made (indicator)
 	var pass_obj: Node3D    # what it is overtaking
 	var search_pos := Vector3.INF   # police that lost sight of the player: where to look instead
+	var want := 0.0                 # target speed this frame (debugging / tests)
 	var reverses := 0               # back-offs from about the same spot (wedged)
 	var reverse_at := Vector3.ZERO
 
@@ -265,7 +266,7 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	# speed: the lane's limit, slower into turns, stop for signals / give way, keep distance
 	if c.emergency:
 		c.panic = maxf(c.panic, 1.0)  # lights and siren: through red lights, no waiting to turn
-	var want := float(ln.speed) * (1.3 if c.panic > 0.0 else 1.0)
+	var want := _lane_speed(c, ln) * (1.3 if c.panic > 0.0 else 1.0)
 	c.reason = ""
 	c.yield_t -= delta
 	if c.yield_t > 0.0:
@@ -293,7 +294,8 @@ func _drive(c: TrafficCar, delta: float) -> void:
 						c.next = c.route.pop_front()
 	var nl: Dictionary = graph.lanes[c.next] if c.next >= 0 else {}
 	if not nl.is_empty():
-		want = minf(want, sqrt(float(nl.speed) * float(nl.speed) + 2.0 * ACCEL * remaining))
+		var nls := _lane_speed(c, nl)
+		want = minf(want, sqrt(nls * nls + 2.0 * ACCEL * remaining))
 		if ln.node < 0 and nl.node >= 0 and c.panic <= 0.0:
 			var stop := false
 			if int(nl.group) >= 0:
@@ -328,6 +330,12 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	c.change_t -= delta
 	# a slow car in front of an emergency vehicle also gets overtaken
 	var slow_block := c.emergency and gap < 25.0 and c.block is RigidBody3D and (c.block as RigidBody3D).linear_velocity.length() < float(ln.speed) * 0.7
+	if slow_block:
+		# a car waiting at a light ahead clears the way through the red for the siren: wait for it rather than
+		# swerving into a turn lane and taking a long way round
+		var bc := _car_of(c.block)
+		if bc and (bc.reason == "signal" or bc.reason == "clearing" or bc.reason.begins_with("give")):
+			slow_block = false
 	if slow_block:
 		c.blocked_t += delta
 	if c.blocked_t > 1.5 and c.change_t <= 0.0 and c.block != null and (not _is_traffic(c.block) or slow_block):
@@ -411,6 +419,7 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	v.ai_brake = brake
 	v.ai_steer = steer
 	v.ai_handbrake = false
+	c.want = want
 	# horn: held up by the player, or panicking
 	c.panic = maxf(0.0, c.panic - delta)
 	c.honk_t -= delta
@@ -449,6 +458,21 @@ func _indicate(c: TrafficCar, ln: Dictionary, nl: Dictionary, remaining: float) 
 		sig = Vehicle.Blinker.RIGHT
 	if c.v.indicator != sig:
 		c.v.set_indicator(sig)
+
+
+func _car_of(o: Object) -> TrafficCar:
+	for o2: TrafficCar in cars:
+		if o2.v == o:
+			return o2
+	return null
+
+
+## Speed for a lane: long vehicles (trucks, buses) take turns slowly so they don't swing into the other lane.
+func _lane_speed(c: TrafficCar, ln: Dictionary) -> float:
+	var sp := float(ln.speed)
+	if int(ln.node) >= 0 and int(ln.turn) != 0 and c.v.wheelbase > 3.4:
+		sp = minf(sp, 5.0)
+	return sp
 
 
 ## On a junction connector blocked beyond it: the connector from the same approach into the neighbouring lane.

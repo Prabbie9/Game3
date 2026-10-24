@@ -51,6 +51,9 @@ func _run() -> void:
 	var samples := 0.0
 	var turn_samples := 0
 	var turn_signalled := 0
+	var hist := {}         # car -> last lanes
+	var held := {}         # car -> seconds standing still, not at a light (a jam)
+	var worst_held := 0.0
 	var off_run := {}      # car -> consecutive samples well off its lane
 	var worst_run := 0
 	for step in 60:
@@ -58,11 +61,19 @@ func _run() -> void:
 		for c in tm.cars:
 			if not is_instance_valid(c.v):
 				continue
+			var hl: Array = hist.get(c, [])
+			if hl.is_empty() or hl[-1] != c.lane:
+				hl.append(c.lane)
+				if hl.size() > 4:
+					hl.pop_front()
+				hist[c] = hl
 			var ln: Dictionary = tm.graph.lanes[c.lane]
 			var on: Vector3 = tm.graph.sample(c.lane, c.s)[0]
 			var off := Vector2(on.x - c.v.global_position.x, on.z - c.v.global_position.z).length()
 			if ln.node < 0 and c.change_t < 0.0 and c.pass_t <= -1.0 and c.yield_t <= -1.0 and not c.emergency:
 				worst_off = maxf(worst_off, off)
+				if off > 2.5 and int(off_run.get(c, 0)) == 0:
+					print("      TRACE %s off %.1f lane %d kind %s prev %d hist %s change %.1f pass %.1f yield %.1f rev %.1f stuck %.1f speed %.1f reason %s" % [c.v.model, off, c.lane, ln.kind, c.prev, hist.get(c, []), c.change_t, c.pass_t, c.yield_t, c.reverse_t, c.stuck, c.v.linear_velocity.length(), c.reason])
 				off_run[c] = int(off_run.get(c, 0)) + 1 if off > 2.5 else 0
 				worst_run = maxi(worst_run, int(off_run[c]))
 				if off > 2.2 and worst_off < 9.0:
@@ -71,6 +82,9 @@ func _run() -> void:
 				turn_samples += 1
 				if c.v.indicator == (Vehicle.Blinker.LEFT if int(ln.turn) < 0 else Vehicle.Blinker.RIGHT):
 					turn_signalled += 1
+			var at_light: bool = c.reason == "signal" or c.reason.begins_with("give")
+			held[c] = float(held.get(c, 0.0)) + 0.5 if c.v.linear_velocity.length() < 0.5 and not at_light else 0.0
+			worst_held = maxf(worst_held, float(held[c]))
 			dist_sum += c.v.linear_velocity.length() * 0.5
 			var rk: String = c.reason.split(" ")[0] if c.reason != "" else ("free" if c.v.linear_velocity.length() > 2.0 else "stopped?")
 			reasons[rk] = int(reasons.get(rk, 0)) + 1
@@ -92,7 +106,8 @@ func _run() -> void:
 			moved += 1
 	print("      reasons: %s" % reasons)
 	var mean := dist_sum / maxf(samples, 0.001)
-	_check(mean > 4.5, "traffic flows (mean speed %.1f m/s incl. waiting at lights; %d of %d first cars moved > 40 m)" % [mean, moved, start.size()])
+	_check(mean > 3.5, "traffic flows (mean speed %.1f m/s incl. waiting at lights; %d of %d first cars moved > 40 m)" % [mean, moved, start.size()])
+	_check(worst_held < 50.0, "no jams (longest standstill not at a light %.0f s; a queue at a red light clears within a signal cycle)" % worst_held)
 	_check(worst_run < 3, "cars stay in lane (worst %.2f m off, longest %.1f s more than 2.5 m off)" % [worst_off, worst_run * 0.5])
 	_check(red_runs <= 1, "no red-light running (%d)" % red_runs)
 	_check(turn_samples == 0 or turn_signalled == turn_samples, "turning cars indicate (%d / %d)" % [turn_signalled, turn_samples])
