@@ -182,10 +182,10 @@ func fill(focus: Vector3) -> void:
 func _refresh(focus: Vector3) -> void:
 	# release cars that left their slot, and free those that are far away
 	for id: int in _active.keys():
-		var v: Vehicle = _active[id]
-		if not is_instance_valid(v):
+		if not is_instance_valid(_active[id]):   # (a typed read of a freed car is an error)
 			_active.erase(id)
 			continue
+		var v: Vehicle = _active[id]
 		var slot: Vector3 = _slots[id][0]
 		var used: bool = v.driver != null and not v.driver is NPCDriver
 		if used or Vector2(v.global_position.x - slot.x, v.global_position.z - slot.z).length() > 1.5:
@@ -196,12 +196,12 @@ func _refresh(focus: Vector3) -> void:
 			v.queue_free()
 	var player: Node = Game.player
 	for id: int in _taken.keys():
-		var v: Vehicle = _taken[id]
 		var slot: Vector3 = _slots[id][0]
-		if not is_instance_valid(v):
+		if not is_instance_valid(_taken[id]):
 			if slot.distance_to(focus) > DESPAWN_R:
 				_taken.erase(id)
 			continue
+		var v: Vehicle = _taken[id]
 		var in_use: bool = (v.driver != null and not v.driver is NPCDriver) or (player and player.get("vehicle") == v)
 		if not in_use and v.global_position.distance_to(focus) > LOOSE_R:
 			v.queue_free()

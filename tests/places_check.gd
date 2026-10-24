@@ -110,6 +110,9 @@ func _run() -> void:
 		q.transform = Transform3D(Basis(), c.position + Vector3(0, 0.2, 0))
 		q.collision_mask = 1 | 16
 		var inside := space.intersect_shape(q, 4)
+		for h: Dictionary in inside:
+			var co: Object = h.collider
+			print("      coin %d overlaps %s (%s) layer %d" % [i, co, (co as Node).get_path() if co is Node else "", co.get("collision_layer")])
 		var ok: bool = c.get_meta("settled") and inside.is_empty() and c.position.y - ground < 3.5
 		print("      coin %d at %s (%s) ground %.1f settled %s overlaps %d" % [i, c.position.snapped(Vector3.ONE * 0.1), SaveGame.district_at(c.position), ground, c.get_meta("settled"), inside.size()])
 		if not ok:
@@ -118,12 +121,13 @@ func _run() -> void:
 	# pick one up
 	Game.money = 0
 	var c0: Area3D = col._coins[0]
-	p._respawn(Transform3D(Basis(), c0.position - Vector3(0, 0.7, 0)), "")
+	var c0_at := c0.position
+	p._respawn(Transform3D(Basis(), c0_at - Vector3(0, 0.7, 0)), "")
 	await _secs(0.5)
 	_check(Game.collected == [0] and Game.money == Collectibles.REWARD and not col._coins.has(0), "picked up a coin: $%d, found %s" % [Game.money, Game.collected])
 	_check(Game.stat_text("lucky_coins") == "1 / %d" % Collectibles.COUNT, "stats count it (%s)" % Game.stat_text("lucky_coins"))
 	# found coins stay found after loading a save (stepping away first, or coin 0 is picked up again at once)
-	p._respawn(Transform3D(Basis(), c0.position + Vector3(30.0, 0, 0)), "")
+	p._respawn(Transform3D(Basis(), c0_at + Vector3(30.0, 0, 0)), "")
 	await _secs(0.3)
 	Game.collected = [3, 4]
 	col.refresh()
