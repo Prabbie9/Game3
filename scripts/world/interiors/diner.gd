@@ -48,7 +48,22 @@ func _build() -> void:
 		furnish("dining_chair_02", Vector3(x - 0.75, 0, -2.0), 90.0)
 		furnish("dining_chair_02", Vector3(x + 0.75, 0, -2.0), -90.0)
 	furnish("potted_plant_02", Vector3(-9.2, 0, -11.2), 0.0)
-	furnish("potted_plant_02", Vector3(9.2, 0, -11.2), 0.0)
+	furnish("potted_plant_02", Vector3(9.2, 0, -6.4), 0.0)
+	# the back shelves: jugs, vases, bowls and goblets
+	var items := ["jug_01", "ceramic_vase_01", "wooden_bowl_01", "metal_jug", "brass_goblets"]
+	for row in 2:
+		for i in 9:
+			var item: String = items[(i + row * 2) % items.size()]
+			if row == 1 and item == "ceramic_vase_01":
+				item = "wooden_bowl_01"   # (too tall for the top shelf)
+			furnish(item, Vector3(-4.0 + i + row * 0.5 - (0.5 if row == 1 and i == 8 else 0.0), 1.63 + row * 0.5, -depth + 0.45), randf_range(-30.0, 30.0), false)
+	furnish("CoffeeCart_01", Vector3(7.6, 0, -11.2), 0.0)
+	furnish("standing_chalkboard_01", Vector3(-9.0, 0, -6.0), 90.0)
+	var ceil := height - 0.3
+	furnish("ceiling_fan", Vector3(-5.0, ceil, -4.5), 0.0, false)
+	furnish("ceiling_fan", Vector3(5.0, ceil, -4.5), 0.0, false)
+	furnish("hanging_picture_frame_02", Vector3(-9.83, 2.0, -9.0), 90.0, false)
+	furnish("hanging_picture_frame_03", Vector3(9.83, 2.0, -9.5), -90.0, false)
 	_spawn_waitress.call_deferred()
 
 

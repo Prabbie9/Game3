@@ -104,6 +104,13 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Curly Teddy Checkered (texture) | safehouse rugs | colormass, Rico Cilliers | https://polyhaven.com/a/curly_teddy_checkered | CC0 |
 | Vintage Wooden Drawer 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/vintage_wooden_drawer_01 | CC0 |
 | Hanging Picture Frame 03 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_03 | CC0 |
+| Jug 01 (model) | diner interior | Kuutti Siitonen | https://polyhaven.com/a/jug_01 | CC0 |
+| Ceramic Vase 01 (model) | diner interior | James Ray Cock | https://polyhaven.com/a/ceramic_vase_01 | CC0 |
+| Metal Jug (model) | diner interior | Anzor Lezhava | https://polyhaven.com/a/metal_jug | CC0 |
+| Wooden Bowl 01 (model) | diner interior | Oliver Harries | https://polyhaven.com/a/wooden_bowl_01 | CC0 |
+| Brass Goblets (model) | diner interior | Tina | https://polyhaven.com/a/brass_goblets | CC0 |
+| Standing Chalkboard 01 (model) | diner interior | ParzivalCG | https://polyhaven.com/a/standing_chalkboard_01 | CC0 |
+| Coffee Cart 01 (model) | diner interior | Joe Seabuhr | https://polyhaven.com/a/CoffeeCart_01 | CC0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.

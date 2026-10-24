@@ -61,7 +61,7 @@ func _build() -> void:
 	furnish("throw_pillows_01", BED + Vector3(0.1, 0.45, -0.6), 90.0, false)
 	furnish("ClassicNightstand_01", Vector3(-7.55, 0, -12.45), 90.0)
 	furnish("alarm_clock_01", Vector3(-7.55, 0.7, -12.4), 70.0, false)
-	furnish("vintage_wooden_drawer_01", Vector3(-4.2, 0, -12.65), 0.0)
+	furnish("vintage_wooden_drawer_01", Vector3(-4.3, 0, -12.3), 0.0)
 	furnish("vintage_suitcase", Vector3(-2.4, 0, -12.75), 0.0, true, 0.45)
 	furnish("hanging_picture_frame_03", Vector3(-7.83, 1.85, -10.6), 90.0, false)
 	furnish("ornate_mirror_01", Vector3(-5.6, 1.55, -8.07), 180.0, false)
