@@ -54,8 +54,8 @@ func _plan() -> void:
 				var cx := x0 + 2.0 if rng.randf() < 0.5 else x1 - 2.0
 				var cz := z0 + 2.0 if rng.randf() < 0.5 else z1 - 2.0
 				p = Vector3(cx, 0, cz)
-			if kind == "plaza":
-				p = Vector3(lerpf(x0, x1, 0.15), 0, lerpf(z0, z1, 0.15))   # by the corner, not in the pool
+			if kind == "plaza" and data.pool.size() == 4:
+				p = Vector3(float(data.pool[0]) - 2.5, 0, (float(data.pool[1]) + float(data.pool[3])) * 0.5)   # by the pool
 			if kind == "lookout":
 				p = data.lookout + Vector3(3.0, 0, 2.0)
 			spots.append(p)
@@ -132,10 +132,10 @@ func _settle(c: Node3D, city: City) -> void:
 	ball.radius = 0.55
 	q.shape = ball
 	q.collision_mask = 1 | 16
-	for r: float in [0.0, 1.5, 3.0, 4.5]:
-		for k in (1 if r == 0.0 else 8):
-			var x := c.position.x + cos(k * TAU / 8.0) * r
-			var z := c.position.z + sin(k * TAU / 8.0) * r
+	for r: float in [0.0, 1.5, 3.0, 4.5, 7.0, 10.0, 14.0, 18.0]:
+		for k in (1 if r == 0.0 else 12):
+			var x := c.position.x + cos(k * TAU / 12.0) * r
+			var z := c.position.z + sin(k * TAU / 12.0) * r
 			var y := city.ground_y(x, z)
 			if is_nan(y):
 				return
