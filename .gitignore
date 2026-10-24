@@ -18,3 +18,4 @@ assets/source/mixamo/**/*.jpeg
 assets/source/mixamo/**/*.tga
 # Audio sources (fetched by tools/audio/build_audio.py; processed files in assets/audio are committed)
 assets/source/audio_src/
+tests/tmp/

@@ -41,6 +41,7 @@ const KINDS := {
 const SIM_RANGE := {"gull": 450.0, "pigeon": 160.0}
 const SCARE := 6.5
 
+var cost_ms := 0.0      # main-thread time of the last frame (perf overlay / stream_check)
 var flocks: Array = []   # {kind, mmi, anchor, birds: [{pos, vel, yaw, state, t, home, ...}], active, grounded}
 var _rng := RandomNumberGenerator.new()
 var _scared: Array = []  # noise positions this frame
@@ -175,6 +176,12 @@ func nearest_gulls(pos: Vector3, within: float) -> Vector3:
 
 
 func _process(delta: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	_update(delta)
+	cost_ms = (Time.get_ticks_usec() - t0) / 1000.0
+
+
+func _update(delta: float) -> void:
 	var cam := get_viewport().get_camera_3d()
 	if cam == null:
 		return

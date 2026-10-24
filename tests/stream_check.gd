@@ -41,7 +41,7 @@ func _run() -> void:
 			var now := Time.get_ticks_usec()
 			times.append((now - last) / 1000.0)
 			if (now - last) > 20000 and times.size() > 30:
-				print("STREAM slow frame %.1f ms at %s, phys %.1f ms, process %.1f ms (traffic %.1f, people %.1f, cells %d, objects %d)" % [(now - last) / 1000.0, cam.global_position.snapped(Vector3.ONE), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, world.traffic.cost_ms, world.population.cost_ms, world.city._cells.size(), Performance.get_monitor(Performance.OBJECT_NODE_COUNT)])
+				print("STREAM slow frame %.1f ms at %s, phys %.1f ms, process %.1f ms (traffic %.1f, people %.1f, birds %.1f, ambience %.1f, cells %d, objects %d)" % [(now - last) / 1000.0, cam.global_position.snapped(Vector3.ONE), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, world.traffic.cost_ms, world.population.cost_ms, world.birds.cost_ms, world.ambience.cost_ms, world.city._cells.size(), Performance.get_monitor(Performance.OBJECT_NODE_COUNT)])
 			last = now
 	times = times.slice(30)
 	var sorted := times.duplicate()

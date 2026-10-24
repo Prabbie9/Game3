@@ -11,6 +11,7 @@ const URBAN := {"block": 1.0, "midrise": 1.0, "plaza": 0.8, "parking": 0.7, "ind
 	"port_sheds": 0.6, "crane": 0.6, "house": 0.3, "mansion": 0.2, "park": 0.3, "boardwalk": 0.4, "beachfront": 0.4}
 const BEDS := {"city": -3.0, "surf": -2.0, "birds": -6.0, "crickets": -8.0, "wind": -6.0, "room": -4.0}
 
+var cost_ms := 0.0      # main-thread time of the last frame (perf overlay / stream_check)
 var urban := 0.0
 var coast := 0.0
 var hills := 0.0
@@ -130,6 +131,12 @@ func _coast_at(p: Vector3) -> float:
 
 
 func _process(delta: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	_update(delta)
+	cost_ms = (Time.get_ticks_usec() - t0) / 1000.0
+
+
+func _update(delta: float) -> void:
 	var cam := get_viewport().get_camera_3d()
 	var w := Game.world as World
 	if cam == null or w == null:
