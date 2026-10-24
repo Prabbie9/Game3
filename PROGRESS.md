@@ -228,6 +228,9 @@ consistency pass, final perf pass on all presets, final export).
   library has no freestyle/treading-water clips (owner checklist asks for them).
 - tests/emergency_check.gd still fails now and then (an ambulance taking a long way round or wedged before the
   out-of-sight recovery kicks in); traffic_check / police_chase_check pass 3/3 after the latest fixes.
+- tests/stream_check.gd: on this 4-core software container the worst single frame varies run to run (30-100 ms,
+  once 330 ms) with no script time behind it, with or without any one M9 system; p99 is a steady ~10.5 ms. The
+  check tolerates up to 3 isolated spikes over 40 ms (none over 150 ms). Look again in M10 on real hardware.
 - Default branch is still `claude/tmp-push-test` (proxy blocks changing it) → owner checklist item.
 
 ### Builds

@@ -29,6 +29,9 @@ func _ready() -> void:
 			total += float(t.length)
 		s.total = total
 		_offsets.append(_rng.randf() * total)
+		# decode-ready in the background (a track loads in ~15 ms: a hitch when getting into a car)
+		for t: Dictionary in s.tracks:
+			ResourceLoader.load_threaded_request(Audio.DIR + String(t.file))
 	_player = AudioStreamPlayer.new()
 	_player.bus = &"Music"
 	add_child(_player)
