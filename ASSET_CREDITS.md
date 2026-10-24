@@ -90,7 +90,6 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Painted Wooden Cabinet (model) | safehouse interior | Kirill Sannikov | https://polyhaven.com/a/painted_wooden_cabinet | CC0 |
 | Classic Nightstand 01 (model) | safehouse interior | Kirill Sannikov | https://polyhaven.com/a/ClassicNightstand_01 | CC0 |
 | Alarm Clock 01 (model) | safehouse interior | Yann Kervran, James Ray Cock | https://polyhaven.com/a/alarm_clock_01 | CC0 |
-| Hanging Picture Frame 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_01 | CC0 |
 | Hanging Picture Frame 02 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_02 | CC0 |
 | Ornate Mirror 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/ornate_mirror_01 | CC0 |
 | Book Encyclopedia Set 01 (model) | safehouse interior | John Malcolm | https://polyhaven.com/a/book_encyclopedia_set_01 | CC0 |
@@ -98,10 +97,13 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Gaming Console (model) | safehouse interior | Sean Buckley | https://polyhaven.com/a/gaming_console | CC0 |
 | Ceiling Fan (model) | safehouse interior | Ulan Cabanilla | https://polyhaven.com/a/ceiling_fan | CC0 |
 | Vintage Electric Kettle (model) | safehouse interior | SV Garip | https://polyhaven.com/a/vintage_electric_kettle | CC0 |
-| Drawer Cabinet (model) | safehouse interior | Ulan Cabanilla | https://polyhaven.com/a/drawer_cabinet | CC0 |
 | Planter Box 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/planter_box_01 | CC0 |
 | Standing Picture Frame 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/standing_picture_frame_01 | CC0 |
 | Vintage Suitcase (model) | safehouse interior | Maximilian Schuster | https://polyhaven.com/a/vintage_suitcase | CC0 |
+| Floral Jacquard (texture) | safehouse rugs | colormass, Rico Cilliers | https://polyhaven.com/a/floral_jacquard | CC0 |
+| Curly Teddy Checkered (texture) | safehouse rugs | colormass, Rico Cilliers | https://polyhaven.com/a/curly_teddy_checkered | CC0 |
+| Vintage Wooden Drawer 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/vintage_wooden_drawer_01 | CC0 |
+| Hanging Picture Frame 03 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_03 | CC0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.

@@ -337,6 +337,11 @@ func _run() -> void:
 		c.look_at_from_position(eye, ac._plane.global_position)
 		await _frames(3)
 		await _snap("life_plane")
+		var occl := get_viewport().use_occlusion_culling
+		get_viewport().use_occlusion_culling = false
+		await _frames(3)
+		await _snap("life_plane_nocull")
+		get_viewport().use_occlusion_culling = occl
 		c.queue_free()
 		world.birds.set_process(true)
 		ac.set_process(true)

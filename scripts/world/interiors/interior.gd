@@ -174,6 +174,20 @@ func _solid_wall(a: Vector3, c: Vector3) -> void:
 	_shape(mid + Vector3(0, height * 0.5, 0), Vector3(absf(c.x - a.x) + (T if absf(d.z) > 0.5 else 0.0), height, absf(c.z - a.z) + (T if absf(d.x) > 0.5 else 0.0)))
 
 
+## A rug (local centre on the floor, size x/z, a fabric texture from assets/textures/polyhaven).
+func rug(c: Vector3, size: Vector2, tex: String, tint := Color.WHITE, yaw := 0.0) -> void:
+	var city := _city()
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(size.x, 0.012, size.y)
+	mi.mesh = bm
+	mi.material_override = city._pbr(tex, 1.2, tint) if city else null
+	mi.position = c + Vector3(0, _base + 0.028, 0)
+	mi.rotation.y = deg_to_rad(yaw)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+
+
 ## An inside partition wall from a to c (local, floor level): plastered both sides, with end caps, solid.
 func partition(a: Vector3, c: Vector3, thick := 0.12) -> void:
 	var b := MeshBatch.new()

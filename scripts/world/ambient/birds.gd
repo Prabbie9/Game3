@@ -122,7 +122,7 @@ func _mesh(kind: String) -> ArrayMesh:
 				var b: Array = pt.call(i + 1, j)
 				var d: Array = pt.call(i + 1, j + 1)
 				var e: Array = pt.call(i, j + 1)
-				for q: Array in [a, b, d, a, d, e]:   # clockwise seen from outside (front faces)
+				for q: Array in [a, d, b, a, e, d]:
 					vert.call(q[0], q[1], col)
 	var body := Color(0, 0, 0, 0)
 	ellipsoid.call(Vector3(0, 0, L * 0.02), Vector3(L * 0.17, L * 0.17, L * 0.4), body, 6, 8)

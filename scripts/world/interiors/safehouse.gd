@@ -37,6 +37,10 @@ func _build() -> void:
 	furnish("ceiling_fan", Vector3(5.2, ceil, -7.5), 0.0, false)
 	furnish("hanging_picture_frame_02", Vector3(7.83, 1.95, -7.5), -90.0, false)
 	furnish("wooden_bookshelf_worn", Vector3(2.4, 0, -12.55), 0.0)
+	for shelf: Array in [[0.43, 2.05], [0.9, 2.4], [1.37, 2.15]]:
+		furnish("book_encyclopedia_set_01", Vector3(shelf[1], shelf[0], -12.6), 0.0, false)
+	rug(Vector3(5.3, 0, -7.5), Vector2(3.4, 2.6), "floral_jacquard", Color(0.85, 0.7, 0.6))
+	rug(Vector3(-5.5, 0, -10.6), Vector2(2.0, 2.8), "curly_teddy_checkered", Color(0.9, 0.85, 0.8))
 	furnish("wall_clock", Vector3(5.5, 2.45, -12.82), 0.0, false)
 	furnish("potted_plant_02", Vector3(7.3, 0, -12.3), 0.0)
 	furnish("planter_box_01", Vector3(6.0, 0, -0.45), 0.0)
@@ -57,9 +61,9 @@ func _build() -> void:
 	furnish("throw_pillows_01", BED + Vector3(0.1, 0.45, -0.6), 90.0, false)
 	furnish("ClassicNightstand_01", Vector3(-7.55, 0, -12.45), 90.0)
 	furnish("alarm_clock_01", Vector3(-7.55, 0.7, -12.4), 70.0, false)
-	furnish("drawer_cabinet", Vector3(-4.2, 0, -12.7), 0.0)
+	furnish("vintage_wooden_drawer_01", Vector3(-4.2, 0, -12.65), 0.0)
 	furnish("vintage_suitcase", Vector3(-2.4, 0, -12.75), 0.0, true, 0.45)
-	furnish("hanging_picture_frame_01", Vector3(-7.83, 1.85, -10.6), 90.0, false)
+	furnish("hanging_picture_frame_03", Vector3(-7.83, 1.85, -10.6), 90.0, false)
 	furnish("ornate_mirror_01", Vector3(-5.6, 1.55, -8.07), 180.0, false)
 
 
