@@ -129,7 +129,7 @@ func _settle(c: Node3D, city: City) -> void:
 	var space := get_world_3d().direct_space_state
 	var q := PhysicsShapeQueryParameters3D.new()
 	var ball := SphereShape3D.new()
-	ball.radius = 0.45
+	ball.radius = 0.55
 	q.shape = ball
 	q.collision_mask = 1 | 16
 	for r: float in [0.0, 1.5, 3.0, 4.5]:
@@ -139,7 +139,7 @@ func _settle(c: Node3D, city: City) -> void:
 			var y := city.ground_y(x, z)
 			if is_nan(y):
 				return
-			q.transform = Transform3D(Basis(), Vector3(x, y + 0.75, z))
+			q.transform = Transform3D(Basis(), Vector3(x, y + 0.95, z))
 			if space.intersect_shape(q, 1).is_empty():
 				c.position = Vector3(x, y + 0.8, z)
 				c.set_meta("settled", true)
