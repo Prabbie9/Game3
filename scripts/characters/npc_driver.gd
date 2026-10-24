@@ -57,6 +57,8 @@ static func seat_in(v: Vehicle, character: String) -> NPCDriver:
 		n.visual.clip_swap = {"walk": "f_walk", "idle": "f_idle", "run": "f_run"}
 	n.add_child(n.visual)
 	v.add_child(n)
+	if v.model in ["police", "heli"] and n.visual.skeleton:
+		Uniform.dress(n.visual, "police")
 	n.visual.jump_to.call_deferred("drive")
 	n._place.call_deferred()
 	v.reserve(n)

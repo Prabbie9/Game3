@@ -130,12 +130,14 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 
 **Milestone 6 — Population: DONE (v0.6.0)**
 - Traffic (TrafficManager + LaneGraph): AI drivers in real VehicleBody3D cars (Vehicle.ai_* inputs) spawn out of
-  sight 70–160 m away; pure-pursuit lane following, speed by road class, slow for turns, stop at red/amber, give
-  way at unsignalled junctions and when turning left, junction conflict rule, keep gaps (other traffic, box casts
-  for anything else), change lanes round stopped cars, honk when held up, panic at gunfire, headlights at night,
+  sight 40–130 m away; pure-pursuit lane following, speed by road class, slow for turns, stop at red/amber (signals where avenues/drives
+  meet; the major road gets the longer green), give way at unsignalled junctions and when turning left, junction conflict rule, keep gaps (other traffic, box casts
+  for anything else), change lanes round stopped cars, overtake on two-way streets when the oncoming lane is clear, pull over
+  for sirens, indicate for turns and lane changes, honk when held up, panic at gunfire, headlights at night,
   wedged cars recycled. TrafficLights: signal heads on poles at every signalled junction near the player.
 - Emergency services (EmergencyServices): ambulance for anyone dead in the street (paramedic kneels and revives),
-  fire engine for burning cars (firefighter sprays them out); units drive a Dijkstra lane route with sirens.
+  fire engine for burning cars (firefighter sprays them out); units drive an A* lane route with sirens,
+  overtaking and running reds carefully. Crashed/burnt cars stay while a unit attends them.
 - Pedestrians (Population + WalkGraph + Pedestrian): 14 Mixamo characters (7 women with female walk/idle/run),
   count by preset × district density × time of day × rain; they walk the pavements with a sideways spread, avoid
   each other and the player, wait at crossings for the cars' red (or a gap), stop for phone calls / texting /
@@ -144,7 +146,10 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   10 Hz. Character textures are downsized at import (tools/import/character_post_import.gd).
 - Checks: lane_graph_check, traffic_check, walk_graph_check, population_check, emergency_check; screenshots `street`.
 
-**Next: Milestone 7 — Police** (drafts of Wanted/Cop are in progress; see docs/PLAN.md).
+- Also in v0.6.0: WASTED screen → wake at the hospital (fee $100); hospital, police station and the respray
+  garage stand as storefronts (used fully by the police in M7).
+
+**Next: Milestone 7 — Police** (drafts of Wanted/Cop in scripts/police; tests/police_check.gd written, not run yet).
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.

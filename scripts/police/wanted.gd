@@ -9,7 +9,7 @@ signal stars_changed(stars: int)
 
 const SEE_RANGE := 60.0
 ## stars -> [officers on foot, patrol cars, SWAT vans, helicopter]
-const RESPONSE := {1: [2, 1, 0, 0], 2: [3, 2, 0, 0], 3: [4, 3, 0, 0], 4: [4, 3, 1, 1], 5: [5, 4, 2, 1]}
+const RESPONSE := {1: [2, 1, 0, 0], 2: [3, 2, 0, 0], 3: [4, 3, 0, 0], 4: [4, 3, 1, 0], 5: [5, 4, 2, 1]}
 
 var stars := 0
 var heat := 0.0                  # fractional stars (crimes while wanted push it up)
@@ -24,6 +24,7 @@ var _spawn_t := 0.0
 var _roadblock_t := 0.0
 var _rng := RandomNumberGenerator.new()
 var _seen_frame := 0
+var _radio_t := 3.0
 
 
 func _ready() -> void:
@@ -35,11 +36,13 @@ func _ready() -> void:
 # --- crimes -------------------------------------------------------------------
 
 const CRIME_STARS := {"shooting": 1, "assault": 1, "murder": 2, "carjack": 1, "hit_pedestrian": 1, "theft": 1,
-	"explosion": 1, "attack_police": 1, "kill_police": 2}
+	"explosion": 1, "attack_police": 1, "kill_police": 2, "steal_police": 1}
+## Crimes against the police count whether or not an officer sees them.
+const ALWAYS := ["kill_police", "attack_police", "steal_police"]
 
 
 func _on_crime(kind: String, pos: Vector3) -> void:
-	if not _police_sees(pos) and kind != "kill_police" and kind != "attack_police":
+	if not (kind in ALWAYS) and not _police_sees(pos):
 		return
 	_raise(CRIME_STARS.get(kind, 1), pos)
 
@@ -183,6 +186,7 @@ func _physics_process(delta: float) -> void:
 		_spawn_t = 1.5
 		_top_up(p, at)
 	_chase_units(p, at)
+	_radio(delta, p, at)
 	_roadblock_t -= delta
 	if stars >= 3 and p.vehicle and p.vehicle.linear_velocity.length() > 12.0 and _roadblock_t <= 0.0:
 		_roadblock_t = 25.0
@@ -222,9 +226,10 @@ func _spawn_foot_cop(at: Vector3, gun: String) -> void:
 		return
 
 
-func _make_cop(gun: String) -> Cop:
+func _make_cop(gun: String, swat := false) -> Cop:
 	var c := Cop.new()
-	var chars: Array = POLICE_CHARACTERS
+	var chars: Array = SWAT_CHARACTERS if swat else POLICE_CHARACTERS
+	c.kit = "swat" if swat else "police"
 	c.character_file = chars[_rng.randi() % chars.size()]
 	c.female = Population.CHARACTERS.get(c.character_file, false)
 	c.gun = gun
@@ -235,16 +240,20 @@ func _make_cop(gun: String) -> Cop:
 
 
 ## Who wears the uniform (see docs/DECISIONS.md: no police characters in the library; dark-clothed ones are used).
-const POLICE_CHARACTERS := ["ch33_nonpbr", "ch31_nonpbr", "ch23_nonpbr", "ch07_nonpbr"]
+const POLICE_CHARACTERS := ["ch31_nonpbr", "ch33_nonpbr", "ch07_nonpbr", "ch23_nonpbr"]
+const SWAT_CHARACTERS := ["ch28_nonpbr", "ch31_nonpbr", "ch12_nonpbr"]
 
 
 func _dispatch(kind: String, at: Vector3) -> void:
 	var model := "police" if kind == "police" else "van"
-	var tc := traffic.dispatch(model, at, POLICE_CHARACTERS[_rng.randi() % POLICE_CHARACTERS.size()],
+	var crew: Array = SWAT_CHARACTERS if kind == "swat" else POLICE_CHARACTERS
+	var tc := traffic.dispatch(model, at, crew[_rng.randi() % crew.size()],
 		Color(0.06, 0.07, 0.09) if kind == "swat" else Color(0, 0, 0, 0))
 	if tc == null:
 		return
 	tc.chase = Game.player
+	if kind == "swat" and tc.v.driver is NPCDriver:
+		Uniform.dress((tc.v.driver as NPCDriver).visual, "swat")
 	units.append({"car": tc, "kind": kind, "crew": false})
 
 
@@ -261,7 +270,7 @@ func _chase_units(p: Player, at: Vector3) -> void:
 			traffic.park(tc)
 			var n := 2 if u.kind == "police" else 4
 			for i in n:
-				var c := _make_cop("pistol" if u.kind == "police" and stars < 3 else ("smg" if u.kind == "police" else "rifle"))
+				var c := _make_cop("pistol" if u.kind == "police" and stars < 3 else ("smg" if u.kind == "police" else "rifle"), u.kind == "swat")
 				Game.world.add_child(c)
 				var side := tc.v.global_basis.x * (1.5 + tc.v._bounds.size.x * 0.5) * (-1.0 if i % 2 == 0 else 1.0)
 				c.global_position = tc.v.global_position + side + tc.v.global_basis.z * (i / 2) * 1.2 + Vector3(0, 0.2, 0)
@@ -295,6 +304,29 @@ func _place_roadblock(p: Player) -> void:
 		c.global_position = pos - dir * 3.0 + right * (i * 2.0 - 1.0) * 2.0 + Vector3(0, 0.2, 0)
 
 
+## Radio chatter from the nearest police car or officer (or the stolen police car the player is driving).
+func _radio(delta: float, p: Player, at: Vector3) -> void:
+	_radio_t -= delta
+	if _radio_t > 0.0:
+		return
+	_radio_t = _rng.randf_range(6.0, 14.0)
+	var src := Vector3.INF
+	var best := 45.0
+	if p.vehicle and p.vehicle.model == "police":
+		src = p.vehicle.global_position
+	else:
+		var from: Array = []
+		for u: Dictionary in units:
+			from.append((u.car as TrafficManager.TrafficCar).v)
+		from.append_array(cops)
+		for n: Node3D in from:
+			if is_instance_valid(n) and n.global_position.distance_to(at) < best:
+				best = n.global_position.distance_to(at)
+				src = n.global_position
+	if src != Vector3.INF:
+		Audio.play_at(Audio.pick("police/radio_%d.ogg", 6), src + Vector3(0, 1.2, 0), -6.0, _rng.randf_range(0.95, 1.05), &"SFX", 40.0)
+
+
 # --- helicopter -----------------------------------------------------------------
 
 func _spawn_heli(at: Vector3) -> void:
@@ -318,7 +350,7 @@ func _fly_heli(delta: float) -> void:
 	var h := heli
 	var target := (p.vehicle.global_position if p.vehicle else p.global_position)
 	var want := target + Vector3(0, 35.0, 0)
-	if h.has_meta("leave") or stars < 4:
+	if h.has_meta("leave") or stars < 5:
 		want = h.global_position + (h.global_position - target).normalized() * 50.0 + Vector3(0, 20, 0)
 		if h.global_position.distance_to(target) > 300.0:
 			h.queue_free()

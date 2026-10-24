@@ -49,6 +49,8 @@ func _run() -> void:
 	var reasons := {}
 	var dist_sum := 0.0
 	var samples := 0.0
+	var turn_samples := 0
+	var turn_signalled := 0
 	for step in 40:
 		await _secs(0.5)
 		for c in tm.cars:
@@ -61,6 +63,10 @@ func _run() -> void:
 				worst_off = maxf(worst_off, off)
 				if off > 2.2 and worst_off < 9.0:
 					print("      off lane %.2f: %s lane %d (%s idx %d/%d) s %.1f speed %.1f block %s" % [off, c.v.model, c.lane, ln.kind, ln.index, ln.lanes, c.s, c.v.linear_velocity.length(), c.block])
+			if ln.node >= 0 and int(ln.turn) != 0:
+				turn_samples += 1
+				if c.v.indicator == (Vehicle.Blinker.LEFT if int(ln.turn) < 0 else Vehicle.Blinker.RIGHT):
+					turn_signalled += 1
 			dist_sum += c.v.linear_velocity.length() * 0.5
 			var rk: String = c.reason.split(" ")[0] if c.reason != "" else ("free" if c.v.linear_velocity.length() > 2.0 else "stopped?")
 			reasons[rk] = int(reasons.get(rk, 0)) + 1
@@ -85,6 +91,7 @@ func _run() -> void:
 	_check(mean > 4.5, "traffic flows (mean speed %.1f m/s incl. waiting at lights; %d of %d first cars moved > 40 m)" % [mean, moved, start.size()])
 	_check(worst_off < 2.5, "cars stay in lane (worst %.2f m off)" % worst_off)
 	_check(red_runs <= 1, "no red-light running (%d)" % red_runs)
+	_check(turn_samples == 0 or turn_signalled == turn_samples, "turning cars indicate (%d / %d)" % [turn_signalled, turn_samples])
 	_check(crashes <= 1, "no pile-ups (%d damaged)" % crashes)
 	print("TRAFFIC CHECK %s" % ("PASSED" if fails == 0 else "FAILED (%d)" % fails))
 	get_tree().quit(0 if fails == 0 else 1)

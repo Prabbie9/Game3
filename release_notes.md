@@ -1,3 +1,33 @@
+## Port Solano v0.6.0 — Milestone 6: population
+
+Unzip and run `PortSolano.exe`. **Esc** lists all controls.
+
+**Streets that are alive**
+- Traffic drives the roads: cars, vans, trucks and buses keep to their lane, stop at red lights, give way at
+  junctions, keep their distance, indicate and change lanes round obstacles, overtake slow vehicles when the road
+  ahead is clear and honk when you hold them up. At night they drive with their lights on.
+- New traffic lights hang over the downtown junctions and cycle green, amber, red.
+- Fourteen different people walk the pavements, more downtown and by the beach, fewer in the hills, at night or in
+  the rain. They wait for the green man (or a gap) at crossings, chat in pairs, take phone calls, text, smoke and
+  sit on benches.
+
+**People react**
+- Gunfire, explosions and bodies send people running along the pavements, cowering against walls or crouching
+  with their hands over their heads. Panic spreads to the people around them. Some pull out their phones and call
+  the police; some men put up their fists if you hit them.
+- Drivers slam on the brakes or flee when shooting starts, and pull over for sirens.
+
+**Emergency services**
+- Kill someone and an ambulance arrives with its siren on; the paramedic kneels by the body and may bring them
+  back. Set a car on fire and a fire engine comes, and its crew puts the fire out.
+
+**Also**
+- Dying now shows WASTED and you come round outside the hospital ($100 fee).
+- Officers at the wheel of police cars wear a uniform (cap and duty vest), ready for the police in the next build.
+- The fire engine's front wheels no longer leave a gap in the wheel arch; every gun now plays its shot sound.
+
+See `OWNER_TEST_CHECKLIST.md` in the zip for what to try and what to send back. Credits: `ASSET_CREDITS.md`.
+
 ## Port Solano v0.5.0 — Milestone 5: combat
 
 Unzip and run `PortSolano.exe`. **Esc** lists all controls.

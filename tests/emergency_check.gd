@@ -53,6 +53,12 @@ func _run() -> void:
 				vv.body_entered.connect(func(b: Node): print("      CONTACT %s with %s (%s) at %s" % [vv.model, b.name, b.get_class(), vv.global_position.snapped(Vector3.ONE * 0.1)]))
 			if c.emergency and is_instance_valid(c.v) and int(t) % 5 == 0:
 				print("      unit %s at %s lane %d -> target %d (route %d) s %.1f/%.1f speed %.1f reason '%s' arrived %s" % [c.v.model, c.v.global_position.snapped(Vector3.ONE), c.lane, c.target_lane, c.route.size(), c.s, c.target_s, c.v.linear_velocity.length(), c.reason, c.arrived])
+				if c.block is Vehicle:
+					var bc = null
+					for o in world.traffic.cars:
+						if o.v == c.block:
+							bc = o
+					print("        blocker %s at %s speed %.1f %s" % [(c.block as Vehicle).model, (c.block as Vehicle).global_position.snapped(Vector3.ONE * 0.1), (c.block as Vehicle).linear_velocity.length(), ("traffic lane %d reason '%s' parked %s panic %.1f" % [bc.lane, bc.reason, bc.parked, bc.panic]) if bc else "not traffic (player/parked)"])
 		if is_instance_valid(ped) and int(t) % 5 == 0:
 			print("      t %.0f real %d ped %s incidents %d jobs %d cars %d" % [t, Time.get_ticks_msec() / 1000, ped.state, world.traffic.get_node("Emergency")._incidents.size(), world.traffic.get_node("Emergency")._jobs.size(), world.traffic.cars.size()])
 		for c in world.traffic.cars:

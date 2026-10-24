@@ -7,6 +7,7 @@ extends Pedestrian
 
 var wanted: Wanted
 var gun := "pistol"
+var kit := "police"   # uniform: police / swat
 var accuracy := 0.55
 var _fire_cd := 1.0
 var _model: Node3D
@@ -20,6 +21,7 @@ func _ready() -> void:
 	super._ready()
 	remove_from_group("pedestrians")   # not part of the crowd's panic
 	add_to_group("police")
+	Uniform.dress(visual, kit)
 	stay_put = false
 	_model = WeaponModel.build("pistol")[0] if gun == "pistol" else (load("res://assets/models/weapons/%s.scn" % gun) as PackedScene).instantiate()
 	add_child(_model)

@@ -13,6 +13,7 @@ const CONNECTOR_SPEED := 6.5
 const GREEN := 18.0
 const AMBER := 3.0
 const ALL_RED := 1.0
+const RANK := {"street": 1, "drive": 2, "avenue": 3}
 
 ## Lane: {pts: PackedVector3Array, cum: PackedFloat32Array, len, road, dir (+1 a->b / -1), index, lanes,
 ##        from, to (nodes), next: [lane ids], speed, node (-1, or the junction a connector crosses),
@@ -44,11 +45,28 @@ func build(data: WorldData, net: RoadNet) -> void:
 				town += 1
 		if town < 3:
 			continue
+		# two minor streets crossing: give way, no lights
+		var has_major := false
+		for e: Dictionary in list:
+			if e.kind in ["avenue", "drive"]:
+				has_major = true
+		if not has_major:
+			continue
 		var d0: Vector2 = list[0].dir
 		var groups := {}
+		var rank := [0, 0]   # the most important road in each phase
 		for e: Dictionary in list:
-			groups[Vector2i(e.road, e.end)] = 0 if absf((e.dir as Vector2).dot(d0)) > 0.7 else 1
-		signals[node] = {"groups": groups, "offset": fposmod(float(node) * 7.3, cycle())}
+			var g := 0 if absf((e.dir as Vector2).dot(d0)) > 0.7 else 1
+			groups[Vector2i(e.road, e.end)] = g
+			rank[g] = maxi(rank[g], int(RANK.get(String(e.kind), 0)))
+		# the bigger road gets the longer green
+		var greens := [GREEN, GREEN]
+		if rank[0] != rank[1]:
+			var major := 0 if rank[0] > rank[1] else 1
+			greens[major] = GREEN + 7.0
+			greens[1 - major] = GREEN - 6.0
+		signals[node] = {"groups": groups, "greens": greens}
+		signals[node].offset = fposmod(float(node) * 7.3, cycle(node))
 	# connectors
 	for node: int in net.ends:
 		var list: Array = net.ends[node]
@@ -96,7 +114,10 @@ func build(data: WorldData, net: RoadNet) -> void:
 	# dead lanes (no way on) loop nowhere: traffic despawns there; fine on map edges
 
 
-func cycle() -> float:
+func cycle(node := -1) -> float:
+	if signals.has(node):
+		var gr: Array = signals[node].greens
+		return float(gr[0]) + float(gr[1]) + 2.0 * (AMBER + ALL_RED)
 	return 2.0 * (GREEN + AMBER + ALL_RED)
 
 
@@ -104,14 +125,16 @@ func cycle() -> float:
 func signal_state(node: int, g: int, t: float) -> int:
 	if g < 0 or not signals.has(node):
 		return 0
-	var c := fposmod(t + float(signals[node].offset), cycle())
-	var half := GREEN + AMBER + ALL_RED
-	var local := c - (0.0 if g == 0 else half)
-	if local < 0.0 or local >= half:
+	var gr: Array = signals[node].greens
+	var c := fposmod(t + float(signals[node].offset), cycle(node))
+	var start := 0.0 if g == 0 else float(gr[0]) + AMBER + ALL_RED
+	var local := c - start
+	var green: float = gr[g]
+	if local < 0.0 or local >= green + AMBER + ALL_RED:
 		return 2
-	if local < GREEN:
+	if local < green:
 		return 0
-	if local < GREEN + AMBER:
+	if local < green + AMBER:
 		return 1
 	return 2
 

@@ -15,6 +15,10 @@ func _run() -> void:
 	var world: World = (load("res://scenes/world/world.tscn") as PackedScene).instantiate()
 	get_tree().root.add_child(world)
 	world.time_scale = 0.0
+	# streaming only: no traffic or crowd round the (parked) player, whose physics would swamp the numbers
+	# (traffic_check measures their cost)
+	world.traffic.set_deferred("budget", 0)
+	world.population.enabled = false
 	var cam := Camera3D.new()
 	world.add_child(cam)
 	cam.make_current()
@@ -37,7 +41,7 @@ func _run() -> void:
 			var now := Time.get_ticks_usec()
 			times.append((now - last) / 1000.0)
 			if (now - last) > 20000 and times.size() > 30:
-				print("STREAM slow frame %.1f ms at %s, phys %.1f ms" % [(now - last) / 1000.0, cam.global_position.snapped(Vector3.ONE), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
+				print("STREAM slow frame %.1f ms at %s, phys %.1f ms, process %.1f ms (traffic %.1f, people %.1f, cells %d, objects %d)" % [(now - last) / 1000.0, cam.global_position.snapped(Vector3.ONE), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, world.traffic.cost_ms, world.population.cost_ms, world.city._cells.size(), Performance.get_monitor(Performance.OBJECT_NODE_COUNT)])
 			last = now
 	times = times.slice(30)
 	var sorted := times.duplicate()

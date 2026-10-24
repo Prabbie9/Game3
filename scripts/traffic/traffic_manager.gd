@@ -52,6 +52,8 @@ class TrafficCar:
 	var chase: Node3D       # police: drive at this (the player) instead of to a fixed point
 	var parked := false     # stopped for good (crew out, roadblock)
 	var _replan := 0.0
+	var change_side := 0    # -1 left / 1 right: the lane change just made (indicator)
+	var pass_obj: Node3D    # what it is overtaking
 
 
 func _ready() -> void:
@@ -94,7 +96,7 @@ func _update(delta: float) -> void:
 			_occupy(int(ln.node), c, int(graph.lanes[_from_lane(c)].road) if c.prev >= 0 else -1, 0.0, int(ln.turn))
 		elif c.next >= 0:
 			var rem := float(ln.len) - c.s
-			if rem < 22.0:
+			if rem < 40.0:
 				_occupy(int(graph.lanes[c.next].node), c, int(ln.road), rem, int(graph.lanes[c.next].turn))
 	for i in range(cars.size() - 1, -1, -1):
 		var c: TrafficCar = cars[i]
@@ -135,6 +137,7 @@ func _release(c: TrafficCar) -> void:
 	if is_instance_valid(c.v):
 		c.v.ai_drive = false
 		c.v.horn_on = false
+		c.v.set_indicator(Vehicle.Blinker.OFF)
 
 
 func _seen(pos: Vector3) -> bool:
@@ -212,6 +215,8 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	if c.parked:
 		v.ai_throttle = 0.0
 		v.ai_brake = 1.0
+		if v.indicator != Vehicle.Blinker.HAZARD:
+			v.set_indicator(Vehicle.Blinker.HAZARD)
 		return
 	if is_instance_valid(c.chase):
 		if _pursue(c, delta):
@@ -239,9 +244,10 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	var target := _point_ahead(c, look)
 	# siren behind: slow down and keep to the right to let it through
 	if not c.emergency and _siren_behind(c, pos):
-		var d2 := (target - pos)
-		d2.y = 0.0
-		target += Vector3(-d2.z, 0, d2.x).normalized() * 1.3
+		if ln.node < 0:
+			var d2 := (target - pos)
+			d2.y = 0.0
+			target += Vector3(-d2.z, 0, d2.x).normalized() * 1.3
 		c.yield_t = 1.0
 	if c.pass_t > 0.0 and _oncoming_clear(c, pos):
 		# overtaking a stopped car: aim a lane's width to the left
@@ -265,10 +271,23 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	if c.emergency and c.target_pos != Vector3.INF:
 		# pull up beside the scene, whichever side of the road it is on
 		var dist := Vector2(pos.x - c.target_pos.x, pos.z - c.target_pos.z).length()
-		if dist < 16.0:
+		var at_spot := c.lane == c.target_lane and c.s >= c.target_s - 3.0
+		if dist < 16.0 or at_spot:
 			want = minf(want, maxf(0.0, (dist - 8.0) * 0.8))
+			if at_spot or dist < 10.0:
+				want = 0.0   # stop here, don't roll on past
 			if absf(speed) < 0.6:
 				c.arrived = true
+		elif c.route.is_empty() and c.lane != c.target_lane and c.target_lane >= 0 and not is_instance_valid(c.chase):
+			# ran out of route (overshot, or turned off it round an obstacle): plan again from here
+			c._replan -= delta
+			if c._replan <= 0.0:
+				c._replan = 3.0
+				var path := route(c.next if c.next >= 0 else c.lane, c.target_lane)
+				if not path.is_empty():
+					c.route = path
+					if c.next < 0:
+						c.next = c.route.pop_front()
 	var nl: Dictionary = graph.lanes[c.next] if c.next >= 0 else {}
 	if not nl.is_empty():
 		want = minf(want, sqrt(float(nl.speed) * float(nl.speed) + 2.0 * ACCEL * remaining))
@@ -280,6 +299,11 @@ func _drive(c: TrafficCar, delta: float) -> void:
 				stop = st == 2 or (st == 1 and remaining > stopping + 2.0)
 			if stop:
 				c.reason = "signal"
+				# a siren right behind: creep through the red to clear the way (if the junction is clear)
+				if c.yield_t > 0.0 and remaining < 8.0 and _cross_clear(c, int(nl.node), int(ln.road)):
+					stop = false
+					want = minf(want, 4.0)
+					c.reason = "clearing"
 			if not stop and not _may_enter(c, int(nl.node), int(ln.road), int(nl.turn), int(nl.group) >= 0, remaining):
 				stop = true
 				c.reason = "give way"
@@ -306,6 +330,8 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	if c.blocked_t > 1.5 and c.change_t <= 0.0 and c.block != null and (not _is_traffic(c.block) or slow_block):
 		var other := graph.adjacent_lane(c.lane) if ln.node < 0 else _adjacent_connector(c)
 		if other >= 0 and _lane_clear(other, c.s, pos):
+			var to_lane := v.global_transform.affine_inverse() * (graph.sample(other, graph.project(other, pos))[0] as Vector3)
+			c.change_side = -1 if to_lane.x < 0.0 else 1
 			c.lane = other
 			c.s = graph.project(other, pos)
 			c.next = _pick_next(other, c) if ln.node < 0 else int(graph.lanes[other].next[0])
@@ -317,10 +343,24 @@ func _drive(c: TrafficCar, delta: float) -> void:
 			if c.target_lane >= 0 and (c.emergency or is_instance_valid(c.chase)):
 				c.route = route(c.lane, c.target_lane)
 				c.next = c.route.pop_front() if not c.route.is_empty() else _pick_next(c.lane)
-		elif int(graph.lanes[c.lane].lanes) == 1 and ln.node < 0:
-			# one lane each way: pull out round it when nothing is coming
+		elif int(graph.lanes[c.lane].lanes) == 1 and ln.node < 0 and remaining > 25.0:
+			# one lane each way: pull out round it when nothing is coming (not just before a junction, where
+			# the car would end up waiting at the lights on the wrong side)
 			c.pass_t = 5.0
+			c.pass_obj = c.block as Node3D
+		elif c.emergency and c.blocked_t > 4.0:
+			c.pass_t = 4.0   # lights and siren: go round it on the other side
+			c.pass_obj = c.block as Node3D
+	# last resort for a unit on a call: a stalled car that has blocked it for long, out of sight, is towed away
+	if c.emergency and c.blocked_t > 15.0 and c.block is Vehicle and _is_traffic(c.block) and not _seen((c.block as Vehicle).global_position):
+		(c.block as Vehicle).queue_free()
+		c.blocked_t = 0.0
 	c.pass_t -= delta
+	# don't pull back in while still alongside what it is overtaking
+	if c.pass_t > -0.5 and c.pass_t < 0.3 and is_instance_valid(c.pass_obj):
+		var rel := v.global_transform.affine_inverse() * c.pass_obj.global_position
+		if rel.z < 3.0 and rel.length() < 12.0:   # forward is -Z: not yet behind us
+			c.pass_t = 0.3
 	# controls
 	var err := want - speed
 	var throttle := 0.0
@@ -333,7 +373,7 @@ func _drive(c: TrafficCar, delta: float) -> void:
 		brake = 1.0
 		throttle = 0.0
 	# stuck against something for a while: back up a little, then try again
-	if want > 3.0 and absf(speed) < 0.4 and gap == INF:
+	if want > 1.5 and absf(speed) < 0.4 and gap == INF:
 		c.stuck += delta
 	else:
 		c.stuck = maxf(0.0, c.stuck - delta)
@@ -358,10 +398,36 @@ func _drive(c: TrafficCar, delta: float) -> void:
 		get_tree().create_timer(0.5 + randf() * 0.5).timeout.connect(func():
 			if is_instance_valid(v):
 				v.horn_on = false)
+	_indicate(c, ln, nl, remaining)
 	# headlights after dark
 	var w := get_parent() as World
 	if w and v.headlights_on != (w.night > 0.5):
 		v.set_headlights(w.night > 0.5)
+
+
+## Indicators: before and through a turn at a junction, for a lane change or an overtake, right when pulling over
+## for a siren; hazards when parked on a call or a roadblock.
+func _indicate(c: TrafficCar, ln: Dictionary, nl: Dictionary, remaining: float) -> void:
+	var want := 0   # -1 left, 1 right
+	if int(ln.node) >= 0 and int(ln.turn) != 0:
+		want = int(ln.turn)
+	elif not nl.is_empty() and int(nl.node) >= 0 and int(nl.turn) != 0 and remaining < 35.0:
+		want = int(nl.turn)
+	elif c.change_t > 2.0 and c.change_side != 0:
+		want = c.change_side
+	elif c.pass_t > 3.5:
+		want = -1
+	elif c.yield_t > 0.0:
+		want = 1
+	var sig := Vehicle.Blinker.OFF
+	if c.parked:
+		sig = Vehicle.Blinker.HAZARD
+	elif want < 0:
+		sig = Vehicle.Blinker.LEFT
+	elif want > 0:
+		sig = Vehicle.Blinker.RIGHT
+	if c.v.indicator != sig:
+		c.v.set_indicator(sig)
 
 
 ## On a junction connector blocked beyond it: the connector from the same approach into the neighbouring lane.
@@ -424,6 +490,17 @@ func _occupy(node: int, c: TrafficCar, road: int, dist: float, turn: int) -> voi
 	(_junction_busy[node] as Array).append([c, road, dist, turn])
 
 
+## Nobody from another approach is in the junction or coming up to it (going through a red for a siren).
+func _cross_clear(c: TrafficCar, node: int, road: int) -> bool:
+	for e: Array in _junction_busy.get(node, []):
+		var o: TrafficCar = e[0]
+		if o == c or int(e[1]) == road:
+			continue
+		if float(e[2]) == 0.0 or (float(e[2]) < 35.0 and o.v.linear_velocity.length() > 1.0):
+			return false
+	return true
+
+
 ## Junction etiquette. Signalled: the phase already decided who goes; turning left also waits for oncoming
 ## cars in (or about to enter) the junction. Unsignalled: wait while anyone from another road is crossing,
 ## and give way to whoever is closer to their stop line.
@@ -433,6 +510,8 @@ func _may_enter(c: TrafficCar, node: int, road: int, turn: int, signalled: bool,
 		if o == c or int(e[1]) == road:
 			continue
 		var d: float = e[2]
+		if d > 22.0:
+			continue   # far off (only the siren rule looks that far)
 		var oturn: int = e[3]
 		# someone from another approach is already in the junction on a path that may cross ours
 		if d == 0.0 and not ((turn == 0 and oturn == 0) or (turn == 1 and oturn == 1)):

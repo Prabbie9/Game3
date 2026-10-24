@@ -687,7 +687,7 @@ func _physics_process(delta: float) -> void:
 		if indicator != Blinker.HAZARD:
 			_turned += angular_velocity.y * delta * (1.0 if indicator == Blinker.LEFT else -1.0)
 			# cancel once the turn in the signalled direction is done and the wheel is straight again
-			if _turned > 0.9 and absf(_steer) < 0.05:
+			if _turned > 0.9 and absf(_steer) < 0.05 and not ai_drive:
 				set_indicator(Blinker.OFF)
 	if driver == null and linear_velocity.length_squared() < 0.0625 and angular_velocity.length_squared() < 0.01:
 		if indicator != Blinker.OFF:

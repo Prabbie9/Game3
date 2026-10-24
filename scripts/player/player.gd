@@ -298,10 +298,24 @@ func _nearest_vehicle() -> Vehicle:
 
 var _enter_side := 0
 var _enter_clip := "car_enter"
+
+
+## Taking a vehicle that isn't ours is a crime (if the police see it); a police vehicle always is.
+func _report_theft(v: Vehicle, jack: bool) -> void:
+	if v.has_meta("player_used"):
+		return
+	v.set_meta("player_used", true)
+	if v.model in ["police", "heli"]:
+		Game.crime("steal_police", v.global_position)
+	elif jack:
+		Game.crime("carjack", v.global_position)
+	else:
+		Game.crime("theft", v.global_position)
 var _shuffle_t := -1.0
 
 
 func enter_vehicle(v: Vehicle) -> void:
+	_report_theft(v, v.driver is NPCDriver)
 	if v is Bike:
 		_mount(v)
 		return

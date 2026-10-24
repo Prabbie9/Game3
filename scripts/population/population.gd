@@ -26,7 +26,7 @@ const BENCH_SEAT := Transform3D(Basis(Vector3.UP, PI), Vector3(0.0, 0.0, 0.32))
 
 var walk: WalkGraph
 var traffic: TrafficManager
-var budget := 16
+var enabled := true   # false: no new people (tests that measure other systems)
 var people: Array = []
 var _spawn_t := 0.0
 var _rng := RandomNumberGenerator.new()
@@ -38,6 +38,23 @@ func _ready() -> void:
 	walk = WalkGraph.new()
 	walk.build(w.data, w.city.net)
 	NPCDriver.preload_characters()
+	_prewarm_uniforms()
+
+
+func _exit_tree() -> void:
+	Uniform.finish()
+
+
+## Fit the police / SWAT kits in the background as their characters finish loading.
+func _prewarm_uniforms() -> void:
+	var todo: Array = Wanted.POLICE_CHARACTERS + Wanted.SWAT_CHARACTERS
+	while not todo.is_empty() and is_inside_tree():
+		for c: String in todo.duplicate():
+			if NPCDriver.is_ready(c):
+				Uniform.prewarm(c)
+				todo.erase(c)
+				break
+		await get_tree().create_timer(0.2).timeout
 
 
 ## People wanted around `pos` right now.
@@ -88,7 +105,7 @@ func _update(delta: float) -> void:
 	_spawn_t -= delta
 	if _spawn_t <= 0.0:
 		_spawn_t = 0.25
-		if people.size() < target_count(focus):
+		if enabled and people.size() < target_count(focus):
 			_try_spawn(focus)
 
 

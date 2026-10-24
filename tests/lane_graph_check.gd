@@ -34,7 +34,7 @@ func _ready() -> void:
 		fails += 1
 		print("FAIL too many dead ends")
 	for node in g.signals:
-		for t in range(0, int(g.cycle()), 1):
+		for t in range(0, int(g.cycle(node)), 1):
 			if g.signal_state(node, 0, t) != 2 and g.signal_state(node, 1, t) != 2:
 				fails += 1
 				print("FAIL both phases open at node %d t %d" % [node, t])

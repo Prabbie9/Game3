@@ -77,6 +77,17 @@
   clerks and crews; the least-used character is picked for each spawn so streets don't fill with clones.
 - 2026-10-23 — Mixamo characters embed 4096² textures (~50 MB video memory each); a post-import script
   (tools/import/character_post_import.gd) downsizes them to 1024 (pedestrians) / 2048 (player).
-- 2026-10-23 — Emergency services are ordinary traffic cars on a planned lane route (Dijkstra over the lane
-  graph) with siren/priority; an ambulance's paramedic revives the dead or injured, a fire engine's crew puts out
+- 2026-10-23 — Emergency services are ordinary traffic cars on a planned lane route (A* with a binary heap over the
+  lane graph; Dijkstra was O(n²) and stalled the frame) with siren/priority; an ambulance's paramedic revives the dead or injured, a fire engine's crew puts out
   burning cars. They only operate near the player (streamed like the rest of the traffic).
+- 2026-10-23 — Hand-placed showcase vehicles stand on the kerb (not in a lane) so traffic doesn't queue behind them;
+  traffic still changes lane / overtakes round anything left in the road.
+- 2026-10-23 — Dying shows WASTED and wakes the player at the hospital for a $100 fee (weapons kept); the
+  hospital, police station and respray garage are storefronts on reserved lots so the police (M7) can use them.
+- 2026-10-23 — Signals only where an avenue or drive meets other roads (70 junctions); minor street crossings are
+  give-way. The bigger road gets the longer green (25 s vs 12 s). With lights on every 64 m grid junction cars
+  spent ~60% of their time at red. Cars creep through a red only to clear the way for a siren, when nothing
+  crosses.
+- 2026-10-23 — tests/stream_check.gd measures streaming alone (no traffic/crowd round the parked player);
+  traffic_check covers the traffic itself.
+- 2026-10-24 — No uniformed characters in the Mixamo library, so police/SWAT wear a fitted kit (Uniform): a vest shrink-wrapped to the character's torso with weights copied from the nearest body vertices, cap or helmet on the head bone, lettering as Label3D. Fitting runs on a worker thread at load (mesh built on the main thread: RenderingServer calls from the worker deadlocked the exported build at quit).

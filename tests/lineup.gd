@@ -25,7 +25,12 @@ func _run() -> void:
 	root.add_child(sun)
 	var chars: Array = Population.CHARACTERS.keys()
 	var a: Array = get_meta("args", [])
-	if a.size() > 1:
+	var police: bool = a.size() > 1 and a[1] == "police"
+	if police:
+		# every officer and SWAT character, front then back
+		chars = Wanted.POLICE_CHARACTERS + Wanted.SWAT_CHARACTERS
+		chars = chars + chars
+	elif a.size() > 1:
 		var b := int(a[1])
 		chars = chars.slice(b * 8, b * 8 + 8)
 	var t := 0
@@ -39,6 +44,11 @@ func _run() -> void:
 		root.add_child(v)
 		v.position = Vector3((i - chars.size() * 0.5) * 0.9, 0, 0)
 		v.rotation.y = PI
+		if police:
+			if i >= chars.size() / 2:
+				v.rotation.y = 0.0
+			var swat_kit: bool = Wanted.SWAT_CHARACTERS.has(chars[i]) and (i % (chars.size() / 2)) >= Wanted.POLICE_CHARACTERS.size()
+			Uniform.dress(v, "swat" if swat_kit else "police")
 		var l := Label3D.new()
 		l.text = String(chars[i]).substr(2, 2)
 		l.font_size = 48

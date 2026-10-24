@@ -13,6 +13,16 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.6.0 — Milestone 6 population
+- [ ] **Benchmark** on HIGH and paste the report: traffic and pedestrians now spawn along the route, so this is
+      the first build where the CPU is busy. Also note the frame time standing at a busy downtown junction (F3).
+- [ ] Watch a signalled junction for a minute: do cars stop for red, turn sensibly, and not crash into each
+      other? Report anything odd (cars stuck, driving through each other, wrong side of the road).
+- [ ] Walk downtown: enough people? Too many look alike? Do they cross at the zebra crossings with the signals?
+- [ ] Fire a gun in a crowd: people run, cower, call the police; a driver panics. Punch a man: does he fight back?
+- [ ] Kill someone and wait: an ambulance should come with its siren on. Set a car on fire: a fire engine comes.
+- [ ] Settings → Graphics: try LOW and ULTRA — traffic and crowd sizes scale with the preset.
+
 ## v0.5.0 — Milestone 5 combat
 - [ ] Hold Tab (LB): the weapon wheel opens, time slows, mouse/right stick picks; does it feel quick enough?
 - [ ] Walk into the gun shop across the street from the start, press F at the counter, buy a rifle and armour.
