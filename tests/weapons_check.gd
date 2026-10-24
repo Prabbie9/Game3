@@ -217,7 +217,7 @@ func _run() -> void:
 	while not shop.is_open() and t < 20.0:
 		await _secs(0.25)
 		t += 0.25
-	_check(shop.is_open(), "the gun shop has a clerk")
+	_check(shop.is_open(), "the gun shop has a clerk (%s)" % ("state %d at %s, alive %s" % [shop.clerk.state, shop.clerk.global_position, shop.clerk.is_alive()] if shop.clerk and is_instance_valid(shop.clerk) else "none"))
 	p.global_position = shop.interact_point() + Vector3(0, 0.05, 0)
 	await _secs(0.3)
 	_check(p.nearest_interactable() == shop, "counter is in reach")
