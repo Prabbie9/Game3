@@ -271,7 +271,9 @@ func _run() -> void:
 	if _want("interiors"):
 		# the safehouse across the avenue and the diner behind the start, from the street and inside
 		for view: Array in [["safehouse_front", Vector3(-24.0, 1.7, 1.5), Vector3(-25.5, 2.6, 13.0)],
-				["safehouse_inside", Vector3(-31.0, 1.65, 14.2), Vector3(-20.5, 0.9, 21.5)],
+				["safehouse_inside", Vector3(-27.75, 1.65, 13.6), Vector3(-22.75, 0.8, 21.6)],
+				["safehouse_lounge", Vector3(-23.75, 1.65, 16.6), Vector3(-31.75, 0.8, 21.6)],
+				["safehouse_bedroom", Vector3(-22.25, 1.6, 21.6), Vector3(-17.75, 0.6, 24.1)],
 				["diner_front", Vector3(25.0, 1.7, 1.5), Vector3(24.5, 2.6, 13.0)],
 				["diner_inside", Vector3(32.5, 1.65, 13.6), Vector3(20.0, 1.0, 21.0)]]:
 			var c := Camera3D.new()
@@ -313,12 +315,15 @@ func _run() -> void:
 				await _frames(1)
 				if flock.ground > -INF:
 					break
-			c.look_at_from_position(a + Vector3(4.5, flock.ground + 1.2, 3.0), a + Vector3(0, flock.ground + 0.1, 0))
+			c.look_at_from_position(a + Vector3(3.0, flock.ground + 0.9, 2.2), a + Vector3(0, flock.ground + 0.1, 0))
 			await _frames(30)
 			await _snap("life_pigeons")
 			Game.noise(a, 30.0, p)
-			await _frames(24)
-			c.look_at_from_position(a + Vector3(7.0, flock.ground + 1.5, 6.0), a + Vector3(0, flock.ground + 3.0, 0))
+			# frames take seconds here: step the flock by hand, a third of a second after take-off
+			world.birds.set_process(false)
+			for i in 20:
+				world.birds._update(1.0 / 60.0)
+			c.look_at_from_position(a + Vector3(5.0, flock.ground + 1.0, 4.0), a + Vector3(0, flock.ground + 1.2, 0))
 			await _frames(2)
 			await _snap("life_pigeons_fly")
 		var ac := world.aircraft
@@ -327,11 +332,14 @@ func _run() -> void:
 		var eye := c.global_position
 		ac._plane.global_position = eye - ac._dir * 120.0 + Vector3(0, 700.0, 0)
 		ac._plane.look_at(ac._plane.global_position + ac._dir, Vector3.UP)
+		ac.set_process(false)   # (frames take seconds here: it would fly out of the shot)
 		c.fov = 22
 		c.look_at_from_position(eye, ac._plane.global_position)
 		await _frames(3)
 		await _snap("life_plane")
 		c.queue_free()
+		world.birds.set_process(true)
+		ac.set_process(true)
 		p.global_transform = keep
 		p.cam.camera.make_current()
 	if _want("shop"):

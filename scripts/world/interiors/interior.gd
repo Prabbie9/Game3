@@ -174,6 +174,22 @@ func _solid_wall(a: Vector3, c: Vector3) -> void:
 	_shape(mid + Vector3(0, height * 0.5, 0), Vector3(absf(c.x - a.x) + (T if absf(d.z) > 0.5 else 0.0), height, absf(c.z - a.z) + (T if absf(d.x) > 0.5 else 0.0)))
 
 
+## An inside partition wall from a to c (local, floor level): plastered both sides, with end caps, solid.
+func partition(a: Vector3, c: Vector3, thick := 0.12) -> void:
+	var b := MeshBatch.new()
+	var d := (c - a).normalized()
+	var n := Vector3(-d.z, 0, d.x) * thick * 0.5
+	var y := Vector3(0, _base, 0)
+	var h := height - 0.3
+	b.wall("int", a + y + n, c + y + n, h)
+	b.wall("int", c + y - n, a + y - n, h)
+	for e: Vector3 in [a, c]:   # caps (one of each pair faces out, the other is culled)
+		b.wall("int", e + y - n, e + y + n, h)
+		b.wall("int", e + y + n, e + y - n, h)
+	_add_batch(b)
+	_shape((a + c) * 0.5 + y + Vector3(0, h * 0.5, 0), Vector3(absf(c.x - a.x) + (thick if absf(d.z) > 0.5 else 0.0), h, absf(c.z - a.z) + (thick if absf(d.x) > 0.5 else 0.0)))
+
+
 ## A piece of the front wall from x a to x c, between heights h0..h1 above the floor.
 func _front_piece(a: float, c: float, h0: float, h1: float) -> void:
 	var b := MeshBatch.new()

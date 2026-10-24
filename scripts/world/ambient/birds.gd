@@ -12,9 +12,11 @@ render_mode cull_disabled;
 uniform vec3 body_color : source_color;
 uniform vec3 wing_color : source_color;
 uniform vec3 tip_color : source_color;
+uniform vec3 head_color : source_color;
+uniform vec3 beak_color : source_color;
 varying vec3 col;
 void vertex() {
-	// COLOR.r: 0 on the body .. 1 at the wing tip; COLOR.g: dark tip feathers
+	// COLOR.r: 0 on the body .. 1 at the wing tip; g: dark tip feathers; b: head / beak; a: flat part
 	float w = COLOR.r;
 	float flap = sin(TIME * INSTANCE_CUSTOM.y * 30.0 + INSTANCE_CUSTOM.x * 6.2832) * INSTANCE_CUSTOM.z;
 	float ax = abs(VERTEX.x);
@@ -25,18 +27,23 @@ void vertex() {
 		VERTEX.y += r * sin(ang);
 		VERTEX.z += INSTANCE_CUSTOM.w * w * 0.12;
 	}
-	col = w > 0.0 ? mix(wing_color, tip_color, COLOR.g) : body_color;
+	col = w > 0.0 ? mix(wing_color, tip_color, COLOR.g) : (COLOR.b > 0.75 ? beak_color : (COLOR.b > 0.25 ? head_color : body_color));
 }
 void fragment() {
 	ALBEDO = col;
 	ROUGHNESS = 0.85;
+	if (!FRONT_FACING && COLOR.a > 0.5) {   // flat parts (wings, tail) are lit on both sides
+		NORMAL = -NORMAL;
+	}
 }
 """
 
-## kind -> [body length, span, body colour, wing colour, tip colour, visible range]
+## kind -> [body length, span, body colour, wing colour, tip colour, visible range, head colour, beak colour]
 const KINDS := {
-	"gull": [0.5, 1.25, Color(0.93, 0.93, 0.92), Color(0.72, 0.74, 0.77), Color(0.12, 0.12, 0.13), 600.0],
-	"pigeon": [0.32, 0.62, Color(0.45, 0.47, 0.52), Color(0.55, 0.57, 0.62), Color(0.25, 0.26, 0.3), 220.0],
+	"gull": [0.5, 1.25, Color(0.93, 0.93, 0.92), Color(0.72, 0.74, 0.77), Color(0.12, 0.12, 0.13), 600.0,
+		Color(0.96, 0.96, 0.95), Color(0.95, 0.75, 0.2)],
+	"pigeon": [0.34, 0.64, Color(0.52, 0.54, 0.6), Color(0.62, 0.64, 0.7), Color(0.22, 0.23, 0.27), 220.0,
+		Color(0.33, 0.36, 0.42), Color(0.25, 0.22, 0.2)],
 }
 const SIM_RANGE := {"gull": 450.0, "pigeon": 160.0}
 const SCARE := 6.5
@@ -97,43 +104,62 @@ func _mesh(kind: String) -> ArrayMesh:
 	var S: float = k[1] * 0.5
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var tri := func(a: Vector3, b: Vector3, c: Vector3, w: Array) -> void:
-		for i in 3:
-			st.set_color(Color(w[i][0], w[i][1], 0))
-			st.add_vertex([a, b, c][i])
-	var body := [0.0, 0.0]
-	# body: a slim double pyramid, head forward (-Z), with a fanned tail
-	var nose := Vector3(0, 0.02, -L * 0.55)
-	var tail := Vector3(0, 0.0, L * 0.45)
-	var rw := L * 0.12
-	var top := Vector3(0, rw * 0.9, -L * 0.1)
-	var bot := Vector3(0, -rw * 0.8, -L * 0.05)
-	var lft := Vector3(-rw, 0, -L * 0.08)
-	var rgt := Vector3(rw, 0, -L * 0.08)
-	for pair in [[top, lft], [rgt, top], [lft, bot], [bot, rgt]]:
-		tri.call(nose, pair[0], pair[1], [body, body, body])
-		tri.call(tail, pair[1], pair[0], [body, body, body])
-	tri.call(tail + Vector3(0, 0, -L * 0.05), Vector3(-L * 0.14, 0, L * 0.62), Vector3(L * 0.14, 0, L * 0.62), [body, body, body])
+	# COLOR: r = wing weight (0 body .. 1 tip), g = dark tip feathers, b = 0.5 head / 1 beak
+	var vert := func(v: Vector3, n: Vector3, c: Color) -> void:
+		st.set_color(c)
+		st.set_normal(n)
+		st.add_vertex(v)
+	# rounded parts (body, head): ellipsoids with analytic normals
+	var ellipsoid := func(c: Vector3, r: Vector3, col: Color, rings: int, segs: int) -> void:
+		var pt := func(i: int, j: int) -> Array:
+			var th := PI * float(i) / rings
+			var ph := TAU * float(j) / segs
+			var u := Vector3(sin(th) * cos(ph), cos(th), sin(th) * sin(ph))
+			return [c + u * r, (u / r).normalized()]
+		for i in rings:
+			for j in segs:
+				var a: Array = pt.call(i, j)
+				var b: Array = pt.call(i + 1, j)
+				var d: Array = pt.call(i + 1, j + 1)
+				var e: Array = pt.call(i, j + 1)
+				for q: Array in [a, b, d, a, d, e]:   # clockwise seen from outside (front faces)
+					vert.call(q[0], q[1], col)
+	var body := Color(0, 0, 0, 0)
+	ellipsoid.call(Vector3(0, 0, L * 0.02), Vector3(L * 0.17, L * 0.17, L * 0.4), body, 6, 8)
+	ellipsoid.call(Vector3(0, L * 0.15, -L * 0.4), Vector3(L * 0.11, L * 0.11, L * 0.12), Color(0, 0, 0.5, 0), 5, 8)
+	# beak: a little pyramid off the front of the head
+	var bt := Vector3(0, L * 0.13, -L * 0.62)
+	var bb := [Vector3(-L * 0.03, L * 0.15, -L * 0.5), Vector3(L * 0.03, L * 0.15, -L * 0.5), Vector3(0, L * 0.11, -L * 0.5)]
+	for i in 3:
+		var a: Vector3 = bb[i]
+		var b: Vector3 = bb[(i + 1) % 3]
+		vert.call(bt, Vector3(0, 0, -1), Color(0, 0, 1, 0))
+		vert.call(a, (a - Vector3(0, L * 0.14, -L * 0.5)).normalized(), Color(0, 0, 1, 0))
+		vert.call(b, (b - Vector3(0, L * 0.14, -L * 0.5)).normalized(), Color(0, 0, 1, 0))
+	# tail fan (flat; the shader lights both sides)
+	var t0 := Vector3(0, L * 0.02, L * 0.3)
+	for q: Array in [[t0, Vector3(-L * 0.13, 0, L * 0.68), Vector3(L * 0.13, 0, L * 0.68)]]:
+		for v: Vector3 in q:
+			vert.call(v, Vector3.UP, Color(0, 0, 0, 1))
 	# wings: inner panel and swept tip panel each side
 	for sx in [-1.0, 1.0]:
-		var r0 := Vector3(sx * 0.03, 0.01, -L * 0.18)
-		var r1 := Vector3(sx * 0.03, 0.01, L * 0.12)
-		var m0 := Vector3(sx * S * 0.55, 0.0, -L * 0.14)
-		var m1 := Vector3(sx * S * 0.55, 0.0, L * 0.16)
-		var tp := Vector3(sx * S, 0.0, L * 0.2)
-		var mw := [0.55, 0.0]
-		var tw := [1.0, 1.0]
-		var mt := [0.75, 0.7]
-		tri.call(r0, m0, m1, [[0.01, 0.0], mw, mw])
-		tri.call(r0, m1, r1, [[0.01, 0.0], mw, [0.01, 0.0]])
-		tri.call(m0, tp, m1, [[0.55, 0.6], tw, mt])
-	st.generate_normals()
+		var r0 := Vector3(sx * 0.03, L * 0.06, -L * 0.18)
+		var r1 := Vector3(sx * 0.03, L * 0.06, L * 0.14)
+		var m0 := Vector3(sx * S * 0.55, L * 0.05, -L * 0.14)
+		var m1 := Vector3(sx * S * 0.55, L * 0.05, L * 0.18)
+		var tp := Vector3(sx * S, L * 0.05, L * 0.24)
+		for tri: Array in [[[r0, 0.01, 0.0], [m0, 0.55, 0.0], [m1, 0.55, 0.0]], [[r0, 0.01, 0.0], [m1, 0.55, 0.0], [r1, 0.01, 0.0]],
+				[[m0, 0.55, 0.6], [tp, 1.0, 1.0], [m1, 0.75, 0.7]]]:
+			for v: Array in tri:
+				vert.call(v[0], Vector3.UP, Color(v[1], v[2], 0, 1))
 	var m := st.commit()
 	var mat := ShaderMaterial.new()
 	mat.shader = _shader
 	mat.set_shader_parameter("body_color", k[2])
 	mat.set_shader_parameter("wing_color", k[3])
 	mat.set_shader_parameter("tip_color", k[4])
+	mat.set_shader_parameter("head_color", k[6])
+	mat.set_shader_parameter("beak_color", k[7])
 	m.surface_set_material(0, mat)
 	_meshes[kind] = m
 	return m

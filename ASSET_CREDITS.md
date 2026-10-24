@@ -84,6 +84,24 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Throw Pillows 01 (model) | safehouse and diner interiors | Serhii Khromov | https://polyhaven.com/a/throw_pillows_01 | CC0 |
 | Checkered Pavement Tiles (texture) | interior floors | Amal Kumar | https://polyhaven.com/a/checkered_pavement_tiles | CC0 |
 | Laminate Floor 02 (texture) | interior floors | Dario Barresi, Charlotte Baglioni | https://polyhaven.com/a/laminate_floor_02 | CC0 |
+| Arm Chair 01 (model) | safehouse interior | Kirill Sannikov | https://polyhaven.com/a/ArmChair_01 | CC0 |
+| Wooden Bookshelf Worn (model) | safehouse interior | Ulan Cabanilla | https://polyhaven.com/a/wooden_bookshelf_worn | CC0 |
+| Modern Wooden Cabinet (model) | safehouse interior | Patrik Pangerl | https://polyhaven.com/a/modern_wooden_cabinet | CC0 |
+| Painted Wooden Cabinet (model) | safehouse interior | Kirill Sannikov | https://polyhaven.com/a/painted_wooden_cabinet | CC0 |
+| Classic Nightstand 01 (model) | safehouse interior | Kirill Sannikov | https://polyhaven.com/a/ClassicNightstand_01 | CC0 |
+| Alarm Clock 01 (model) | safehouse interior | Yann Kervran, James Ray Cock | https://polyhaven.com/a/alarm_clock_01 | CC0 |
+| Hanging Picture Frame 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_01 | CC0 |
+| Hanging Picture Frame 02 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_02 | CC0 |
+| Ornate Mirror 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/ornate_mirror_01 | CC0 |
+| Book Encyclopedia Set 01 (model) | safehouse interior | John Malcolm | https://polyhaven.com/a/book_encyclopedia_set_01 | CC0 |
+| Boombox (model) | safehouse interior | Thomas Paul Mouilleron | https://polyhaven.com/a/boombox | CC0 |
+| Gaming Console (model) | safehouse interior | Sean Buckley | https://polyhaven.com/a/gaming_console | CC0 |
+| Ceiling Fan (model) | safehouse interior | Ulan Cabanilla | https://polyhaven.com/a/ceiling_fan | CC0 |
+| Vintage Electric Kettle (model) | safehouse interior | SV Garip | https://polyhaven.com/a/vintage_electric_kettle | CC0 |
+| Drawer Cabinet (model) | safehouse interior | Ulan Cabanilla | https://polyhaven.com/a/drawer_cabinet | CC0 |
+| Planter Box 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/planter_box_01 | CC0 |
+| Standing Picture Frame 01 (model) | safehouse interior | James Ray Cock | https://polyhaven.com/a/standing_picture_frame_01 | CC0 |
+| Vintage Suitcase (model) | safehouse interior | Maximilian Schuster | https://polyhaven.com/a/vintage_suitcase | CC0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.

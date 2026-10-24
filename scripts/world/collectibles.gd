@@ -14,6 +14,7 @@ const PLAN := {"park": 3, "plaza": 1, "pier": 1, "lookout": 1, "lifeguard": 4, "
 var spots: Array[Vector3] = []
 var _coins := {}   # id -> Node3D
 static var _mesh: Mesh
+static var _rim: Mesh
 static var _mat: StandardMaterial3D
 
 
@@ -65,19 +66,28 @@ func _plan() -> void:
 
 func _make(i: int) -> void:
 	if _mesh == null:
+		# a gold token: a thin disc inside a raised rim
 		var cyl := CylinderMesh.new()
-		cyl.top_radius = 0.22
-		cyl.bottom_radius = 0.22
-		cyl.height = 0.05
-		cyl.radial_segments = 24
+		cyl.top_radius = 0.2
+		cyl.bottom_radius = 0.2
+		cyl.height = 0.035
+		cyl.radial_segments = 32
 		_mesh = cyl
+		var rim := TorusMesh.new()
+		rim.inner_radius = 0.18
+		rim.outer_radius = 0.235
+		rim.rings = 32
+		rim.ring_segments = 10
+		_rim = rim
 		_mat = StandardMaterial3D.new()
-		_mat.albedo_color = Color(1.0, 0.78, 0.25)
-		_mat.metallic = 1.0
-		_mat.roughness = 0.25
+		_mat.albedo_color = Color(0.95, 0.72, 0.28)
+		_mat.metallic = 0.9
+		_mat.roughness = 0.32
 		_mat.emission_enabled = true
-		_mat.emission = Color(1.0, 0.7, 0.2)
-		_mat.emission_energy_multiplier = 0.6
+		_mat.emission = Color(1.0, 0.68, 0.22)
+		_mat.emission_energy_multiplier = 0.18
+		_mat.rim_enabled = true
+		_mat.rim = 0.6
 	var c := Area3D.new()
 	c.collision_layer = 0
 	c.collision_mask = 2
@@ -88,12 +98,15 @@ func _make(i: int) -> void:
 	sh.radius = 0.9
 	cs.shape = sh
 	c.add_child(cs)
-	var mi := MeshInstance3D.new()
-	mi.mesh = _mesh
-	mi.material_override = _mat
-	mi.rotation.x = PI * 0.5
-	mi.visibility_range_end = 160.0
+	var mi := Node3D.new()   # spins (child 1)
 	c.add_child(mi)
+	for part: Mesh in [_mesh, _rim]:
+		var pm := MeshInstance3D.new()
+		pm.mesh = part
+		pm.material_override = _mat
+		pm.rotation.x = PI * 0.5
+		pm.visibility_range_end = 160.0
+		mi.add_child(pm)
 	var glow := OmniLight3D.new()
 	glow.light_color = Color(1.0, 0.8, 0.4)
 	glow.light_energy = 0.6
@@ -120,7 +133,9 @@ func _physics_process(delta: float) -> void:
 			continue
 		if not c.get_meta("settled") and city and Vector2(c.position.x - p.global_position.x, c.position.z - p.global_position.z).length() < 150.0:
 			_settle(c, city)
-		(c.get_child(1) as Node3D).rotation.y += delta * 2.0
+		var spin := c.get_child(1) as Node3D
+		spin.rotation.y += delta * 2.0
+		spin.position.y = sin(Time.get_ticks_msec() * 0.002 + i) * 0.08
 
 
 
