@@ -9,37 +9,62 @@ const PATH := "user://settings.cfg"
 const PRESETS := {
 	Preset.LOW: {"ssao": false, "ssil": false, "ssr": false, "sdfgi": false, "volumetric_fog": false, "glow": true,
 		"shadow_size": 2048, "shadow_filter": 1, "shadow_distance": 140.0, "render_scale": 0.77, "upscaler": "fsr1",
-		"taa": false, "fxaa": true, "lod_threshold": 4.0, "foliage_density": 0.5},
+		"taa": false, "fxaa": true, "lod_threshold": 4.0, "foliage_density": 0.5,
+		"parked": 16, "crowd": 12, "traffic": 8},
 	Preset.MEDIUM: {"ssao": true, "ssil": false, "ssr": false, "sdfgi": false, "volumetric_fog": true, "glow": true,
 		"shadow_size": 2048, "shadow_filter": 2, "shadow_distance": 200.0, "render_scale": 1.0, "upscaler": "none",
-		"taa": true, "fxaa": false, "lod_threshold": 2.0, "foliage_density": 0.75},
+		"taa": true, "fxaa": false, "lod_threshold": 2.0, "foliage_density": 0.75,
+		"parked": 22, "crowd": 18, "traffic": 12},
 	Preset.HIGH: {"ssao": true, "ssil": true, "ssr": true, "sdfgi": true, "volumetric_fog": true, "glow": true,
 		"shadow_size": 4096, "shadow_filter": 3, "shadow_distance": 260.0, "render_scale": 1.0, "upscaler": "none",
-		"taa": true, "fxaa": false, "lod_threshold": 1.0, "foliage_density": 1.0},
+		"taa": true, "fxaa": false, "lod_threshold": 1.0, "foliage_density": 1.0,
+		"parked": 30, "crowd": 26, "traffic": 16},
 	Preset.ULTRA: {"ssao": true, "ssil": true, "ssr": true, "sdfgi": true, "volumetric_fog": true, "glow": true,
 		"shadow_size": 8192, "shadow_filter": 4, "shadow_distance": 380.0, "render_scale": 1.0, "upscaler": "none",
-		"taa": true, "fxaa": false, "lod_threshold": 0.6, "foliage_density": 1.25},
+		"taa": true, "fxaa": false, "lod_threshold": 0.6, "foliage_density": 1.25,
+		"parked": 38, "crowd": 34, "traffic": 22},
 }
 
 static var preset := Preset.HIGH
 static var values: Dictionary = PRESETS[Preset.HIGH].duplicate()
-static var display := {"fov": 70.0, "vsync": false, "max_fps": 0, "window_mode": "fullscreen"}
+static var display := {"fov": 70.0, "vsync": false, "max_fps": 0, "window_mode": "borderless", "resolution": Vector2i(1920, 1080)}
 static var _loaded := false
 
 
 ## How many parked cars are kept around the player.
 static func parked_cars() -> int:
-	return [16, 22, 30, 38][mini(preset, 3)] if preset != Preset.CUSTOM else 30
+	return int(values.get("parked", 30))
 
 
 ## How many pedestrians are kept around the player (scaled by district and time of day).
 static func pedestrians() -> int:
-	return [12, 18, 26, 34][mini(preset, 3)] if preset != Preset.CUSTOM else 26
+	return int(values.get("crowd", 26))
 
 
 ## How many moving traffic cars are kept around the player.
 static func traffic_cars() -> int:
-	return [8, 12, 16, 22][mini(preset, 3)] if preset != Preset.CUSTOM else 16
+	return int(values.get("traffic", 16))
+
+
+## Window mode, resolution, V-sync and the frame cap (not the in-game camera's FOV: apply_to does that).
+static func apply_display() -> void:
+	ensure_loaded()
+	if DisplayServer.get_name() == "headless":
+		return
+	match String(display.window_mode):
+		"fullscreen":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+		"borderless":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		_:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			var res: Vector2i = display.resolution
+			var screen := DisplayServer.screen_get_size()
+			res = Vector2i(mini(res.x, screen.x), mini(res.y, screen.y))
+			DisplayServer.window_set_size(res)
+			DisplayServer.window_set_position((screen - res) / 2 + DisplayServer.screen_get_position())
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if display.vsync else DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = int(display.max_fps)
 
 
 static func ensure_loaded() -> void:
@@ -58,6 +83,7 @@ static func ensure_loaded() -> void:
 
 static func save() -> void:
 	var cf := ConfigFile.new()
+	cf.load(PATH)   # keep the audio / gameplay / controls sections (Settings)
 	cf.set_value("graphics", "preset", preset)
 	for k in values:
 		cf.set_value("graphics", k, values[k])
@@ -102,8 +128,6 @@ static func apply_to(world: Node) -> void:
 			world.street_lights.set_count([12, 20, 32, 48][mini(preset, 3)])
 		if world.get("parked"):
 			world.parked.max_active = parked_cars()
-	var cam := vp.get_camera_3d()
-	if cam:
-		cam.fov = display.fov
+	CameraRig.fov_scale = float(display.fov) / 70.0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if display.vsync else DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = int(display.max_fps)

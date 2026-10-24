@@ -9,6 +9,7 @@ const BUSES := ["SFX", "Vehicles", "Ambience", "Music"]
 var _streams := {}
 var _pool: Array[AudioStreamPlayer3D] = []
 var _next := 0
+var _ui: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -62,6 +63,19 @@ func pick(pattern: String, n: int) -> AudioStream:
 
 
 ## Fire-and-forget positional sound from the pool (the oldest voice is reused when all are busy).
+## Menu sound (click / select / back / open): not positional, plays while the game is paused.
+func play_ui(name: String) -> void:
+	if _ui == null:
+		_ui = AudioStreamPlayer.new()
+		_ui.bus = &"SFX"
+		_ui.max_polyphony = 4
+		_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(_ui)
+	_ui.stream = stream("ui/%s.ogg" % name)
+	_ui.volume_db = -6.0
+	_ui.play()
+
+
 func play_at(s: AudioStream, pos: Vector3, volume_db := 0.0, pitch := 1.0, bus := &"SFX", range_m := 90.0) -> void:
 	if s == null or not is_inside_tree():
 		return

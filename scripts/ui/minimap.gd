@@ -41,8 +41,15 @@ func _draw() -> void:
 	draw_set_transform_matrix(Transform2D(yaw, c) * Transform2D(0.0, Vector2(scale_f, scale_f), 0.0, Vector2.ZERO) * Transform2D(0.0, Vector2(-focus.x, -focus.z)))
 	draw_texture_rect(_map, Rect2(-_half, -_half, _half * 2.0, _half * 2.0), false)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
-	# waypoint (clamped to the edge when off the map)
+	# GPS route to the waypoint
 	var fm: FullMap = Game.world.full_map
+	if fm and fm.route.size() >= 2:
+		var pl := PackedVector2Array()
+		for q in fm.route:
+			pl.append(to_px.call(Vector2(q.x, q.z)))
+		draw_polyline(pl, Color(0.05, 0.05, 0.06, 0.7), 6.0, true)
+		draw_polyline(pl, UITheme.SAND, 3.5, true)
+	# waypoint (clamped to the edge when off the map)
 	if fm and fm.waypoint != null:
 		var wp: Vector2 = to_px.call(fm.waypoint)
 		var r := Rect2(Vector2(8, 8), size_px - Vector2(16, 16))

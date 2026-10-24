@@ -6,6 +6,9 @@ extends CanvasLayer
 signal waypoint_changed(pos: Variant)
 
 var waypoint: Variant = null  # Vector2 (world x/z) or null
+## GPS: the road route to the waypoint (world points), drawn here and on the minimap.
+var route := PackedVector3Array()
+var _route_t := 0.0
 var _root: Control
 var _map: Texture2D
 var _data: WorldData
@@ -78,12 +81,42 @@ func _on_input(e: InputEvent) -> void:
 		_center -= e.relative / _zoom
 
 
+func _physics_process(delta: float) -> void:
+	_route_t -= delta
+	if _route_t <= 0.0:
+		_route_t = 1.5
+		update_route()
+
+
+## Recompute the GPS route from where the player is (arrived: the waypoint goes).
+func update_route() -> void:
+	route = PackedVector3Array()
+	var p := Game.player as Player
+	var w := Game.world as World
+	if waypoint == null or p == null or w == null or w.traffic == null:
+		return
+	var at := p.vehicle.global_position if p.vehicle else p.global_position
+	var wp: Vector2 = waypoint
+	if Vector2(at.x, at.z).distance_to(wp) < 22.0:
+		waypoint = null
+		waypoint_changed.emit(null)
+		Game.message("You have reached your destination.")
+		Audio.play_ui("select")
+		return
+	var heading := Vector3.ZERO
+	if p.vehicle:
+		heading = -p.vehicle.global_basis.z
+		heading.y = 0.0
+	route = w.traffic.gps_path(at, heading, Vector3(wp.x, 0, wp.y))
+
+
 func _set_waypoint(p: Vector2) -> void:
 	if waypoint != null and (waypoint as Vector2).distance_to(p) < 30.0 / _zoom:
 		waypoint = null
 	else:
 		waypoint = p
 	waypoint_changed.emit(waypoint)
+	update_route()
 
 
 func _to_world(px: Vector2) -> Vector2:
@@ -107,6 +140,13 @@ func _draw_map() -> void:
 		c.draw_string(UITheme.heading, p - Vector2(w * 0.5, 0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UITheme.PAPER)
 	for v in get_tree().get_nodes_in_group("vehicles"):
 		c.draw_circle(_to_px(Vector2(v.global_position.x, v.global_position.z)), 4.0, Color(0.55, 0.75, 0.95))
+	# GPS route
+	if route.size() >= 2:
+		var pl := PackedVector2Array()
+		for q in route:
+			pl.append(_to_px(Vector2(q.x, q.z)))
+		c.draw_polyline(pl, Color(0.05, 0.05, 0.06, 0.8), 7.0, true)
+		c.draw_polyline(pl, UITheme.SAND, 4.0, true)
 	# places + a legend in the corner
 	var places: Array = Game.world.places() if Game.world and Game.world.has_method("places") else []
 	for pl: Array in places:

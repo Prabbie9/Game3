@@ -90,6 +90,11 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_combo_window -= delta
+	# distance stats (on foot / at the wheel of anything)
+	if state == State.DRIVING and vehicle:
+		Game.stat_add("distance_driven", vehicle.linear_velocity.length() * delta)
+	elif state == State.ON_FOOT:
+		Game.stat_add("distance_foot", Vector2(velocity.x, velocity.z).length() * delta)
 	# safety net: fell out of the world (e.g. through a gap while streaming) -> back onto the nearest road
 	if global_position.y < -60.0 and state != State.DRIVING:
 		_rescue()
@@ -305,6 +310,7 @@ func _report_theft(v: Vehicle, jack: bool) -> void:
 	if v.has_meta("player_used"):
 		return
 	v.set_meta("player_used", true)
+	Game.stat_add("vehicles_stolen")
 	if v.model in ["police", "heli"]:
 		Game.crime("steal_police", v.global_position)
 	elif jack:
@@ -856,6 +862,7 @@ func _ragdolled(delta: float) -> void:
 	global_position = Vector3(hips.x, hit.position.y if hit else hips.y - 0.15, hips.z)
 	if state == State.DEAD:
 		if _respawn_timer < 0.0:
+			Game.stat_add("wasted")
 			var w := Game.world as World
 			if w and w.game_over:
 				# WASTED: the screen does the waiting, then we come round at the hospital
@@ -929,13 +936,15 @@ func _respawn(at := Transform3D(), text := "You woke up a little bruised.") -> v
 	state = State.ON_FOOT
 	visual.jump_to("ground")
 	Game.controls_enabled = true
-	Game.message(text)
+	if text != "":
+		Game.message(text)
 
 
 ## Arrested: hands up on the knees, then (after BUSTED) out of the police station without the guns.
 func arrested(w: World) -> void:
 	if state == State.DEAD:
 		return
+	Game.stat_add("busted")
 	Game.controls_enabled = false
 	if vehicle:
 		var out := vehicle.driver_door_position()

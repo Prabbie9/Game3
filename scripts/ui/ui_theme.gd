@@ -62,6 +62,23 @@ static func get_theme() -> Theme:
 	return t
 
 
+## A big menu entry (main / pause menu) with the menu sounds.
+static func menu_button(parent: Control, text: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.custom_minimum_size = Vector2(380, 54)
+	b.focus_entered.connect(func(): Audio.play_ui("click"))
+	b.mouse_entered.connect(func():
+		if not b.has_focus():
+			b.grab_focus())
+	b.pressed.connect(func():
+		Audio.play_ui("select")
+		cb.call())
+	parent.add_child(b)
+	return b
+
+
 static func label(text: String, size := 18, font: Font = null, color := PAPER) -> Label:
 	get_theme()
 	var l := Label.new()

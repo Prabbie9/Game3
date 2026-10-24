@@ -13,6 +13,8 @@ var _speed: Label
 var _speed_unit: Label
 var _toast: Label
 var _notify: Label
+var _subtitle: RichTextLabel
+var _sub_tween: Tween
 var _health_bar: ColorRect
 var _armor_bar: ColorRect
 var _minimap: Minimap
@@ -154,6 +156,27 @@ func _ready() -> void:
 	_notify.custom_minimum_size = Vector2(340, 0)
 	np.add_child(_notify)
 	_notify.set_meta("panel", np)
+
+	# subtitles (bottom centre)
+	_subtitle = RichTextLabel.new()
+	_subtitle.bbcode_enabled = true
+	_subtitle.fit_content = true
+	_subtitle.scroll_active = false
+	_subtitle.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_subtitle.offset_top = -200
+	_subtitle.offset_bottom = -140
+	_subtitle.offset_left = -520
+	_subtitle.offset_right = 520
+	_subtitle.add_theme_font_override("normal_font", UITheme.body)
+	_subtitle.add_theme_font_override("bold_font", UITheme.body_bold)
+	_subtitle.add_theme_font_size_override("normal_font_size", 22)
+	_subtitle.add_theme_font_size_override("bold_font_size", 22)
+	_subtitle.add_theme_constant_override("outline_size", 6)
+	_subtitle.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_subtitle.modulate.a = 0.0
+	root.add_child(_subtitle)
+	Game.subtitle.connect(show_subtitle)
 
 	# context hint (enter vehicle etc.)
 	_hint = UITheme.label("", 18, UITheme.body_bold)
@@ -304,6 +327,16 @@ func _on_vehicle(v: Node) -> void:
 		tw.tween_property(_toast, "modulate:a", 1.0, 0.25)
 		tw.tween_interval(2.2)
 		tw.tween_property(_toast, "modulate:a", 0.0, 0.6)
+
+
+func show_subtitle(speaker: String, text: String) -> void:
+	_subtitle.text = "[center][b][color=#%s]%s:[/color][/b] %s[/center]" % [UITheme.SAND.to_html(false), speaker.to_upper(), text]
+	if _sub_tween:
+		_sub_tween.kill()
+	_sub_tween = create_tween()
+	_subtitle.modulate.a = 1.0
+	_sub_tween.tween_interval(2.5 + text.length() * 0.04)
+	_sub_tween.tween_property(_subtitle, "modulate:a", 0.0, 0.4)
 
 
 func show_notification(text: String) -> void:

@@ -96,6 +96,11 @@ func _ready() -> void:
 		add_child(preload("res://scripts/core/benchmark.gd").new())
 	GraphicsSettings.apply_to(self)
 	_update_sun()
+	if not Game.pending_load.is_empty():
+		# a save being loaded: after the first frame, when the player and streaming are up
+		var d: Dictionary = Game.pending_load
+		Game.pending_load = {}
+		(func(): SaveGame.apply(d)).call_deferred()
 
 
 ## Hand-placed places and things: the gun shop, weapon/health/armour/cash pickups around the map, and a
@@ -153,6 +158,17 @@ var _plaza_people := []
 
 
 ## Where the player comes round: "hospital" (wasted) or "police" (busted).
+## "6th Ave" (the street at pos) or the district name, for radio chatter and saves.
+func place_name(pos: Vector3) -> String:
+	if traffic:
+		var nl := traffic.nearest_lane(pos)
+		if int(nl[0]) >= 0 and float(nl[2]) < 18.0:
+			var rd: Dictionary = data.roads[int(traffic.graph.lanes[int(nl[0])].road)]
+			if String(rd.get("name", "")) != "":
+				return String(rd.name)
+	return SaveGame.district_at(pos)
+
+
 ## Places shown on the minimap and the map: [world x/z, letter, colour, name].
 func places() -> Array:
 	var out := [[Vector2(23.0, -18.0), "G", UITheme.CORAL, "Gun shop"], [Vector2(102.0, -20.0), "R", UITheme.TEAL, "Respray"]]

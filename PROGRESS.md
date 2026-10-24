@@ -192,3 +192,4 @@ full map + GPS route, save/load).
 | v0.4.0 | 4 — vehicles | GitHub Release |
 | v0.5.0 | 5 — combat | GitHub Release |
 | v0.6.0 | 6 — population | GitHub Release |
+| v0.7.0 | 7 — police | GitHub Release |

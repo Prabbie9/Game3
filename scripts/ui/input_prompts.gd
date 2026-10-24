@@ -8,11 +8,10 @@ const PAD := {"interact": "Y", "jump": "X", "sprint": "A", "aim": "LT", "fire": 
 
 
 static func prompt(action: String) -> String:
-	if Game.using_gamepad:
-		return "[%s]" % PAD.get(action, action.to_upper())
-	for e in InputMap.action_get_events(action):
-		if e is InputEventKey:
-			return "[%s]" % OS.get_keycode_string(e.physical_keycode)
-		if e is InputEventMouseButton:
-			return "[%s]" % {1: "LMB", 2: "RMB", 3: "MMB", 4: "WHEEL", 5: "WHEEL"}.get(int(e.button_index), "MOUSE")
-	return "[%s]" % action.to_upper()
+	# the live binding (it follows rebinding in the settings); a few actions only exist on one device
+	var name := Settings.binding_name(action, Game.using_gamepad)
+	if name == "—":
+		if Game.using_gamepad and PAD.has(action):
+			return "[%s]" % PAD[action]
+		return "[%s]" % action.to_upper()
+	return "[%s]" % name

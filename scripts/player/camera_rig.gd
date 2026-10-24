@@ -25,6 +25,8 @@ var sprinting := false
 var ragdolled := false
 ## Scoped weapons: field of view while aiming (0 = the normal aim view).
 var zoom_fov := 0.0
+## Field of view setting (Settings → Display), relative to the 70° default; scopes are not scaled.
+static var fov_scale := 1.0
 ## Hidden when the camera is squeezed against the character (back to a wall, tight corners).
 var hide_when_close: Node3D
 ## Vehicle views cycled with camera_mode: 0 chase, 1 far chase, 2 hood, 3 cinematic.
@@ -126,7 +128,7 @@ func _process(delta: float) -> void:
 	_dist = lerpf(_dist, p.dist, k)
 	_height = lerpf(_height, p.height - (0.45 if crouch and mode != Mode.VEHICLE else 0.0), k)
 	_side = lerpf(_side, p.side * shoulder, k)
-	camera.fov = lerpf(camera.fov, p.fov, k if zoom_fov <= 0.0 else 1.0 - exp(-delta * 18.0))
+	camera.fov = lerpf(camera.fov, p.fov * (fov_scale if zoom_fov <= 0.0 or mode != Mode.AIM else 1.0), k if zoom_fov <= 0.0 else 1.0 - exp(-delta * 18.0))
 
 	# characters can supply a smoother anchor than their root (the pelvis during vaults, climbs, ragdoll)
 	var anchor := tgt_xf.origin
@@ -147,7 +149,7 @@ func _process(delta: float) -> void:
 		global_transform = Transform3D(vt.basis * free * Basis(Vector3.RIGHT, clampf(pitch, -0.4, 0.3)), vt * hood)
 		spring.spring_length = 0.0
 		spring.position = Vector3.ZERO
-		camera.fov = lerpf(camera.fov, p.fov, k)
+		camera.fov = lerpf(camera.fov, p.fov * fov_scale, k)
 	if mode == Mode.VEHICLE and vehicle_view == 3 and target:
 		_cinematic(delta)
 	if hide_when_close:

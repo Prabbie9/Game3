@@ -232,6 +232,8 @@ func _hurt(amount: float, from: Node, push: Vector3, at: Vector3, zone: String) 
 		Game.crime("murder" if health <= 0.0 else "assault", global_position)
 	if health <= 0.0:
 		_killer = from
+		if from == Game.player:
+			Game.stat_add("cops_killed" if is_in_group("police") else "kills")
 		_die(push, "Head" if zone == "head" else "")
 		return
 	if zone == "blast":

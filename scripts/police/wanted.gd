@@ -70,6 +70,7 @@ func _raise(to: int, pos: Vector3) -> void:
 	unseen = 0.0
 	if s != stars:
 		stars = clampi(s, 0, 5)
+		Game.stat_max("max_wanted", stars)
 		heat = maxf(heat, float(stars))
 		stars_changed.emit(stars)
 		Audio.play_at(Audio.stream("vehicles/siren_loop.ogg"), Game.player.global_position + Vector3(30, 5, 0), -18.0, 1.0, &"SFX", 400.0)
@@ -355,6 +356,32 @@ func _radio(delta: float, p: Player, at: Vector3) -> void:
 				src = n.global_position
 	if src != Vector3.INF:
 		Audio.play_at(Audio.pick("police/radio_%d.ogg", 6), src + Vector3(0, 1.2, 0), -6.0, _rng.randf_range(0.95, 1.05), &"SFX", 40.0)
+		var line := _radio_line(p, at)
+		Game.say(line[0], line[1])
+
+
+## What the radio says: who is speaking and a line that fits the chase (place, vehicle, sighting, backup).
+func _radio_line(p: Player, at: Vector3) -> Array:
+	var w := Game.world as World
+	var place: String = w.place_name(last_seen) if w else "the city"
+	var unit := "Unit %d" % (_rng.randi_range(2, 39))
+	var opts: Array = []
+	if unseen > 2.0:
+		opts.append([unit, "Lost visual on the suspect. Searching around %s." % place])
+		opts.append(["Dispatch", "All units, suspect last seen on %s. Set up a perimeter." % place])
+	else:
+		if p.vehicle:
+			opts.append([unit, "Suspect is in a %s on %s, in pursuit." % [p.vehicle.display_name, place]])
+		else:
+			opts.append([unit, "Eyes on the suspect, on foot on %s." % place])
+		opts.append(["Dispatch", "All units, %d-star suspect on %s. Proceed with caution." % [stars, place]])
+	if stars >= 3:
+		opts.append(["Dispatch", "Roadblocks are going up. Box the suspect in."])
+	if stars >= 4:
+		opts.append(["SWAT", "Tactical team en route. ETA two minutes."])
+	if is_instance_valid(heli):
+		opts.append(["Air One", "Air One overhead, we have the suspect in sight." if unseen < 2.0 else "Air One sweeping the area, no visual."])
+	return opts[_rng.randi() % opts.size()]
 
 
 # --- helicopter -----------------------------------------------------------------

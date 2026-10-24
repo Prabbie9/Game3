@@ -708,6 +708,51 @@ func route(from: int, to: int) -> Array:
 	return path
 
 
+## GPS: the road route from `from` to `to` as a polyline (empty if there is none). With a heading (driving) the
+## route starts on the lane going that way; on foot it takes whichever direction gives the shorter route.
+func gps_path(from: Vector3, heading: Vector3, to: Vector3) -> PackedVector3Array:
+	var goal := nearest_lane(to)
+	if int(goal[0]) < 0:
+		return PackedVector3Array()
+	var starts := []
+	if heading.length() > 0.1:
+		var la := lane_ahead(from, heading.normalized(), 0.0)
+		if int(la[0]) >= 0:
+			starts.append(la)
+	if starts.is_empty():
+		for dir: Vector3 in [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT]:
+			var la2 := lane_ahead(from, dir, 0.0)
+			if int(la2[0]) >= 0 and not starts.any(func(x): return int(x[0]) == int(la2[0])):
+				starts.append(la2)
+			if starts.size() >= 2:
+				break
+	var best := PackedVector3Array()
+	var best_len := INF
+	for st: Array in starts:
+		var lanes := [int(st[0])] + route(int(st[0]), int(goal[0]))
+		if lanes.size() == 1 and int(st[0]) != int(goal[0]):
+			continue
+		var pts := PackedVector3Array()
+		var length := 0.0
+		for i in lanes.size():
+			var ln: Dictionary = graph.lanes[lanes[i]]
+			var lp: PackedVector3Array = ln.pts
+			var cum: PackedFloat32Array = ln.cum
+			var s0 := float(st[1]) if i == 0 else 0.0
+			var s1 := float(goal[1]) if i == lanes.size() - 1 else float(ln.len)
+			if i == 0:
+				pts.append(graph.sample(lanes[i], s0)[0])
+			for k in lp.size():
+				if cum[k] > s0 and cum[k] < s1:
+					pts.append(lp[k])
+			pts.append(graph.sample(lanes[i], s1)[0])
+			length += maxf(s1 - s0, 0.0)
+		if length < best_len:
+			best_len = length
+			best = pts
+	return best
+
+
 static func _push(h: Array, item: Array) -> void:
 	h.append(item)
 	var i := h.size() - 1

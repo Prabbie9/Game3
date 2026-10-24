@@ -382,13 +382,18 @@ func _fire() -> void:
 	var aim_dir: Vector3 = (ray[1] - from).normalized()
 	# start the trace at the player's depth along the view so nothing between camera and player is hit
 	from += aim_dir * maxf(0.0, (_muzzle.global_position - from).dot(aim_dir) - 0.3)
+	Game.stat_add("shots")
 	if data.kind == "launcher":
 		_launch_rocket(from, aim_dir)
 	else:
 		var sp := spread()
+		var hit_someone := false
 		for i in int(data.get("pellets", 1)):
 			var dir := (aim_dir + _cone(sp)).normalized()
-			_bullet(from, dir, float(data.damage), i == 0 or i % 3 == 0)
+			if _bullet(from, dir, float(data.damage), i == 0 or i % 3 == 0):
+				hit_someone = true
+		if hit_someone:
+			Game.stat_add("hits")
 		_bloom = minf(_bloom + float(data.get("bloom", 0.0)), float(data.get("max_bloom", 0.03)))
 	_cam.add_recoil(float(data.recoil) * (0.6 if _player.crouched else 1.0))
 	_cam.shake = maxf(_cam.shake, 0.15 + float(data.recoil) * 2.0)
@@ -409,7 +414,8 @@ func _cone(radius: float) -> Vector3:
 	return b.x * cos(t) * r + b.y * sin(t) * r
 
 
-func _bullet(from: Vector3, dir: Vector3, damage: float, tracer: bool) -> void:
+## Returns true when it hit a person.
+func _bullet(from: Vector3, dir: Vector3, damage: float, tracer: bool) -> bool:
 	var range: float = data.range
 	var space := get_world_3d().direct_space_state
 	var excl: Array[RID] = [_player.get_rid()]
@@ -424,13 +430,18 @@ func _bullet(from: Vector3, dir: Vector3, damage: float, tracer: bool) -> void:
 	var start := _muzzle.global_position
 	var dir2 := (aim_end + dir * 0.05 - start).normalized()
 	var hit := Weapon.trace(space, start, dir2, start.distance_to(aim_end) + (range if not first else 0.1), excl)
+	var person := false
 	if hit:
 		end = hit.position
+		person = hit.has("zone")
+		if hit.get("zone", "") == "head":
+			Game.stat_add("headshots")
 		Weapon.apply_hit(get_tree().current_scene, hit, dir2, damage, _player)
 	elif first:
 		end = aim_end
 	if tracer:
 		FX.tracer(get_tree().current_scene, start, end)
+	return person
 
 
 ## A bullet's path: the first thing it really hits. Characters are tested against their limbs (ray_test),
