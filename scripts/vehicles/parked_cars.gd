@@ -194,7 +194,7 @@ func _refresh(focus: Vector3) -> void:
 		elif slot.distance_to(focus) > DESPAWN_R:
 			_active.erase(id)
 			v.queue_free()
-	var player: Node = Game.player
+	var player: Node = Game.player if is_instance_valid(Game.player) else null
 	for id: int in _taken.keys():
 		var slot: Vector3 = _slots[id][0]
 		if not is_instance_valid(_taken[id]):
