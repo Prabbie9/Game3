@@ -71,7 +71,9 @@ func _process_modification_with_delta(delta: float) -> void:
 		var n := Vector3.UP
 		if hit:
 			off = clampf(hit.position.y - root_y, -MAX_DROP, MAX_RAISE)
-			n = hit.normal
+			var hn: Vector3 = hit.normal
+			if hn.y > 0.2:   # a ray starting inside something reports a zero normal; walls and undersides don't count
+				n = hn.normalized()
 		_offsets[i] = lerpf(_offsets[i], off, 1.0 - exp(-delta * 18.0))
 		# footstep: the animated ankle drops back to its planted height after lifting
 		var h := gp.origin.y - root_y
@@ -81,7 +83,7 @@ func _process_modification_with_delta(delta: float) -> void:
 		elif _raised[i] and h < _rest[i] + 0.02 and hit and _w > 0.2:
 			_raised[i] = false
 			stepped.emit(i, hit.position, hit.collider)
-		ground_normals[i] = ground_normals[i].slerp(n, 1.0 - exp(-delta * 12.0))
+		ground_normals[i] = ground_normals[i].lerp(n, 1.0 - exp(-delta * 12.0)).normalized()
 		lowest = minf(lowest, _offsets[i])
 	# lower the pelvis so the foot on lower ground can reach without hyper-extending
 	_pelvis = lerpf(_pelvis, lowest * _w, 1.0 - exp(-delta * 12.0))
