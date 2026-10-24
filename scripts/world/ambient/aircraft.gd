@@ -52,6 +52,7 @@ func _build() -> Node3D:
 		mi.position = pos
 		mi.rotation = rot
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.ignore_occlusion_culling = true   # high in open sky: the street occluders wrongly hide it
 		root.add_child(mi)
 		return mi
 	# fuselage along -Z (nose forward)

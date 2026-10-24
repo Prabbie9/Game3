@@ -175,6 +175,7 @@ func _add_flock(kind: String, anchor: Vector3, count: int) -> void:
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mmi.visibility_range_end = float(KINDS[kind][5])
+	mmi.ignore_occlusion_culling = kind == "gull"   # up in the sky (pigeons on the ground cull normally)
 	mmi.visible = false
 	add_child(mmi)
 	var f := {"kind": kind, "mmi": mmi, "anchor": anchor, "birds": [], "active": false, "ground": -INF, "calm": 0.0}
