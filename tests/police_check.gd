@@ -44,21 +44,18 @@ func _run() -> void:
 	await _secs(0.5)
 	Game.crime("shooting", p.global_position)
 	_check(w.stars >= 1, "shooting in front of an officer: %d star(s)" % w.stars)
-	await _secs(6.0)
+	# put the gun away: one-star officers come to arrest rather than shoot
+	p.weapon.select("fists")
+	await _secs(3.0)
 	var police := get_tree().get_nodes_in_group("police").size()
 	var cars := w.units.size()
 	_check(police >= 2 or cars >= 1, "the police respond (%d officers, %d cars)" % [police, cars])
-	Game.crime("murder", p.global_position)
-	Game.crime("murder", p.global_position)
-	_check(w.stars >= 2, "more crimes, more stars (%d)" % w.stars)
 	# arrest: stand still next to an officer, no gun out
-	p.weapon.select("fists")
 	for c: Cop in w.cops:
-		if is_instance_valid(c):
+		if is_instance_valid(c) and not world.game_over.running:
 			c.global_position = p.global_position + Vector3(1.0, 0.05, 0.4)
-			w.stars = 1   # arrests happen at low levels
 	var t := 0.0
-	while t < 8.0 and not world.game_over.running:
+	while t < 10.0 and not world.game_over.running:
 		await _secs(0.25)
 		t += 0.25
 	_check(world.game_over.running, "an officer arrests the player (BUSTED after %.1f s)" % t)
@@ -67,9 +64,10 @@ func _run() -> void:
 	_check(p.global_position.distance_to(station) < 4.0 and p.state == Player.State.ON_FOOT, "walks out of the police station (%.1f m)" % p.global_position.distance_to(station))
 	_check(not p.weapon.has("pistol"), "weapons confiscated")
 	_check(w.stars == 0, "the wanted level is gone after the arrest")
-	# losing the police: a star, then out of sight far away
 	Game.crime("attack_police", p.global_position)
-	_check(w.stars >= 1, "attacking police: wanted again")
+	Game.crime("kill_police", p.global_position)
+	_check(w.stars >= 2, "more crimes, more stars (%d)" % w.stars)
+	# losing the police: out of sight far away (no new officers turn up while the test hides the player)
 	for c in get_tree().get_nodes_in_group("police"):
 		c.queue_free()
 	for u in w.units:
@@ -77,6 +75,7 @@ func _run() -> void:
 			u.car.v.queue_free()
 	w.cops.clear()
 	w.units.clear()
+	w._spawn_t = 999.0
 	w.last_seen = p.global_position + Vector3(400, 0, 0)
 	w.unseen = 0.0
 	t = 0.0
@@ -84,6 +83,7 @@ func _run() -> void:
 		await _secs(0.5)
 		t += 0.5
 		# keep new officers from seeing the player
+		w._spawn_t = 999.0
 		for c in get_tree().get_nodes_in_group("police"):
 			c.queue_free()
 		w.cops.clear()

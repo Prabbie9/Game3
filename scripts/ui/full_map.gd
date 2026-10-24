@@ -107,6 +107,26 @@ func _draw_map() -> void:
 		c.draw_string(UITheme.heading, p - Vector2(w * 0.5, 0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UITheme.PAPER)
 	for v in get_tree().get_nodes_in_group("vehicles"):
 		c.draw_circle(_to_px(Vector2(v.global_position.x, v.global_position.z)), 4.0, Color(0.55, 0.75, 0.95))
+	# places + a legend in the corner
+	var places: Array = Game.world.places() if Game.world and Game.world.has_method("places") else []
+	for pl: Array in places:
+		var pp := _to_px(pl[0])
+		c.draw_circle(pp, 11.0, Color(UITheme.INK, 0.9))
+		var lw := UITheme.heading.get_string_size(pl[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+		c.draw_string(UITheme.heading, pp + Vector2(-lw * 0.5, 7.0), pl[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, pl[2])
+	var lg := Vector2(c.size.x - 200.0, 30.0)
+	c.draw_rect(Rect2(lg - Vector2(14, 14), Vector2(190, 30.0 * (places.size() + 2) + 6)), Color(UITheme.INK, 0.75))
+	var rows := places.duplicate()
+	rows.append([null, "", UITheme.CORAL, "You"])
+	rows.append([null, "", UITheme.SAND, "Waypoint"])
+	for i in rows.size():
+		var row: Array = rows[i]
+		var at := lg + Vector2(10, 30.0 * i + 8)
+		c.draw_circle(at, 10.0, Color(0.25, 0.27, 0.3) if row[0] != null else row[2])
+		if row[0] != null:
+			var lw2 := UITheme.heading.get_string_size(row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+			c.draw_string(UITheme.heading, at + Vector2(-lw2 * 0.5, 6.0), row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, row[2])
+		c.draw_string(UITheme.body_bold, at + Vector2(22, 6), row[3], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, UITheme.PAPER)
 	if waypoint != null:
 		var wp := _to_px(waypoint)
 		c.draw_circle(wp, 9.0, Color(0.1, 0.1, 0.1, 0.8))

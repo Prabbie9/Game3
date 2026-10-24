@@ -435,10 +435,10 @@ func _bullet(from: Vector3, dir: Vector3, damage: float, tracer: bool) -> void:
 
 ## A bullet's path: the first thing it really hits. Characters are tested against their limbs (ray_test),
 ## so a shot through the gap under an arm carries on. Returns the ray hit (plus "zone" for characters) or {}.
-static func trace(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vector3, length: float, exclude: Array[RID]) -> Dictionary:
+static func trace(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vector3, length: float, exclude: Array[RID], mask := SHOT_MASK) -> Dictionary:
 	var excl := exclude.duplicate()
 	for i in 4:
-		var q := PhysicsRayQueryParameters3D.create(from, from + dir * length, SHOT_MASK)
+		var q := PhysicsRayQueryParameters3D.create(from, from + dir * length, mask)
 		q.exclude = excl
 		var hit := space.intersect_ray(q)
 		if hit.is_empty():

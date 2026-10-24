@@ -13,6 +13,17 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v0.7.0 — Milestone 7 police
+- [ ] Fire a gun near a police officer: one or two stars, officers and a patrol car arrive. Holster (mouse wheel to
+      fists) and stand still next to an officer: BUSTED, you leave the police station without weapons.
+- [ ] Get to three stars and drive fast down an avenue: is there a roadblock ahead? Does it look believable?
+- [ ] Keep going to five stars: SWAT van, then the helicopter. Does the helicopter follow you well (it should stay
+      above roofs)?
+- [ ] Lose the police: get out of sight, outside the circle on the minimap. Does it take about the right time?
+- [ ] Respray (east of the start, green RESPRAY sign) with stars while nobody watches.
+- [ ] Do the uniforms look right up close (vest following the body, cap/helmet on the head)? Screenshot if not.
+- [ ] Frame time in a five-star chase (F3) on Medium/High.
+
 ## v0.6.0 — Milestone 6 population
 - [ ] **Benchmark** on HIGH and paste the report: traffic and pedestrians now spawn along the route, so this is
       the first build where the CPU is busy. Also note the frame time standing at a busy downtown junction (F3).

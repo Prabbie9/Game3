@@ -263,9 +263,26 @@ func _chase_units(p: Player, at: Vector3) -> void:
 		var tc: TrafficManager.TrafficCar = u.car
 		if u.crew:
 			continue
+		# out of sight: patrol the search area round the last sighting instead of homing in on the player
+		if unseen > 2.0:
+			var sp: Vector3 = u.get("search", Vector3.INF)
+			u.search_t = float(u.get("search_t", 0.0)) - get_physics_process_delta_time()
+			if sp == Vector3.INF or float(u.search_t) <= 0.0 or tc.v.global_position.distance_to(sp) < 15.0:
+				var a := _rng.randf() * TAU
+				sp = last_seen + Vector3(cos(a), 0, sin(a)) * _rng.randf_range(0.2, 0.75) * search_radius()
+				u.search = sp
+				u.search_t = 14.0
+			tc.search_pos = sp
+			u.stall = 0.0
+			continue
+		tc.search_pos = Vector3.INF
+		u.erase("search")
 		var d := tc.v.global_position.distance_to(at)
 		var player_slow := p.vehicle == null or p.vehicle.linear_velocity.length() < 3.0
-		if d < 22.0 and player_slow and tc.v.linear_velocity.length() < 4.0:
+		# close by and stopped, or stuck behind something not far off: out of the car and on foot
+		var slow := tc.v.linear_velocity.length() < 1.0
+		u.stall = float(u.get("stall", 0.0)) + get_physics_process_delta_time() if slow and d < 55.0 else 0.0
+		if player_slow and ((d < 22.0 and tc.v.linear_velocity.length() < 4.0) or float(u.stall) > 3.0):
 			u.crew = true
 			traffic.park(tc)
 			var n := 2 if u.kind == "police" else 4
@@ -279,29 +296,42 @@ func _chase_units(p: Player, at: Vector3) -> void:
 ## Two police cars parked across the road ahead of the player, officers behind them.
 func _place_roadblock(p: Player) -> void:
 	var v := p.vehicle
-	var ahead := v.global_position + v.linear_velocity.normalized() * 110.0
-	var tl := traffic.nearest_lane(ahead)
-	if tl[0] < 0 or float(tl[2]) > 12.0:
+	var vel := v.linear_velocity
+	vel.y = 0.0
+	var la := traffic.lane_ahead(v.global_position, vel.normalized(), 120.0)
+	if int(la[0]) < 0:
+		_roadblock_t = 3.0   # not on a road right now: try again shortly
 		return
-	var at: Array = traffic.graph.sample(int(tl[0]), float(tl[1]))
+	var ln: Dictionary = traffic.graph.lanes[int(la[0])]
+	var at: Array = traffic.graph.sample(int(la[0]), float(la[1]))
 	var pos: Vector3 = at[0]
 	var dir: Vector3 = at[1]
 	var cam := get_viewport().get_camera_3d()
 	if cam and cam.is_position_in_frustum(pos) and cam.global_position.distance_to(pos) < 90.0:
+		_roadblock_t = 3.0
 		return
 	var right := Vector3(-dir.z, 0, dir.x)
-	for k: float in [-1.0, 1.0]:
+	# across the whole road: from the lane back to the centre line, then car after car kerb to kerb
+	var rd: Dictionary = (Game.world as World).data.roads[int(ln.road)]
+	var width := float(rd.w)
+	var n := maxi(int(ln.lanes), 1)
+	var lw := width / (2.0 * n)
+	var off := lw * (int(ln.index) + 0.5) if n >= 2 else lw * 0.42
+	var centre := pos - right * off
+	var count := maxi(2, int(ceil((width - 1.0) / 4.4)))
+	for k in count:
+		var x := lerpf(-width * 0.5 + 2.2, width * 0.5 - 2.2, float(k) / maxf(count - 1, 1))
 		var car := Vehicle.new()
 		car.model = "police"
-		car.position = pos + right * k * 2.3 + Vector3(0, 0.6, 0)
-		car.rotation.y = atan2(-right.x, -right.z) + (0.25 if k > 0 else -0.25)
+		car.position = centre + right * x + Vector3(0, 0.6, 0)
+		car.rotation.y = atan2(-right.x, -right.z) + (0.25 if k % 2 == 0 else -0.25)
 		Game.world.add_child(car)
 		car.set_siren(true)
 		roadblocks.append(car)
 	for i in 2:
 		var c := _make_cop("smg" if stars >= 4 else "pistol")
 		Game.world.add_child(c)
-		c.global_position = pos - dir * 3.0 + right * (i * 2.0 - 1.0) * 2.0 + Vector3(0, 0.2, 0)
+		c.global_position = centre - dir * 3.5 + right * (i * 2.0 - 1.0) * 2.0 + Vector3(0, 0.2, 0)
 
 
 ## Radio chatter from the nearest police car or officer (or the stolen police car the player is driving).
@@ -333,7 +363,7 @@ func _spawn_heli(at: Vector3) -> void:
 	var h := Helicopter.new()
 	h.model = "heli"
 	var dir := Vector3(_rng.randf_range(-1, 1), 0, _rng.randf_range(-1, 1)).normalized()
-	h.position = at + dir * 160.0 + Vector3(0, 60.0, 0)
+	h.position = at + dir * 160.0 + Vector3(0, 90.0, 0)
 	Game.world.add_child(h)
 	h.freeze = false
 	var pilot := NPCDriver.seat_in(h, POLICE_CHARACTERS[0])
@@ -356,14 +386,56 @@ func _fly_heli(delta: float) -> void:
 			h.queue_free()
 			heli = null
 			return
-	var to := want - h.global_position
-	var flat := Vector3(to.x, 0, to.z)
+	# keep clear of the towers: cruise high until close, never lower than 22 m over whatever is below or ahead
+	var hp := h.global_position
+	var flat_d := Vector2(hp.x - target.x, hp.z - target.z).length()
+	if flat_d > 70.0:
+		want.y = maxf(want.y, target.y + 80.0)
+	var space := h.get_world_3d().direct_space_state
 	var fwd := -h.global_basis.z
 	fwd.y = 0.0
-	var face := (Vector3(target.x, 0, target.z) - Vector3(h.global_position.x, 0, h.global_position.z))
-	var yaw_err := fwd.normalized().signed_angle_to(face.normalized() if face.length() > 1.0 else fwd.normalized(), Vector3.UP)
+	fwd = fwd.normalized()
+	var floor_y := -INF
+	# what is under it and along where it is heading (look further ahead the faster it flies)
+	var spd := Vector2(h.linear_velocity.x, h.linear_velocity.z).length()
+	var probes: Array = [Vector3.ZERO, h.linear_velocity * 1.5]
+	for k in [6.0, 12.0, 18.0, 25.0, 35.0, 45.0]:
+		if k < 8.0 + spd * 2.5:
+			probes.append(fwd * k)
+	var side := Vector3(-fwd.z, 0, fwd.x)
+	probes.append_array([side * 5.0, -side * 5.0])
+	for probe: Vector3 in probes:
+		var top := hp + probe
+		top.y = 400.0   # from high above, so a tower taller than the helicopter is found too
+		var q := PhysicsRayQueryParameters3D.create(top, hp + probe + Vector3(0, -150, 0), 1)
+		q.exclude = [h.get_rid()]
+		var hit := space.intersect_ray(q)
+		if hit:
+			floor_y = maxf(floor_y, (hit.position as Vector3).y)
+	if floor_y > -INF:
+		want.y = maxf(want.y, floor_y + 22.0)
+	# the hover point itself must be clear: above any roof within 10 m of it
+	for k in 9:
+		var off := Vector3.ZERO if k == 0 else Vector3(cos(k * TAU / 8.0), 0, sin(k * TAU / 8.0)) * 10.0
+		var top2 := Vector3(target.x, 400.0, target.z) + off
+		var q2 := PhysicsRayQueryParameters3D.create(top2, top2 + Vector3(0, -420.0, 0), 1)
+		q2.exclude = [h.get_rid()]
+		var hit2 := space.intersect_ray(q2)
+		if hit2 and flat_d < 60.0:
+			want.y = maxf(want.y, (hit2.position as Vector3).y + 18.0)
+	var to := want - hp
+	# velocity control: head for the hover point at a speed that falls off as it gets close; the nose turns
+	# into the needed velocity (correcting drift), the pitch sets the speed along it. Close by, face the player.
+	var flat := Vector3(to.x, 0, to.z)
+	var vh := Vector3(h.linear_velocity.x, 0, h.linear_velocity.z)
+	var v_des := flat.normalized() * clampf(flat.length() * 0.35, 0.0, 20.0) if flat.length() > 0.5 else Vector3.ZERO
+	var face := v_des + (v_des - vh) * 0.8
+	if flat.length() < 15.0 or face.length() < 1.0:
+		face = Vector3(target.x - hp.x, 0, target.z - hp.z)
+	var yaw_err := fwd.signed_angle_to(face.normalized() if face.length() > 0.5 else fwd, Vector3.UP)
 	h.ai_steer = clampf(yaw_err * 1.5, -1.0, 1.0)
-	var along := flat.dot(fwd.normalized())
-	var vel_along := h.linear_velocity.dot(fwd.normalized())
-	h.ai_throttle = clampf((along - 8.0) * 0.04 - vel_along * 0.06, -1.0, 1.0)
+	h.ai_throttle = clampf((v_des.dot(fwd) - vh.dot(fwd)) * 0.12, -1.0, 1.0)
+	# well below where it needs to be (a roof ahead): climb first, don't press on into the wall
+	if to.y > 6.0:
+		h.ai_throttle = minf(h.ai_throttle, clampf(1.0 - (to.y - 6.0) / 10.0, -0.3, 1.0))
 	h.ai_lift = clampf(to.y * 0.15 - h.linear_velocity.y * 0.3, -1.0, 1.0)

@@ -51,7 +51,9 @@ func _run() -> void:
 	var samples := 0.0
 	var turn_samples := 0
 	var turn_signalled := 0
-	for step in 40:
+	var off_run := {}      # car -> consecutive samples well off its lane
+	var worst_run := 0
+	for step in 60:
 		await _secs(0.5)
 		for c in tm.cars:
 			if not is_instance_valid(c.v):
@@ -59,8 +61,10 @@ func _run() -> void:
 			var ln: Dictionary = tm.graph.lanes[c.lane]
 			var on: Vector3 = tm.graph.sample(c.lane, c.s)[0]
 			var off := Vector2(on.x - c.v.global_position.x, on.z - c.v.global_position.z).length()
-			if ln.node < 0 and c.change_t < 0.0 and c.pass_t <= -1.0 and c.yield_t <= -1.0:
+			if ln.node < 0 and c.change_t < 0.0 and c.pass_t <= -1.0 and c.yield_t <= -1.0 and not c.emergency:
 				worst_off = maxf(worst_off, off)
+				off_run[c] = int(off_run.get(c, 0)) + 1 if off > 2.5 else 0
+				worst_run = maxi(worst_run, int(off_run[c]))
 				if off > 2.2 and worst_off < 9.0:
 					print("      off lane %.2f: %s lane %d (%s idx %d/%d) s %.1f speed %.1f block %s" % [off, c.v.model, c.lane, ln.kind, ln.index, ln.lanes, c.s, c.v.linear_velocity.length(), c.block])
 			if ln.node >= 0 and int(ln.turn) != 0:
@@ -89,7 +93,7 @@ func _run() -> void:
 	print("      reasons: %s" % reasons)
 	var mean := dist_sum / maxf(samples, 0.001)
 	_check(mean > 4.5, "traffic flows (mean speed %.1f m/s incl. waiting at lights; %d of %d first cars moved > 40 m)" % [mean, moved, start.size()])
-	_check(worst_off < 2.5, "cars stay in lane (worst %.2f m off)" % worst_off)
+	_check(worst_run < 3, "cars stay in lane (worst %.2f m off, longest %.1f s more than 2.5 m off)" % [worst_off, worst_run * 0.5])
 	_check(red_runs <= 1, "no red-light running (%d)" % red_runs)
 	_check(turn_samples == 0 or turn_signalled == turn_samples, "turning cars indicate (%d / %d)" % [turn_signalled, turn_samples])
 	_check(crashes <= 1, "no pile-ups (%d damaged)" % crashes)

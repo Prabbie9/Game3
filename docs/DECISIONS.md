@@ -91,3 +91,13 @@
 - 2026-10-23 — tests/stream_check.gd measures streaming alone (no traffic/crowd round the parked player);
   traffic_check covers the traffic itself.
 - 2026-10-24 — No uniformed characters in the Mixamo library, so police/SWAT wear a fitted kit (Uniform): a vest shrink-wrapped to the character's torso with weights copied from the nearest body vertices, cap or helmet on the head bone, lettering as Label3D. Fitting runs on a worker thread at load (mesh built on the main thread: RenderingServer calls from the worker deadlocked the exported build at quit).
+- 2026-10-24 — Police escalation follows the brief's order: foot officers + patrol cars (1–2★), roadblocks (3★),
+  SWAT (4★), helicopter (5★). Officers shoot from 2★ or at an armed suspect; arrests only of an unarmed player.
+  Unseen units search points round the last sighting instead of knowing where the player is.
+- 2026-10-24 — Traffic gap rays ignore anything (not traffic) lying further to the side of the lane path than the
+  car's half-width + 0.25 m: the rays point straight ahead while the lane curves, so kerbside cars and people on
+  the pavement were stopping turning traffic. Cars that back off three times from the same spot are set back on
+  their lane (units on a call) or recycled (ordinary traffic) when out of sight. AI steering uses each vehicle's
+  real wheelbase (trucks no longer swing wide).
+- 2026-10-24 — Tests that exercise one system switch the others off where they would interfere (weapons_check: no
+  police or traffic; stream_check: no traffic/crowd); each system has its own check.

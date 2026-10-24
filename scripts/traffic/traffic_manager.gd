@@ -54,6 +54,9 @@ class TrafficCar:
 	var _replan := 0.0
 	var change_side := 0    # -1 left / 1 right: the lane change just made (indicator)
 	var pass_obj: Node3D    # what it is overtaking
+	var search_pos := Vector3.INF   # police that lost sight of the player: where to look instead
+	var reverses := 0               # back-offs from about the same spot (wedged)
+	var reverse_at := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -257,7 +260,7 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	var local := v.global_transform.affine_inverse() * target
 	var alpha := atan2(-local.x, -local.z)
 	var steer_limit := v.max_steer / (1.0 + absf(speed) / 5.5)
-	var wheel := atan(2.0 * 2.7 * sin(alpha) / maxf(look, 1.0))
+	var wheel := atan(2.0 * v.wheelbase * sin(alpha) / maxf(look, 1.0))
 	var steer := clampf(wheel / maxf(steer_limit, 0.05), -1.0, 1.0)
 	# speed: the lane's limit, slower into turns, stop for signals / give way, keep distance
 	if c.emergency:
@@ -380,6 +383,25 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	if c.stuck > 4.0:
 		c.reverse_t = 1.6
 		c.stuck = 0.0
+		# backing off again and again from the same spot: wedged (a kerb corner, a wall). Out of sight, set it
+		# back on its lane (a unit on a call) or take it away (ordinary traffic).
+		if c.reverses == 0 or pos.distance_to(c.reverse_at) > 15.0:
+			c.reverses = 0
+			c.reverse_at = pos
+		c.reverses += 1
+		if c.reverses >= 3 and not _seen(pos):
+			c.reverses = 0
+			if c.emergency or is_instance_valid(c.chase):
+				var smp: Array = graph.sample(c.lane, minf(c.s + 4.0, float(ln.len)))
+				var d3: Vector3 = smp[1]
+				v.global_transform = Transform3D(Basis(Vector3.UP, atan2(-d3.x, -d3.z)), (smp[0] as Vector3) + Vector3(0, 0.6, 0))
+				v.linear_velocity = Vector3.ZERO
+				v.angular_velocity = Vector3.ZERO
+				v._prev_vel = Vector3.ZERO
+				c.reverse_t = 0.0
+			else:
+				v.queue_free()
+				return
 	if c.reverse_t > 0.0:
 		c.reverse_t -= delta
 		throttle = -0.6
@@ -395,9 +417,8 @@ func _drive(c: TrafficCar, delta: float) -> void:
 	if (c.blocked_t > 2.5 or (c.panic > 0.0 and randf() < delta * 0.4)) and c.honk_t <= 0.0:
 		c.honk_t = 4.0 + randf() * 3.0
 		v.horn_on = true
-		get_tree().create_timer(0.5 + randf() * 0.5).timeout.connect(func():
-			if is_instance_valid(v):
-				v.horn_on = false)
+		# bound to the car (not a lambda capturing it), so a car freed meanwhile just drops the call
+		get_tree().create_timer(0.5 + randf() * 0.5).timeout.connect(v.set.bind("horn_on", false))
 	_indicate(c, ln, nl, remaining)
 	# headlights after dark
 	var w := get_parent() as World
@@ -578,11 +599,27 @@ func _gap_ahead(c: TrafficCar, pos: Vector3, fwd: Vector3, speed: float) -> floa
 		q.exclude = [c.v.get_rid()]
 		var hit := space.intersect_ray(q)
 		if hit:
+			# the rays run straight ahead while the lane may curve: something standing beside the lane (a car
+			# at the kerb, someone on the pavement as we turn) isn't in the way
+			if not _is_traffic(hit.collider) and _off_path(c, hit.position) > c.v._bounds.size.x * 0.5 + 0.25:
+				continue
 			var d := (from.distance_to(hit.position)) + half
 			if d < best:
 				best = d
 				c.block = hit.collider
 	return best - half if best < INF else INF
+
+
+## How far a point lies to the side of the path the car is following (its lane, then the next one).
+func _off_path(c: TrafficCar, p: Vector3) -> float:
+	var best := INF
+	for id: int in [c.lane, c.next]:
+		if id < 0:
+			continue
+		var s := graph.project(id, p)
+		var q: Vector3 = graph.sample(id, s)[0]
+		best = minf(best, Vector2(q.x - p.x, q.z - p.z).length())
+	return best
 
 
 ## Police pursuit: far off, keep re-planning a lane route to the target; close (or once the route runs out)
@@ -593,6 +630,9 @@ func _pursue(c: TrafficCar, delta: float) -> bool:
 	var p := c.chase as Player
 	if p and p.vehicle:
 		tgt = p.vehicle.global_position
+	if c.search_pos != Vector3.INF:
+		tgt = c.search_pos
+		p = null   # cruising the search area: no ramming, pull up at the spot
 	var d := v.global_position.distance_to(tgt)
 	c._replan -= delta
 	if d > 45.0:
@@ -718,6 +758,44 @@ func nearest_lane(pos: Vector3) -> Array:
 		if d < best[2]:
 			best = [id, s, d]
 	return best
+
+
+## The point `dist` metres ahead along the road the car at pos is driving (straight on at junctions), on a road
+## lane (not inside a junction): [lane, s], or [-1, 0] if it isn't on a road going that way.
+func lane_ahead(pos: Vector3, dir: Vector3, dist: float) -> Array:
+	var lane := -1
+	var s := 0.0
+	var bd := 6.0
+	for id: int in graph.lanes_near(pos, 20.0):
+		var ln: Dictionary = graph.lanes[id]
+		if ln.node >= 0:
+			continue
+		var ps := graph.project(id, pos)
+		var smp: Array = graph.sample(id, ps)
+		var d := (smp[0] as Vector3).distance_to(pos)
+		if d < bd and (smp[1] as Vector3).dot(dir) > 0.6:
+			bd = d
+			lane = id
+			s = ps
+	if lane < 0:
+		return [-1, 0.0]
+	var left := dist
+	for guard in 40:
+		var ln: Dictionary = graph.lanes[lane]
+		var rest := float(ln.len) - s
+		if left <= rest and ln.node < 0:
+			return [lane, s + left]
+		left = maxf(left - rest, 0.0)
+		var opts: Array = ln.next
+		if opts.is_empty():
+			return [-1, 0.0]
+		var pick: int = opts[0]
+		for o: int in opts:
+			if int(graph.lanes[o].turn) == 0:
+				pick = o
+		lane = pick
+		s = 0.0
+	return [-1, 0.0]
 
 
 ## Send an emergency vehicle (ambulance, firetruck, police) to `target`: it appears on a lane 60–140 m away

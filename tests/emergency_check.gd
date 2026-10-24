@@ -53,6 +53,8 @@ func _run() -> void:
 				vv.body_entered.connect(func(b: Node): print("      CONTACT %s with %s (%s) at %s" % [vv.model, b.name, b.get_class(), vv.global_position.snapped(Vector3.ONE * 0.1)]))
 			if c.emergency and is_instance_valid(c.v) and int(t) % 5 == 0:
 				print("      unit %s at %s lane %d -> target %d (route %d) s %.1f/%.1f speed %.1f reason '%s' arrived %s" % [c.v.model, c.v.global_position.snapped(Vector3.ONE), c.lane, c.target_lane, c.route.size(), c.s, c.target_s, c.v.linear_velocity.length(), c.reason, c.arrived])
+				var lnd: Dictionary = world.traffic.graph.lanes[c.lane]
+				print("        lane kind %s node %s turn %s target_pos %s next %s" % [lnd.kind, lnd.node, lnd.turn, c.target_pos.snapped(Vector3.ONE), c.next])
 				if c.block is Vehicle:
 					var bc = null
 					for o in world.traffic.cars:

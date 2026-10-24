@@ -149,7 +149,27 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Also in v0.6.0: WASTED screen → wake at the hospital (fee $100); hospital, police station and the respray
   garage stand as storefronts (used fully by the police in M7).
 
-**Next: Milestone 7 — Police** (drafts of Wanted/Cop in scripts/police; tests/police_check.gd written, not run yet).
+**Milestone 7 — Police: DONE (v0.7.0)**
+- Wanted (scripts/police/wanted.gd): 1–5 stars from crimes an officer (on foot, in a car, the helicopter) sees
+  or a witness phones in (assault, shooting, murder, theft, carjacking, hitting people, explosions; attacking /
+  killing police or stealing a police vehicle always count). Response by stars: foot officers and patrol cars →
+  3★ roadblocks across the road ahead of a fast player (lane_ahead along the lane graph, kerb to kerb) →
+  4★ SWAT van (rifles, helmets) → 5★ helicopter (keeps 22 m over roofs, cruises high, holds above the player).
+- Line-of-sight search: officers report sightings; out of sight the stars blink, the minimap shows the search
+  circle round the last sighting, patrol cars cruise points inside it and officers comb the streets round it.
+  Out of sight long enough (8 s + 4 s per star) and outside the circle: lost them.
+- Cop (scripts/police/cop.gd): runs to the player / last sighting, shoots on sight from 2★ (or at once at an armed
+  suspect), arrests an unarmed player who stands still close by (BUSTED → police station, weapons confiscated,
+  $100). Officers get out of stalled or arrived cars. Uniform (scripts/police/uniform.gd): vest shrink-wrapped to
+  the character's torso and skinned from it, cap / SWAT helmet, POLICE / SWAT lettering; fitted on a worker thread.
+- WASTED → hospital ($100); respray garage clears the stars if nobody watched you drive in; police radio chatter
+  from nearby units (tools/audio/synth_radio.py).
+- Checks: tests/police_check.gd (stars, response, busted, confiscation, losing them, wasted, respray),
+  tests/police_chase_check.gd (officers fire, patrol car arrives, roadblock on the road, SWAT, helicopter);
+  screenshots `police` (police_hud, police_scene); tests/lineup.gd OUT police (uniforms front/back).
+
+**Next: Milestone 8 — UI/UX** (menus, settings incl. aim assist / blood / subtitles, rebinding, gamepad prompts,
+full map + GPS route, save/load).
 
 ### Known issues / debt
 - Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
@@ -158,6 +178,8 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).
 - Props are solid but not breakable yet (Milestone 9).
+- tests/emergency_check.gd still fails now and then (an ambulance taking a long way round or wedged before the
+  out-of-sight recovery kicks in); traffic_check / police_chase_check pass 3/3 after the latest fixes.
 - Default branch is still `claude/tmp-push-test` (proxy blocks changing it) → owner checklist item.
 
 ### Builds
@@ -169,3 +191,4 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 | v0.3.0 | 3 — world expansion | GitHub Release |
 | v0.4.0 | 4 — vehicles | GitHub Release |
 | v0.5.0 | 5 — combat | GitHub Release |
+| v0.6.0 | 6 — population | GitHub Release |

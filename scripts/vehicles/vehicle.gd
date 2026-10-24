@@ -60,6 +60,7 @@ const RED_RPM := 6800.0
 
 var driver: Node = null
 var _bounds := AABB()
+var wheelbase := 2.7      # front to rear axle (m), for the AI's steering
 var _strike_q: PhysicsShapeQueryParameters3D
 ## AI driving (traffic, police): used instead of the player's controls while ai_drive is on.
 var ai_drive := false
@@ -214,8 +215,12 @@ func _build() -> void:
 	camera_height = clampf(_size.y * 1.05, 1.5, 4.6)
 	# driver sits left of centre (US layout), a bit behind the front axle
 	var wheelbase_front := 0.0
+	var wheelbase_rear := 0.0
 	for w in data.wheels:
 		wheelbase_front = minf(wheelbase_front, w.pos.z)
+		wheelbase_rear = maxf(wheelbase_rear, w.pos.z)
+	if wheelbase_rear - wheelbase_front > 1.0:
+		wheelbase = wheelbase_rear - wheelbase_front
 	# seat = where the driver's hips sit (Player offsets its root by the drive clip's hip height)
 	var spec_s: Dictionary = SPECS.get(model, SPECS.sedan)
 	var seat_z: float = aabb.position.z + spec_s.seat_z if spec_s.has("seat_z") else wheelbase_front * 0.18
@@ -325,9 +330,9 @@ static func _soft_dot() -> Texture2D:
 func repaint(c: Color) -> void:
 	paint = c
 	for m: ShaderMaterial in damage.materials:
-		if not bool(m.get_shader_parameter("is_paint")):
+		if m.get_shader_parameter("is_paint") != true:
 			continue
-		if bool(m.get_shader_parameter("solid")):
+		if m.get_shader_parameter("solid") == true:
 			m.set_shader_parameter("paint", c)
 		else:
 			var tex := m.get_shader_parameter("albedo_tex") as Texture2D

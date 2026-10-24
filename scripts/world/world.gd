@@ -23,6 +23,7 @@ var parked: ParkedCars
 var traffic: TrafficManager
 var population: Population
 var game_over: GameOver
+var wanted: Wanted
 var hospital: Storefront
 var police_station: Storefront
 
@@ -71,6 +72,10 @@ func _ready() -> void:
 	population.name = "Population"
 	add_child(population)
 	population.traffic = traffic
+	wanted = Wanted.new()
+	wanted.name = "Wanted"
+	wanted.traffic = traffic
+	add_child(wanted)
 	player = PLAYER_SCENE.instantiate()
 	player.position = spawn
 	player.rotation.y = deg_to_rad(90)
@@ -148,6 +153,16 @@ var _plaza_people := []
 
 
 ## Where the player comes round: "hospital" (wasted) or "police" (busted).
+## Places shown on the minimap and the map: [world x/z, letter, colour, name].
+func places() -> Array:
+	var out := [[Vector2(23.0, -18.0), "G", UITheme.CORAL, "Gun shop"], [Vector2(102.0, -20.0), "R", UITheme.TEAL, "Respray"]]
+	if hospital:
+		out.append([hospital.rect.get_center(), "H", Color(0.9, 0.3, 0.32), "Hospital"])
+	if police_station:
+		out.append([police_station.rect.get_center(), "P", Color(0.35, 0.55, 0.95), "Police"])
+	return out
+
+
 func respawn_point(kind: String) -> Transform3D:
 	var b := hospital if kind == "hospital" else police_station
 	return b.entrance() if b else player.spawn_point
@@ -303,7 +318,8 @@ var _freeze_timer := 0.0
 func _freeze_far_vehicles(f: Vector3) -> void:
 	for v: Node in get_tree().get_nodes_in_group("vehicles"):
 		var rb := v as RigidBody3D
-		if rb == null or (player and player.vehicle == rb):
+		# (an AI helicopter needs no ground under it)
+		if rb == null or (player and player.vehicle == rb) or (rb is Helicopter and (rb as Helicopter).ai_drive):
 			if rb:
 				rb.freeze = false
 			continue

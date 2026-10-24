@@ -49,14 +49,15 @@ func _draw() -> void:
 		wp = Vector2(clampf(wp.x, r.position.x, r.end.x), clampf(wp.y, r.position.y, r.end.y))
 		draw_circle(wp, 6.0, Color(0.1, 0.1, 0.1, 0.8))
 		draw_circle(wp, 4.0, UITheme.SAND)
-	# places: the gun shop
-	var shop := Game.world.get_node_or_null("GunShop") as Node3D
-	if shop:
-		var sp: Vector2 = to_px.call(Vector2(23.0, -18.0))
+	# places: gun shop, respray, hospital, police station (kept at the edge when off the map)
+	if Game.world.has_method("places"):
 		var r2 := Rect2(Vector2(10, 10), size_px - Vector2(20, 20))
-		sp = Vector2(clampf(sp.x, r2.position.x, r2.end.x), clampf(sp.y, r2.position.y, r2.end.y))
-		draw_circle(sp, 8.0, Color(UITheme.INK, 0.9))
-		draw_string(UITheme.heading, sp + Vector2(-4.5, 5.5), "G", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UITheme.CORAL)
+		for pl: Array in Game.world.places():
+			var sp: Vector2 = to_px.call(pl[0])
+			sp = Vector2(clampf(sp.x, r2.position.x, r2.end.x), clampf(sp.y, r2.position.y, r2.end.y))
+			draw_circle(sp, 8.0, Color(UITheme.INK, 0.9))
+			var lw := UITheme.heading.get_string_size(pl[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+			draw_string(UITheme.heading, sp + Vector2(-lw * 0.5, 5.5), pl[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, pl[2])
 	# wanted: the search area round the last sighting, police blips
 	var wanted = Game.world.get("wanted")
 	var flash_w := int(Time.get_ticks_msec() / 250) % 2 == 0

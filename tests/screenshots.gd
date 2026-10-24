@@ -236,6 +236,38 @@ func _run() -> void:
 			await _snap(view[0])
 			c.queue_free()
 		p.cam.camera.make_current()
+	if _want("police"):
+		# two stars at the start: officers on foot and patrol cars close in (the player can't die for the shot)
+		Game.crime("kill_police", p.global_position)
+		for i in 900:
+			p.health = 100.0
+			world.wanted.report_sighting(p.global_position)
+			await get_tree().physics_frame
+		await _snap("police_hud")
+		var cops: Array = get_tree().get_nodes_in_group("police")
+		var c := Camera3D.new()
+		world.add_child(c)
+		# side view of the player and the nearest officer
+		var near: Node3D = null
+		for cp: Node3D in cops:
+			if near == null or cp.global_position.distance_to(p.global_position) < near.global_position.distance_to(p.global_position):
+				near = cp
+		# over the nearest officer's shoulder, towards the player
+		var look := p.global_position + Vector3(0, 1.0, 0)
+		var from := look + Vector3(6.0, 2.0, 6.0)
+		if near:
+			var d := p.global_position - near.global_position
+			d.y = 0.0
+			var side := Vector3(-d.z, 0, d.x).normalized()
+			from = near.global_position - d.normalized() * 3.0 + side * 1.2 + Vector3(0, 1.9, 0)
+			look = (near.global_position + p.global_position) * 0.5 + Vector3(0, 1.0, 0)
+		c.look_at_from_position(from, look)
+		c.fov = 60
+		c.make_current()
+		await _frames(12)
+		await _snap("police_scene")
+		c.queue_free()
+		p.cam.camera.make_current()
 	if _want("shop"):
 		# the gun shop from the street, then inside at the counter
 		for view: Array in [["shop_front", Vector3(30.0, 1.7, -2.0), Vector3(23.0, 2.2, -12.0)], ["shop_inside", Vector3(25.5, 1.65, -13.2), Vector3(22.0, 1.3, -21.0)]]:
@@ -316,6 +348,12 @@ func _run() -> void:
 		await _frames(40)
 		await _snap("wet")
 		world.weather.set_weather(Weather.Kind.CLEAR, true)
+	if _want("map"):
+		world.full_map._toggle()
+		await _frames(6)
+		await _snap("map")
+		world.full_map._toggle()
+		await _frames(2)
 	if _want("pause"):
 		var pm: CanvasLayer = load("res://scripts/ui/pause_menu.gd").new()
 		world.add_child(pm)

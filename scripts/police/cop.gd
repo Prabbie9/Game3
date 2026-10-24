@@ -15,6 +15,7 @@ var _muzzle := Vector3.ZERO
 var _arrest_t := 0.0
 var _hand := -1
 var _seen_t := 0.0
+var _search := Vector3.INF
 
 
 func _ready() -> void:
@@ -71,14 +72,26 @@ func _physics_process(delta: float) -> void:
 	else:
 		_seen_t = 0.0
 	var goal_pos := target if sees or global_position.distance_to(target) < 15.0 else wanted.last_seen
+	if not sees and wanted.unseen > 2.0:
+		# lost them: go to the last sighting, then comb the streets round it
+		if _search == Vector3.INF or global_position.distance_to(_search) < 2.5:
+			if global_position.distance_to(wanted.last_seen) < 6.0 or _search != Vector3.INF:
+				var a := randf() * TAU
+				_search = wanted.last_seen + Vector3(cos(a), 0, sin(a)) * randf_range(8.0, 30.0)
+		goal_pos = _search if _search != Vector3.INF else wanted.last_seen
+	elif sees:
+		_search = Vector3.INF
 	var to := goal_pos - global_position
 	to.y = 0.0
 	var dist := to.length()
-	var hostile := wanted.stars >= 2 or wanted.player_threatening()
+	# a gun in the player's hand (on foot) makes even a one-star officer shoot rather than walk up to arrest
+	var armed := p.vehicle == null and p.weapon.has_weapon() and not p.weapon.is_melee()
+	var hostile := wanted.stars >= 2 or wanted.player_threatening() or armed
 	# arrest: close, unarmed or not fighting, on foot (or in a car that has stopped)
-	if dist < 1.9 and wanted.stars <= 3 and not p.state in [Player.State.RAGDOLL, Player.State.DEAD]:
+	var pdist := Vector2(target.x - global_position.x, target.z - global_position.z).length()
+	if pdist < 1.9 and wanted.stars <= 3 and not p.state in [Player.State.RAGDOLL, Player.State.DEAD]:
 		var stopped := p.vehicle == null or p.vehicle.linear_velocity.length() < 1.0
-		if stopped and not (p.aiming and p.weapon.has_weapon()):
+		if stopped and not armed:
 			_arrest_t += delta
 			visual.set_aim(Vector2.ZERO, 0.0)
 			_move(Vector3.ZERO, delta)
@@ -124,7 +137,7 @@ func _shoot(at: Vector3, p: Player) -> void:
 	var dir := (at - from).normalized()
 	dir = (dir + Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * spread).normalized()
 	var space := get_world_3d().direct_space_state
-	var hit := Weapon.trace(space, from, dir, 120.0, [get_rid()])
+	var hit := Weapon.trace(space, from, dir, 120.0, [get_rid()], Weapon.SHOT_MASK | 2)   # 2: the player
 	var end := from + dir * 120.0
 	if hit:
 		end = hit.position

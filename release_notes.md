@@ -1,3 +1,28 @@
+## Port Solano v0.7.0 — Milestone 7: police
+
+Unzip and run `PortSolano.exe`. **Esc** lists all controls.
+
+**Five stars of trouble**
+- Commit a crime in front of an officer (or where a witness can phone it in) and the stars appear: shooting,
+  fighting, killing, stealing or jacking cars, running people over, explosions. Attacking the police, or taking
+  one of their cars or the helicopter, always counts.
+- The response grows with every star: officers on foot and patrol cars with sirens, then roadblocks across the
+  road ahead of you, a SWAT van with rifle teams, and at five stars the police helicopter overhead.
+- Officers wear uniforms (cap and duty vest; SWAT in helmets and black vests) and chat on the radio.
+
+**Losing them**
+- Get out of sight: the stars blink and the minimap shows the search area round where you were last seen.
+  Patrol cars cruise it and officers comb the streets. Stay hidden outside the circle and they give up.
+- Or drive into the respray garage (RESPRAY sign, east of the start): $100 for new paint and repairs, and the
+  police lose track of you if nobody saw you go in.
+
+**Busted and wasted**
+- With one to three stars and no gun in your hand, an officer who reaches you makes an arrest: BUSTED, you walk
+  out of the police station without your weapons. With a gun out, they shoot.
+- Dying shows WASTED and you come round at the hospital. Each costs $100.
+
+See `OWNER_TEST_CHECKLIST.md` in the zip for what to try and what to send back. Credits: `ASSET_CREDITS.md`.
+
 ## Port Solano v0.6.0 — Milestone 6: population
 
 Unzip and run `PortSolano.exe`. **Esc** lists all controls.

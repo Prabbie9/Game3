@@ -58,6 +58,12 @@ func _run() -> void:
 	get_tree().root.add_child(world)
 	get_tree().current_scene = world
 	world.time_scale = 0.0
+	# weapons only: no police response to the test's gunfire (tests/police_check.gd covers that)
+	world.wanted.process_mode = Node.PROCESS_MODE_DISABLED
+	Game.crime_committed.disconnect(world.wanted._on_crime)
+	Game.police_call.disconnect(world.wanted._on_call)
+	# and no traffic driving through the test area (a passing car knocks the player down)
+	world.traffic.budget = 0
 	Game.controls_enabled = true
 	Game.aim_assist = false
 	p = world.player
