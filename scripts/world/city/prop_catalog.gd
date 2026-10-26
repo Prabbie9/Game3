@@ -319,15 +319,14 @@ static func _chainlink_fence() -> Dictionary:
 	for mat: Material in by_mat:
 		(by_mat[mat] as SurfaceTool).commit(am)
 		var m := mat
-		if mat is BaseMaterial3D and (mat as BaseMaterial3D).transparency == BaseMaterial3D.TRANSPARENCY_ALPHA:
+		if mat is BaseMaterial3D and (mat as BaseMaterial3D).transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			# the kit's JPG colour map has lost its alpha: use the PNG (with the wire's opacity) and alpha-test it
 			m = mat.duplicate()
+			(m as BaseMaterial3D).albedo_texture = load("res://assets/models/polyhaven/modular_chainlink_fence/textures/modular_chainlink_fence_wire_rgba_1k.png")
 			(m as BaseMaterial3D).transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-			(m as BaseMaterial3D).alpha_scissor_threshold = 0.55
+			(m as BaseMaterial3D).alpha_scissor_threshold = 0.4
+			(m as BaseMaterial3D).alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
 			(m as BaseMaterial3D).cull_mode = BaseMaterial3D.CULL_DISABLED
-			# galvanised wire: the texture is dark and mip-averaged alpha thickens it into a wall from afar
-			(m as BaseMaterial3D).albedo_color = Color(1.7, 1.7, 1.75)
-			(m as BaseMaterial3D).metallic = 0.5
-			(m as BaseMaterial3D).roughness = 0.45
 		am.surface_set_material(am.get_surface_count() - 1, m)
 	am = _reduced(am, 1500)
 	return {"mesh": am, "aabb": AABB(Vector3(-half - 0.075, 0, -0.075), Vector3(CHAINLINK_LEN + 0.15, 2.4, 0.15)), "col": ["box"]}
