@@ -69,7 +69,7 @@ func _run() -> void:
 		var lowest := INF
 		var road := 0.0
 		for w: VehicleWheel3D in v._wheels:
-			var bottom := w.global_position.y - (w.wheel_radius - Vehicle.WHEEL_SINK)
+			var bottom := w.global_position.y + Vehicle.WHEEL_SINK - w.wheel_radius   # the drawn tyre's bottom
 			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(w.global_position, w.global_position - Vector3(0, 2.0, 0), 1 | 16))
 			var gy: float = (hit.position as Vector3).y if hit else bottom
 			if absf(bottom - gy) > absf(worst):

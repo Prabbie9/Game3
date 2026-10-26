@@ -240,8 +240,9 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 
 **Iteration after v1.0**
 - v1.0.1: beach hotels get sea-view balconies (CityCell._balconies: slab, glass, rails, dividers on the ocean face).
-  Tyres no longer sink 4 cm into the road (a fixed physics contact margin, now added to the wheel radius;
-  grounding_check measures each tyre's visible bottom against the ground under it).
+  Tyres no longer sink 4 cm into the road (a fixed physics contact margin): the drawn wheel sits on a holder
+  lifted 4 cm "up" in the car's frame, physics untouched (enlarging the physics radius raised the cars and made
+  AI traffic roll out of lane). grounding_check measures each tyre's drawn bottom against the ground under it.
   Tour screenshots now wait for the city detail to finish streaming (under software rendering the cell builders
   are starved and a fixed wait showed the far stand-ins); new tour shot `tour_hotels`.
 

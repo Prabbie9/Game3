@@ -220,9 +220,7 @@ func _build() -> void:
 		var wheel := VehicleWheel3D.new()
 		var front: bool = w.pos.z < 0.0
 		wheel.position = w.pos + Vector3(0, 0.12, 0)
-		# the physics settles a wheel ~4 cm deeper than its radius (a fixed contact margin, the same on every
-		# model): add it back so the tyres rest on the road instead of sinking into it
-		wheel.wheel_radius = w.radius + WHEEL_SINK
+		wheel.wheel_radius = w.radius
 		var spec: Dictionary = SPECS.get(model, SPECS.sedan)
 		wheel.wheel_rest_length = 0.16 + (float(spec.travel) - 0.22) * 0.5
 		wheel.suspension_travel = spec.travel
@@ -234,12 +232,19 @@ func _build() -> void:
 		wheel.wheel_roll_influence = 0.04
 		wheel.use_as_steering = front
 		wheel.use_as_traction = front if spec.drive == "fwd" else (true if spec.drive == "awd" else not front)
+		# the physics settles a wheel ~4 cm deeper than its radius (a fixed contact margin, the same on every
+		# model): the tyre is drawn that much higher, on a holder kept "up" in the car's frame (_lift_wheels) so it
+		# still spins about its own centre. Handling is untouched.
+		var vis := Node3D.new()
+		vis.name = "Visual"
+		wheel.add_child(vis)
+		wheel.set_meta("vis", vis)
 		for part in w.parts:
 			var mi := MeshInstance3D.new()
 			mi.mesh = part[0]
 			mi.transform = part[1]
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # (in the body's shadow anyway)
-			wheel.add_child(mi)
+			vis.add_child(mi)
 		add_child(wheel)
 		_wheels.append(wheel)
 
@@ -483,6 +488,7 @@ func _build_beacon_lights(data: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	_lift_wheels()
 	if not _doors.is_empty():
 		_swing_doors(delta)
 	if not siren_on:
@@ -615,9 +621,8 @@ func _on_wrecked() -> void:
 	charred.albedo_color = Color(0.025, 0.024, 0.023)
 	charred.roughness = 0.95
 	for w in _wheels:
-		for mi in w.get_children():
-			if mi is MeshInstance3D:
-				(mi as MeshInstance3D).material_override = charred
+		for mi in w.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = charred
 		w.wheel_friction_slip = 0.6
 	set_headlights(false)
 	set_indicator(Blinker.OFF)
@@ -643,6 +648,15 @@ func _make_collision(aabb: AABB) -> void:
 	cabin.shape = cbox
 	cabin.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.25, -aabb.size.z * 0.03)
 	add_child(cabin)
+
+
+## Draws each tyre WHEEL_SINK higher than the physics wheel (see _build), "up" in the car's frame whatever the
+## wheel's steer and spin.
+func _lift_wheels() -> void:
+	for w: VehicleWheel3D in _wheels:
+		var vis: Node3D = w.get_meta("vis", null)
+		if vis:
+			vis.position = w.transform.basis.inverse() * Vector3(0, WHEEL_SINK, 0)
 
 
 ## Swings a front door open (or shut): side -1 the driver's, 1 the passenger's.
