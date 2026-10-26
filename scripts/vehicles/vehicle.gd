@@ -82,6 +82,10 @@ var _steer := 0.0
 var _size := Vector3(1.9, 1.5, 4.5)
 var _seat := Transform3D()
 var _door := Vector3()
+const DOOR_OPEN := 1.1           # radians a front door swings open
+var _doors := {}                  # side (-1 driver / 1 passenger) -> hinge pivot
+var _door_angle := {}
+var _door_want := {}
 var _wheels: Array[VehicleWheel3D] = []
 var _lights: Array[Light3D] = []
 var _brake_mat: StandardMaterial3D
@@ -184,6 +188,28 @@ func _build() -> void:
 		bm.material_override = sm
 		damage.materials.append(sm)
 		add_child(bm)
+	# front doors cut out of the body (CarLibrary._cut_doors), each on a pivot at its hinge
+	for d: Dictionary in data.get("doors", []):
+		var pivot := Node3D.new()
+		pivot.position = d.hinge
+		var dmi := MeshInstance3D.new()
+		dmi.mesh = d.mesh
+		dmi.position = -(d.hinge as Vector3)
+		var dk: Array = d.kinds
+		for s in dmi.mesh.get_surface_count():
+			var kind: String = dk[s] if s < dk.size() else "body"
+			var sm: ShaderMaterial
+			if kind == "glass":
+				sm = _glass_material(dmi.mesh.surface_get_material(s))
+				damage.glass.append(sm)
+			else:
+				sm = _paint_material(dmi.mesh.surface_get_material(s), kind == "paint", kind == "cutout")
+			sm.set_shader_parameter("part_xf", Projection(Transform3D.IDENTITY))
+			damage.materials.append(sm)
+			dmi.set_surface_override_material(s, sm)
+		pivot.add_child(dmi)
+		add_child(pivot)
+		_doors[int(d.side)] = pivot
 	_make_collision(aabb)
 	center_of_mass = Vector3(0, aabb.position.y + 0.08, 0)
 
@@ -451,6 +477,8 @@ func _build_beacon_lights(data: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	if not _doors.is_empty():
+		_swing_doors(delta)
 	if not siren_on:
 		return
 	_beacon_phase = fmod(_beacon_phase + delta * 1.5, 1.0)
@@ -609,6 +637,23 @@ func _make_collision(aabb: AABB) -> void:
 	cabin.shape = cbox
 	cabin.position = aabb.get_center() + Vector3(0, aabb.size.y * 0.25, -aabb.size.z * 0.03)
 	add_child(cabin)
+
+
+## Swings a front door open (or shut): side -1 the driver's, 1 the passenger's.
+func open_door(side: int, open: bool) -> void:
+	_door_want[side] = 1.0 if open else 0.0
+
+
+func _swing_doors(delta: float) -> void:
+	for side: int in _doors:
+		var cur: float = _door_angle.get(side, 0.0)
+		var want: float = _door_want.get(side, 0.0) * DOOR_OPEN
+		if is_equal_approx(cur, want):
+			continue
+		# opening eases out quickly; closing speeds up into the latch
+		cur = move_toward(cur, want, delta * (2.6 if want > cur else 3.4))
+		_door_angle[side] = cur
+		(_doors[side] as Node3D).rotation.y = side * cur   # the rear edge swings outwards
 
 
 func driver_door_position() -> Vector3:

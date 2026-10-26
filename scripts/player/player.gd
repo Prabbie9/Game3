@@ -339,6 +339,7 @@ func enter_vehicle(v: Vehicle) -> void:
 	visual.set_aim(Vector2.ZERO, 0.0)
 	weapon.holster(true)
 	v.reserve(self)
+	v.open_door(1 if _enter_clip == "car_enter_r" else -1, true)
 	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
 	# Place the character so the root-motion clip ends with the hips at the seat.
 	var seat := _seat_root(v) if _enter_clip != "car_enter_r" else _passenger_root(v)
@@ -366,6 +367,7 @@ func exit_vehicle() -> void:
 		return
 	state = State.EXITING
 	vehicle.set_driver_input_enabled(false)
+	vehicle.open_door(-1, true)
 	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
 	var seat := _seat_root(vehicle)
 	global_transform = seat
@@ -414,10 +416,12 @@ func _sequence(delta: float) -> void:
 func _on_action_finished(anim: StringName) -> void:
 	if anim == &"car_enter_r" and state == State.ENTERING:
 		# in through the passenger door: slide across to the wheel
+		vehicle.open_door(1, false)
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.passenger_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		_shuffle_t = 0.0
 		return
 	if (anim == &"car_enter" or anim == &"carjack") and state == State.ENTERING:
+		vehicle.open_door(-1, false)
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		if _seat_clip(vehicle) != "drive":
 			visual.travel(_seat_clip(vehicle))
@@ -427,6 +431,7 @@ func _on_action_finished(anim: StringName) -> void:
 	elif anim == &"car_exit" and state == State.EXITING:
 		global_transform = _seq_to
 		var v := vehicle
+		v.open_door(-1, false)
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		vehicle = null
 		v.set_driver(null)

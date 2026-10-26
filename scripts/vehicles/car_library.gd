@@ -95,6 +95,7 @@ static func get_model(model: String) -> Dictionary:
 	if SINGLE.has(model):
 		if not _cache.has(model):
 			_cache[model] = _extract_single(model)
+			_cut_doors(_cache[model], model)
 		return _cache[model]
 	if not _cache.has("sedan"):
 		# Extract every model in one pass and free the pack right away: keeping an out-of-tree node
@@ -102,9 +103,144 @@ static func get_model(model: String) -> Dictionary:
 		var pack: Node3D = (load(PACK) as PackedScene).instantiate()
 		for m in MODELS:
 			_cache[m] = _extract(pack, m)
+			_cut_doors(_cache[m], m)
 		pack.free()
 		_optics_img = null
 	return _cache[model]
+
+
+## Vehicles whose front doors are cut out of the body to swing open (none of the files has separate doors).
+const NO_DOORS := ["bus", "heli", "speedboat", "dirtbike", "bicycle"]
+
+
+## Cuts the front doors out of the body: the outer shell's triangles (skin, window, mirror) between the front
+## wheel arch and just behind the seat, on each side, become a separate mesh hinged at the door's front edge
+## (data.doors: [{side (-1 driver / 1 passenger), mesh, kinds, hinge}] in the car frame). Closed, the car looks
+## exactly as before. Done once per model while loading.
+static func _cut_doors(data: Dictionary, model: String) -> void:
+	data["doors"] = []
+	if model in NO_DOORS or (data.wheels as Array).size() < 4:
+		return
+	var aabb: AABB = data.aabb
+	var front_z := INF
+	var front_r := 0.3
+	for w: Dictionary in data.wheels:
+		if (w.pos as Vector3).z < front_z:
+			front_z = (w.pos as Vector3).z
+			front_r = float(w.radius)
+	var spec: Dictionary = Vehicle.SPECS.get(model, Vehicle.SPECS.sedan)
+	var seat_z: float = aabb.position.z + float(spec.seat_z) if spec.has("seat_z") else front_z * 0.18
+	var seat_y: float = aabb.position.y + aabb.size.y * float(spec.get("seat_y", 0.3))
+	var long_door: bool = model in ["coupe", "sport", "muscle"]
+	var z0 := maxf(seat_z - (0.95 if long_door else 0.85), front_z + front_r + 0.06)
+	var z1 := seat_z + (0.45 if long_door else 0.3)
+	var y0 := maxf(aabb.position.y + front_r * 0.55, seat_y - 0.5)
+	var y1 := seat_y + 0.95
+	if seat_z < front_z + front_r + 0.3:
+		# cab over the front axle (trucks): the door is above the wheel arch, beside the seat
+		z0 = seat_z - 0.55
+		z1 = seat_z + 0.5
+		y0 = maxf(y0, aabb.position.y + front_r * 2.0 + 0.08)
+	if OS.has_environment("DOOR_DEBUG"):
+		print("DOORS %s z %.2f..%.2f y %.2f..%.2f seat %.2f/%.2f front %.2f r %.2f aabb %s" % [model, z0, z1, y0, y1, seat_z, seat_y, front_z, front_r, aabb])
+	# the body's sides from the wheel track (a model's bounds can carry stray geometry)
+	var cx := 0.0
+	for w: Dictionary in data.wheels:
+		cx += (w.pos as Vector3).x / 4.0
+	var half := 0.0
+	for w: Dictionary in data.wheels:
+		half = maxf(half, absf((w.pos as Vector3).x - cx) + 0.14)
+	var inner := half * 0.6
+	# per side: material -> [SurfaceTool, kind]
+	var door_st := {-1: {}, 1: {}}
+	var bounds := {-1: [INF, -INF], 1: [INF, -INF]}   # outer x extent of each door
+	var new_parts := []
+	for p: Array in data.parts:
+		var mesh: ArrayMesh = p[0]
+		var xf: Transform3D = p[1]
+		var kinds: Array = p[2]
+		var part_box := xf * mesh.get_aabb()
+		if part_box.end.z < z0 or part_box.position.z > z1 or part_box.end.y < y0 or part_box.position.y > y1 \
+				or (part_box.position.x > cx - inner and part_box.end.x < cx + inner):
+			new_parts.append(p)
+			continue
+		var keep := ArrayMesh.new()
+		var keep_kinds: Array[String] = []
+		for si in mesh.get_surface_count():
+			var arr := mesh.surface_get_arrays(si)
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var normals: PackedVector3Array = arr[Mesh.ARRAY_NORMAL] if arr[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+			var uvs: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+			var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			if idx.is_empty():
+				idx.resize(verts.size())
+				for i in verts.size():
+					idx[i] = i
+			var kept := PackedInt32Array()
+			var mat := mesh.surface_get_material(si)
+			var kind: String = kinds[si] if si < kinds.size() else "body"
+			for t in range(0, idx.size() - 2, 3):
+				var a := idx[t]
+				var b := idx[t + 1]
+				var c := idx[t + 2]
+				# a triangle is door only if all its corners are in the door's box (big panels stay on the body)
+				var pa := xf * verts[a]
+				var pb := xf * verts[b]
+				var pc := xf * verts[c]
+				var side := 0
+				if minf(pa.z, minf(pb.z, pc.z)) > z0 - 0.04 and maxf(pa.z, maxf(pb.z, pc.z)) < z1 + 0.04 \
+						and minf(pa.y, minf(pb.y, pc.y)) > y0 - 0.04 and maxf(pa.y, maxf(pb.y, pc.y)) < y1 + 0.04:
+					var mx := maxf(pa.x, maxf(pb.x, pc.x))
+					var nx := minf(pa.x, minf(pb.x, pc.x))
+					if mx < cx - inner:
+						side = -1
+					elif nx > cx + inner:
+						side = 1
+				if side == 0:
+					kept.append(a)
+					kept.append(b)
+					kept.append(c)
+					continue
+				var sides: Dictionary = door_st[side]
+				if not sides.has(mat):
+					var st := SurfaceTool.new()
+					st.begin(Mesh.PRIMITIVE_TRIANGLES)
+					sides[mat] = [st, kind, not uvs.is_empty()]
+				var st2: SurfaceTool = sides[mat][0]
+				for vi in [a, b, c]:
+					if not normals.is_empty():
+						st2.set_normal((xf.basis * normals[vi]).normalized())
+					if not uvs.is_empty():
+						st2.set_uv(uvs[vi])
+					var wv := xf * verts[vi]
+					st2.add_vertex(wv)
+					bounds[side][0] = minf(bounds[side][0], wv.x)
+					bounds[side][1] = maxf(bounds[side][1], wv.x)
+			if kept.is_empty():
+				continue
+			arr[Mesh.ARRAY_INDEX] = kept
+			keep.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			keep.surface_set_material(keep.get_surface_count() - 1, mat)
+			keep_kinds.append(kind)
+		if keep.get_surface_count() > 0:
+			new_parts.append([keep, xf, keep_kinds])
+	data.parts = new_parts
+	for side: int in [-1, 1]:
+		var sides: Dictionary = door_st[side]
+		if sides.is_empty():
+			continue
+		var dm := ArrayMesh.new()
+		var dkinds: Array[String] = []
+		for mat: Variant in sides:
+			var st: SurfaceTool = sides[mat][0]
+			if sides[mat][2]:
+				st.generate_tangents()
+			st.commit(dm)
+			dm.surface_set_material(dm.get_surface_count() - 1, mat)
+			dkinds.append(sides[mat][1])
+		var outer_x: float = bounds[side][0] if side < 0 else bounds[side][1]
+		(data.doors as Array).append({"side": side, "mesh": dm, "kinds": dkinds,
+			"hinge": Vector3(outer_x - side * 0.04, (y0 + y1) * 0.5, z0)})
 
 
 static func _extract(_pack: Node3D, model: String) -> Dictionary:

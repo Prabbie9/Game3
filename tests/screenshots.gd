@@ -285,6 +285,36 @@ func _run() -> void:
 			await _snap(view[0])
 			c.queue_free()
 		p.cam.camera.make_current()
+	if _want("doors"):
+		# front doors cut from the body, swung open: a sedan, a muscle car, a van and a box truck side by side
+		var cars := []
+		var models := ["sedan", "muscle", "van", "boxtruck"]
+		for i in models.size():
+			var v := Vehicle.new()
+			v.model = models[i]
+			world.add_child(v)
+			v.global_position = Vector3(-60.0 + i * 7.0, 1.0, 3.5)
+			v.rotation.y = PI * 0.5
+			cars.append(v)
+		await _frames(60)
+		for v: Vehicle in cars:
+			v.open_door(-1, true)
+			v.open_door(1, i_mod(cars.find(v)) == 0)
+		await _frames(90)
+		var c := Camera3D.new()
+		world.add_child(c)
+		c.look_at_from_position(Vector3(-50.0, 2.6, -6.0), Vector3(-50.0, 0.8, 3.5))
+		c.fov = 62
+		c.make_current()
+		await _frames(10)
+		await _snap("doors")
+		c.look_at_from_position(Vector3(-63.5, 1.7, -0.5), Vector3(-60.0, 0.9, 3.5))
+		await _frames(6)
+		await _snap("doors_close")
+		c.queue_free()
+		for v: Vehicle in cars:
+			v.queue_free()
+		p.cam.camera.make_current()
 	if _want("life"):
 		# a lucky coin in the park, pigeons on the plaza (pecking, then scattering), an airliner overhead
 		var col := world.collectibles
@@ -446,3 +476,7 @@ func _run() -> void:
 		await _snap("settings_controls")
 		pm.resume()
 	get_tree().quit()
+
+
+func i_mod(i: int) -> int:
+	return i % 2
