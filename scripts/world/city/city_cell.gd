@@ -742,8 +742,12 @@ func _beachfront(r: Rect2) -> void:
 	var z := r.position.y
 	while z < r.end.y - 12.0:
 		var d := minf(rng.randf_range(22.0, 34.0), r.end.y - z)
-		_building(Rect2(x, z, hotel_w, d - 4.0), CURB_H, rng.randi_range(5, 14), "white_stucco" if rng.randf() < 0.6 else "plastered_wall_02",
+		var hotel := Rect2(x, z, hotel_w, d - 4.0)
+		var floors := rng.randi_range(5, 13)
+		_building(hotel, CURB_H, floors, "white_stucco" if rng.randf() < 0.6 else "plastered_wall_02",
 			HOUSE_TINTS[rng.randi() % HOUSE_TINTS.size()], true, 2)
+		if not WorldData.is_reserved(hotel):
+			_balconies(hotel, CURB_H, floors)
 		z += d
 	var z2 := r.position.y
 	while z2 < r.end.y - 10.0:
@@ -753,6 +757,26 @@ func _beachfront(r: Rect2) -> void:
 		z2 += d2
 	for i in int(r.size.y / 14.0):
 		_palm(Vector3(r.position.x + 1.5, CURB_H, r.position.y + 7.0 + i * 14.0))
+
+
+## Sea-view balconies on a hotel's ocean (west) face: a slab and a rail per bay on every floor above the shops.
+func _balconies(lot: Rect2, base_y: float, floors: int) -> void:
+	var x := lot.position.x
+	var bays := int((lot.size.y - 2.0) / 3.6)
+	if bays < 1:
+		return
+	var pitch := (lot.size.y - 2.0) / bays
+	_plain()
+	for f in range(1, floors):
+		var y := base_y + 4.2 + float(f - 1) * 3.3
+		for i in bays:
+			var zc := lot.position.y + 1.0 + (i + 0.5) * pitch
+			var w := pitch - 0.7
+			b.box("coping", Vector3(x - 0.6, y + 0.07, zc), Vector3(1.2, 0.14, w))
+			b.box("balcony_rail", Vector3(x - 1.17, y + 1.05, zc), Vector3(0.05, 0.05, w))
+			b.box("balcony_glass", Vector3(x - 1.17, y + 0.6, zc), Vector3(0.02, 0.85, w - 0.1))
+			for e: float in [-0.5, 0.5]:
+				b.box("balcony_rail", Vector3(x - 0.6, y + 0.6, zc + e * w), Vector3(1.15, 0.95, 0.04))
 
 
 func _mall(r: Rect2) -> void:
