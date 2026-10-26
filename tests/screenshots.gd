@@ -107,6 +107,11 @@ func _run() -> void:
 			c.far = 4000.0
 			c.make_current()
 			world.warm_up(sh[1])
+			# software rendering starves the cell builders: wait for the detail to finish streaming in
+			for i in 1500:
+				if world.city.is_settled():
+					break
+				await _frames(1)
 			await _frames(20)
 			await _snap(sh[0])
 			c.queue_free()
