@@ -153,7 +153,9 @@ func _process(delta: float) -> void:
 	if mode == Mode.VEHICLE and vehicle_view == 3 and target:
 		_cinematic(delta)
 	if hide_when_close:
-		hide_when_close.visible = (mode == Mode.VEHICLE and vehicle_view != 2) or (mode != Mode.VEHICLE and spring.get_hit_length() > 0.55)
+		# also hidden through a scope: the zoomed shoulder view would otherwise fill one side with the player's own body
+		var scoped := mode == Mode.AIM and zoom_fov > 0.0 and camera.fov < zoom_fov + 10.0
+		hide_when_close.visible = (mode == Mode.VEHICLE and vehicle_view != 2) or (mode != Mode.VEHICLE and spring.get_hit_length() > 0.55 and not scoped)
 	if shake > 0.0:
 		camera.h_offset = randf_range(-1, 1) * shake * 0.05
 		camera.v_offset = randf_range(-1, 1) * shake * 0.05
