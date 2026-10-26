@@ -1,3 +1,11 @@
+## Port Solano v1.1.1 — sharper cars, clearer map, livelier rooms
+
+- Car bodies, tyres, glass, the vending machines and the ATMs now use compressed, mip-mapped textures: they no
+  longer shimmer at a distance and take far less video memory.
+- The full-screen map keeps district names clear of the place icons (DOWNTOWN was hidden under them).
+- Lit shops at night glow warmly with their shelves showing, instead of reading as flat white panels.
+- The safehouse feels lived in: a reading corner by the bookshelf, a sideboard, rugs, plants and pictures.
+
 ## Port Solano v1.1.0 — fences, glass and things to push
 
 - **Fences:** white picket fences now front the suburban yards, and chain-link runs along the industrial yards.
