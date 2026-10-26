@@ -1,3 +1,8 @@
+## Port Solano v1.0.1 — beachfront
+
+- The beach hotels on Ocean Drive now have sea-view balconies on every floor: glass balustrades, dark rails and
+  dividers, with shadows that give the fronts depth.
+
 ## Port Solano v1.0.0 — Milestone 10: polish
 
 Unzip and run `PortSolano.exe`. **Esc** (START) pauses.

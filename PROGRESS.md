@@ -238,6 +238,11 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Interact uses whichever is nearer, a usable thing or a car door, and the prompt says which. Animation blends
   reviewed (every state change cross-fades 0.08-0.3 s). Full suite green (stream_check's jitter tolerance aside).
 
+**Iteration after v1.0**
+- v1.0.1: beach hotels get sea-view balconies (CityCell._balconies: slab, glass, rails, dividers on the ocean face).
+  Tour screenshots now wait for the city detail to finish streaming (under software rendering the cell builders
+  are starved and a fixed wait showed the far stand-ins); new tour shot `tour_hotels`.
+
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 
@@ -266,3 +271,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v0.8.0 | 8 — UI/UX | GitHub Release |
 | v0.9.0 | 9 — interactivity & life | GitHub Release |
 | v1.0.0 | 10 — polish & optimisation | GitHub Release |
+| v1.0.1 | iteration: beachfront balconies | GitHub Release |
