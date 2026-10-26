@@ -54,6 +54,11 @@ func _build() -> void:
 	furnish("hanging_picture_frame_03", Vector3(7.83, 1.75, -11.2), -90.0, false)
 	furnish("potted_plant_02", Vector3(1.5, 0, -0.6), 0.0)
 	rug(Vector3(3.0, 0, -1.3), Vector2(1.6, 1.0), "curly_teddy_checkered", Color(0.55, 0.5, 0.45))
+	# the open floor between the door and the lounge: a runner rug, a sideboard under the right-hand window wall
+	rug(Vector3(1.6, 0, -4.4), Vector2(2.2, 3.4), "floral_jacquard", Color(0.6, 0.66, 0.72))
+	furnish("painted_wooden_cabinet", Vector3(7.5, 0, -3.6), -90.0)
+	furnish("ceramic_vase_01", Vector3(7.5, 1.18, -3.4), 0.0, false)
+	furnish("hanging_picture_frame_02", Vector3(7.83, 1.9, -4.6), -90.0, false)
 	# kitchen along the left wall, dining table in front of it
 	furnish("electric_stove", Vector3(-7.45, 0, -1.9), 90.0)
 	furnish("painted_wooden_cabinet", Vector3(-7.5, 0, -3.25), 90.0)
