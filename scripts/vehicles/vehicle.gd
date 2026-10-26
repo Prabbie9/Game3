@@ -235,6 +235,7 @@ func _build() -> void:
 			var mi := MeshInstance3D.new()
 			mi.mesh = part[0]
 			mi.transform = part[1]
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # (in the body's shadow anyway)
 			wheel.add_child(mi)
 		add_child(wheel)
 		_wheels.append(wheel)

@@ -298,6 +298,10 @@ func _rack() -> void:
 	for i in ids.size():
 		var m := _model(ids[i])
 		add_child(m)
+		# indoors on the back wall: no sun shadows, and too small to see from across the street
+		for gi: GeometryInstance3D in m.find_children("*", "GeometryInstance3D", true, false):
+			gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			gi.visibility_range_end = 50.0
 		var p: Array = spots[i]
 		m.global_transform = Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(p[0], _base + p[1], Z0 + T * 0.5 + 0.09))
 
