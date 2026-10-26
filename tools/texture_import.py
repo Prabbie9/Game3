@@ -5,7 +5,8 @@ Run before `godot --import`; idempotent."""
 import glob, os, re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIRS = ["assets/textures/**/*.jpg", "assets/textures/**/*.png", "assets/models/**/*.png", "assets/models/**/*.jpg"]
+DIRS = ["assets/textures/**/*.jpg", "assets/textures/**/*.png", "assets/models/**/*.png", "assets/models/**/*.jpg",
+        "assets/models/**/*.jpeg"]
 LIMIT = {"assets/models/sketchfab/pistol": 1024}
 
 
