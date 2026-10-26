@@ -82,6 +82,7 @@ var _steer := 0.0
 var _size := Vector3(1.9, 1.5, 4.5)
 var _seat := Transform3D()
 var _door := Vector3()
+const WHEEL_SINK := 0.04
 const DOOR_OPEN := 1.1           # radians a front door swings open
 var _doors := {}                  # side (-1 driver / 1 passenger) -> hinge pivot
 var _door_angle := {}
@@ -219,7 +220,9 @@ func _build() -> void:
 		var wheel := VehicleWheel3D.new()
 		var front: bool = w.pos.z < 0.0
 		wheel.position = w.pos + Vector3(0, 0.12, 0)
-		wheel.wheel_radius = w.radius
+		# the physics settles a wheel ~4 cm deeper than its radius (a fixed contact margin, the same on every
+		# model): add it back so the tyres rest on the road instead of sinking into it
+		wheel.wheel_radius = w.radius + WHEEL_SINK
 		var spec: Dictionary = SPECS.get(model, SPECS.sedan)
 		wheel.wheel_rest_length = 0.16 + (float(spec.travel) - 0.22) * 0.5
 		wheel.suspension_travel = spec.travel

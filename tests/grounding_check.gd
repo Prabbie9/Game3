@@ -63,9 +63,19 @@ func _run() -> void:
 		for w in v._wheels:
 			if w.is_in_contact():
 				contacts += 1
+		# each tyre's visible bottom against the ground right under it
+		var space := v.get_world_3d().direct_space_state
+		var worst := 0.0
 		var lowest := INF
-		for w in v._wheels:
-			lowest = minf(lowest, w.global_position.y - w.wheel_radius)
-		_check("%s wheels on road" % v.model, contacts == 4, "%d/4 contact, wheel bottom %.3f" % [contacts, lowest])
+		var road := 0.0
+		for w: VehicleWheel3D in v._wheels:
+			var bottom := w.global_position.y - (w.wheel_radius - Vehicle.WHEEL_SINK)
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(w.global_position, w.global_position - Vector3(0, 2.0, 0), 1 | 16))
+			var gy: float = (hit.position as Vector3).y if hit else bottom
+			if absf(bottom - gy) > absf(worst):
+				worst = bottom - gy
+				lowest = bottom
+				road = gy
+		_check("%s wheels on road" % v.model, contacts == 4 and absf(worst) < 0.025, "%d/4 contact, worst tyre bottom %.3f vs ground %.3f" % [contacts, lowest, road])
 	print("GROUNDING CHECK: %s (%d failures)" % ["PASS" if fails == 0 else "FAIL", fails])
 	get_tree().quit(1 if fails else 0)

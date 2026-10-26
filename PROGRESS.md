@@ -240,6 +240,8 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 
 **Iteration after v1.0**
 - v1.0.1: beach hotels get sea-view balconies (CityCell._balconies: slab, glass, rails, dividers on the ocean face).
+  Tyres no longer sink 4 cm into the road (a fixed physics contact margin, now added to the wheel radius;
+  grounding_check measures each tyre's visible bottom against the ground under it).
   Tour screenshots now wait for the city detail to finish streaming (under software rendering the cell builders
   are starved and a fixed wait showed the far stand-ins); new tour shot `tour_hotels`.
 
@@ -247,7 +249,6 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 
 ### Known issues / debt
-- Wheels sit ~4 cm low on the road (suspension/visual offset; tyres look slightly loaded — kept).
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).
 - tests/emergency_check.gd still fails now and then (an ambulance taking a long way round or wedged before the
