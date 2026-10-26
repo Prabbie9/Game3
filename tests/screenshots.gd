@@ -85,7 +85,7 @@ func _run() -> void:
 	if _want("tour") or only.any(func(n): return String(n).begins_with("tour_")):
 		# district overview shots from fixed cameras (streaming follows the active camera)
 		var shots := [
-			["tour_beach", Vector3(-700, 14, 60), Vector3(-860, 0, -40)],
+			["tour_beach", Vector3(-790, 9, 95), Vector3(-728, 14, 20)],
 			["tour_docks", Vector3(420, 30, 540), Vector3(560, 4, 800)],
 			["tour_hills", Vector3(420, 40, -420), Vector3(800, 90, -850)],
 			["tour_suburbs", Vector3(-300, 16, -600), Vector3(-200, 2, -760)],
