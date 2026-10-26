@@ -26,7 +26,8 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   (+ draw-call/primitive stats in the log). ~1 min per shot.
 - `tools/export_windows.sh` then smoke test: copy `~/.local/share/godot/export_templates/4.7.2.stable/linux_release.x86_64`
   as `PortSolano.x86_64` next to a symlink of `build/PortSolano/PortSolano.pck` and run
-  `xvfb-run -a ./PortSolano.x86_64 -- --smoke` (must print `SMOKE TEST PASSED`, exit 0). Wine 9 crashes on start-up
+  `xvfb-run -a ./PortSolano.x86_64 -- --smoke` (must print `SMOKE TEST PASSED`, exit 0; under llvmpipe it takes
+  ~5.5 min — the menu alone ~2.5 min — so give it a 15 min timeout). Wine 9 crashes on start-up
   in this container (page fault inside ntdll), so the Linux template + same .pck is the boot check.
 - `... -- res://tests/weapons_check.gd`, `lane_graph_check.gd`, `traffic_check.gd` (traffic not in the world yet).
 - `... -- res://tests/asset_check.gd` — characters textured, all clips resolve (also runs in CI before export).
