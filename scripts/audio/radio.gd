@@ -16,6 +16,9 @@ var _vehicle: Node
 var _track := -1
 var _offsets: Array[float] = []   # each station's head start on the shared clock
 var _rng := RandomNumberGenerator.new()
+const DUCK_DB := -5.0             # vehicle sounds (engine, tyres) sit under the music while it plays
+var _duck: AudioEffectAmplify
+var _duck_db := 0.0
 
 
 func _ready() -> void:
@@ -146,7 +149,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-func _process(_delta: float) -> void:
+func _exit_tree() -> void:
+	var bus := AudioServer.get_bus_index("Vehicles")
+	for i in range(AudioServer.get_bus_effect_count(bus) - 1, -1, -1):
+		if AudioServer.get_bus_effect(bus, i) == _duck:
+			AudioServer.remove_bus_effect(bus, i)
+
+
+func _process(delta: float) -> void:
+	if _duck == null:
+		_duck = AudioEffectAmplify.new()
+		AudioServer.add_bus_effect(AudioServer.get_bus_index("Vehicles"), _duck)
+	_duck_db = move_toward(_duck_db, DUCK_DB if _player.playing else 0.0, delta * 8.0)
+	_duck.volume_db = _duck_db
 	# off as the player opens the door to get out (or the vehicle is wrecked, or they are thrown out)
 	var p := Game.player as Player
 	if _vehicle != null and (not is_instance_valid(_vehicle) or p == null or p.vehicle != _vehicle or p.state == Player.State.EXITING):
