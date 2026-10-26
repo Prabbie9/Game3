@@ -85,7 +85,7 @@ vec3 room(vec2 p, vec3 r, vec2 id, float seed, out float lit) {
 		c = mix(c, vec3(0.3, 0.22, 0.16), counter * step(t, tz) * 0.0 + counter * 0.6);
 		c *= mix(1.0, 0.7, clamp(hit.z / depth, 0.0, 1.0));
 		lit = 1.0;
-		return c * mix(0.42, 0.22, night) + c * vec3(1.0, 0.88, 0.7) * night * 0.32;
+		return c * mix(0.42, 0.16, night) + c * vec3(1.0, 0.86, 0.66) * night * 0.2;
 	}
 	// depth darkening
 	c *= mix(1.0, 0.55, clamp(hit.z / depth, 0.0, 1.0));
@@ -148,7 +148,7 @@ void fragment() {
 					float lit;
 					vec3 r = room(p, into, vec2(bay, -1.0), seed, lit);
 					col = r * glass_tint * 0.9; rough = 0.04; is_glass = 1.0;
-					emit = r * (0.06 + 0.26 * night);   // lit shops, not light boxes: the shelves must still read
+					emit = r * (0.06 + 0.13 * night);   // lit shops, not light boxes: the shelves must still read
 				}
 			} else if (m.y <= 0.45) {
 				col = vec3(0.32, 0.31, 0.3) * (0.8 + 0.3 * macro); rough = 0.8;
