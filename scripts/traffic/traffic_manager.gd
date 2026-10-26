@@ -558,9 +558,13 @@ func _may_enter(c: TrafficCar, node: int, road: int, turn: int, signalled: bool,
 		if d > 22.0:
 			continue   # far off (only the siren rule looks that far)
 		var oturn: int = e[3]
-		# someone from another approach is already in the junction on a path that may cross ours
-		if d == 0.0 and not ((turn == 0 and oturn == 0) or (turn == 1 and oturn == 1)):
-			return false
+		# someone from another approach is already in the junction on a path that may cross ours: only oncoming
+		# traffic going straight (or both turning right) keeps clear of us; anyone crossing from the side, even
+		# straight on (a late car clearing on amber), is in the way
+		if d == 0.0:
+			var oncoming := c.v.global_basis.z.dot(o.v.global_basis.z) < -0.7
+			if not (oncoming and ((turn == 0 and oturn == 0) or (turn == 1 and oturn == 1))):
+				return false
 		if signalled:
 			if turn == -1 and d < 18.0 and o.v.linear_velocity.length() > 2.0:
 				return false

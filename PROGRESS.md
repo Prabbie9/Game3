@@ -243,6 +243,8 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   Tyres no longer sink 4 cm into the road (a fixed physics contact margin): the drawn wheel sits on a holder
   lifted 4 cm "up" in the car's frame, physics untouched (enlarging the physics radius raised the cars and made
   AI traffic roll out of lane). grounding_check measures each tyre's drawn bottom against the ground under it.
+  Junctions: a car already in the junction now holds back cross traffic even when both go straight (only
+  oncoming traffic could ignore it): a late car clearing on amber was being T-boned by the green side.
   Tour screenshots now wait for the city detail to finish streaming (under software rendering the cell builders
   are starved and a fixed wait showed the far stand-ins); new tour shot `tour_hotels`.
 
