@@ -44,6 +44,16 @@ func _build() -> void:
 	furnish("wall_clock", Vector3(5.5, 2.45, -12.82), 0.0, false)
 	furnish("potted_plant_02", Vector3(7.3, 0, -12.3), 0.0)
 	furnish("planter_box_01", Vector3(6.0, 0, -0.45), 0.0)
+	# a reading corner by the bookshelf, pictures on the bare walls, a mat and a plant by the door
+	furnish("round_wooden_table_01", Vector3(0.3, 0, -11.4), 0.0)
+	furnish("boombox", Vector3(0.3, 0.76, -11.4), 200.0, false)
+	furnish("dining_chair_02", Vector3(0.3, 0, -10.3), 180.0)
+	furnish("potted_plant_02", Vector3(-0.9, 0, -12.5), 40.0)
+	furnish("hanging_picture_frame_02", Vector3(0.3, 1.75, -12.82), 0.0, false)
+	furnish("hanging_picture_frame_03", Vector3(-1.37, 1.7, -10.5), 90.0, false)
+	furnish("hanging_picture_frame_03", Vector3(7.83, 1.75, -11.2), -90.0, false)
+	furnish("potted_plant_02", Vector3(1.5, 0, -0.6), 0.0)
+	rug(Vector3(3.0, 0, -1.3), Vector2(1.6, 1.0), "curly_teddy_checkered", Color(0.55, 0.5, 0.45))
 	# kitchen along the left wall, dining table in front of it
 	furnish("electric_stove", Vector3(-7.45, 0, -1.9), 90.0)
 	furnish("painted_wooden_cabinet", Vector3(-7.5, 0, -3.25), 90.0)

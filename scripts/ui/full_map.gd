@@ -132,12 +132,6 @@ func _draw_map() -> void:
 	c.draw_rect(Rect2(Vector2.ZERO, c.size), Color(0.13, 0.28, 0.38))
 	var h := _data.half
 	c.draw_texture_rect(_map, Rect2(_to_px(Vector2(-h, -h)), Vector2(h, h) * 2.0 * _zoom), false)
-	for d: Dictionary in _data.districts:
-		var p := _to_px(Vector2(d.x, d.z))
-		var t := String(d.name).to_upper()
-		var w := UITheme.heading.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
-		c.draw_string(UITheme.heading, p - Vector2(w * 0.5 - 1, -1), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0, 0, 0, 0.6))
-		c.draw_string(UITheme.heading, p - Vector2(w * 0.5, 0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UITheme.PAPER)
 	for v in get_tree().get_nodes_in_group("vehicles"):
 		c.draw_circle(_to_px(Vector2(v.global_position.x, v.global_position.z)), 4.0, Color(0.55, 0.75, 0.95))
 	# GPS route
@@ -154,6 +148,19 @@ func _draw_map() -> void:
 		c.draw_circle(pp, 11.0, Color(UITheme.INK, 0.9))
 		var lw := UITheme.heading.get_string_size(pl[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 		c.draw_string(UITheme.heading, pp + Vector2(-lw * 0.5, 7.0), pl[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, pl[2])
+	# district names over the places, moved up or down clear of their icons
+	for d: Dictionary in _data.districts:
+		var t := String(d.name).to_upper()
+		var w := UITheme.heading.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+		var base := _to_px(Vector2(d.x, d.z))
+		var p := base
+		for dy: float in [0.0, -30.0, 30.0, -60.0, 60.0, -90.0, 90.0]:
+			var box := Rect2(base + Vector2(-w * 0.5, dy - 20.0), Vector2(w, 24.0)).grow(12.0)
+			if not places.any(func(pl: Array) -> bool: return box.has_point(_to_px(pl[0]))):
+				p = base + Vector2(0, dy)
+				break
+		c.draw_string(UITheme.heading, p - Vector2(w * 0.5 - 1, -1), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0, 0, 0, 0.6))
+		c.draw_string(UITheme.heading, p - Vector2(w * 0.5, 0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UITheme.PAPER)
 	var lg := Vector2(c.size.x - 200.0, 30.0)
 	c.draw_rect(Rect2(lg - Vector2(14, 14), Vector2(190, 30.0 * (places.size() + 2) + 6)), Color(UITheme.INK, 0.75))
 	var rows := places.duplicate()
