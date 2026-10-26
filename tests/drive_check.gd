@@ -27,9 +27,12 @@ func _run() -> void:
 	Game.controls_enabled = true
 	var p: Player = world.player
 	var v: Vehicle
+	# the empty showcase compact by the start (parked with a long clear lane ahead), not a passing one in traffic
+	var bd := INF
 	for c in world.get_tree().get_nodes_in_group("vehicles"):
-		if c.model == "compact":
-			v = c  # parked with a long clear lane ahead
+		if c.model == "compact" and c.driver == null and c.global_position.distance_to(p.global_position) < bd:
+			v = c
+			bd = c.global_position.distance_to(p.global_position)
 	p.global_position = v.driver_door_position()
 	await _phys(5)
 	Input.action_press("interact")

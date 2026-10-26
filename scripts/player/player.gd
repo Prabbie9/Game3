@@ -252,17 +252,25 @@ func _on_foot(delta: float) -> void:
 	cam.sprinting = speed > visual.run_speed * 1.1
 
 	if Game.controls_enabled and Input.is_action_just_pressed("interact"):
-		var it := nearest_interactable()
-		if it:
-			it.interact(self)
-			return
-		var v := _nearest_vehicle()
-		if v:
-			enter_vehicle(v)
+		var target := interact_target()
+		if target is Vehicle:
+			enter_vehicle(target)
+		elif target:
+			target.interact(self)
 
 
 ## Something usable within reach (the gun shop counter, later doors, ATMs...): group "interactables" with
 ## interact_point(), interact_range(), interact_prompt(player) ("" = not now) and interact(player).
+## What the interact button would use now: something usable or a vehicle door, whichever is nearer (null: none).
+func interact_target() -> Node:
+	var it := nearest_interactable()
+	var v := _nearest_vehicle()
+	if it and v:
+		var door := v.passenger_door_position() if _enter_side == 1 else v.driver_door_position()
+		return v if global_position.distance_to(door) < global_position.distance_to(it.interact_point()) else it
+	return it if it else v
+
+
 func nearest_interactable() -> Node:
 	var best: Node = null
 	var bd := INF

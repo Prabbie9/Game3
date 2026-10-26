@@ -247,11 +247,11 @@ func _process(_delta: float) -> void:
 	if box.visible:
 		_speed.text = str(int(round(_player.vehicle.speed_kmh())))
 	var hint := ""
-	var it: Node = _player.nearest_interactable() if _player.state == Player.State.ON_FOOT else null
-	if it:
-		hint = "%s  %s" % [InputPrompts.prompt("interact"), it.interact_prompt(_player)]
-	elif _player.state == Player.State.ON_FOOT and _player._nearest_vehicle():
+	var it: Node = _player.interact_target() if _player.state == Player.State.ON_FOOT else null
+	if it is Vehicle:
 		hint = "%s  Enter vehicle" % InputPrompts.prompt("interact")
+	elif it:
+		hint = "%s  %s" % [InputPrompts.prompt("interact"), it.interact_prompt(_player)]
 	elif _player.state == Player.State.DRIVING and _player.vehicle.linear_velocity.length() < 2.5:
 		hint = "%s  Exit vehicle" % InputPrompts.prompt("interact")
 	_hint.text = hint
