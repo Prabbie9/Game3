@@ -217,7 +217,7 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   sleep, diner, coins placed on open ground, pickup, save state), tests/life_check.gd (soundscape by place and hour,
   indoors, pigeons, gulls, aircraft, radio); screenshots `interiors`.
 
-**Milestone 10 — Polish & optimisation (in progress)**
+**Milestone 10 — Polish & optimisation: DONE (v1.0.0)**
 - Car doors: no model has separate doors, so CarLibrary cuts the front doors out of the body (the outer shell's
   triangles wholly inside the door box between the wheel arch and the seat, from the wheel track) and hangs them on
   a hinge; they swing open when the player gets in or out (passenger side too) and shut behind. Cab-over trucks get
@@ -235,8 +235,11 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - Fixes: foot IK no longer floods errors from a zero ground normal; parked cars no longer read freed cars; a coin
   that had landed inside a building moved to open ground (coins search up to 18 m for a clear spot).
 
-**Next in Milestone 10** (every known issue, animation smoothing, audio mix, visual
-consistency pass, final perf pass on all presets, final export).
+- Interact uses whichever is nearer, a usable thing or a car door, and the prompt says which. Animation blends
+  reviewed (every state change cross-fades 0.08-0.3 s). Full suite green (stream_check's jitter tolerance aside).
+
+**Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
+systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 
 ### Known issues / debt
 - Wheels sit ~4 cm low on the road (suspension/visual offset; tyres look slightly loaded — kept).
@@ -262,3 +265,4 @@ consistency pass, final perf pass on all presets, final export).
 | v0.7.0 | 7 — police | GitHub Release |
 | v0.8.0 | 8 — UI/UX | GitHub Release |
 | v0.9.0 | 9 — interactivity & life | GitHub Release |
+| v1.0.0 | 10 — polish & optimisation | GitHub Release |
