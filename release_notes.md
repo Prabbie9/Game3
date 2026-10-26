@@ -1,3 +1,26 @@
+## Port Solano v1.0.0 — Milestone 10: polish
+
+Unzip and run `PortSolano.exe`. **Esc** (START) pauses.
+
+**Polish**
+- Car doors now swing open when you get in or out (both sides), and shut behind you. Buses are boarded through
+  their front door on the kerb side.
+- The car radio sits over the engine: engine and tyre sounds dip while music plays.
+- Rain looks like rain: a grey, dull overcast with wet streets, instead of a bright haze.
+- The safehouse is a proper flat now (lounge, kitchen, a bedroom behind a partition, rugs and books); the diner's
+  back bar is stocked; pigeons and gulls look like birds; the airliner shows up against the sky.
+- Lucky coins are all reachable on open ground.
+
+**Performance**
+- Fewer shadow-casting objects (furniture indoors, wheels, the gun shop's wall rack): lighter frames around the
+  start of the game; radio music loads in the background so getting into a car never stalls.
+
+**Fixes**
+- No more error spam from foot placement or from parked cars that had been driven away.
+
+The whole game, milestone by milestone, is described in `PROGRESS.md`. See `OWNER_TEST_CHECKLIST.md` in the zip for
+what to try and what to send back (most of all: the benchmark report from your PC). Credits: `ASSET_CREDITS.md`.
+
 ## Port Solano v0.9.0 — Milestone 9: a city you can touch and listen to
 
 Unzip and run `PortSolano.exe`. **Esc** (START) pauses.

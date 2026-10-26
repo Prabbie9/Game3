@@ -13,6 +13,14 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v1.0.0 — Milestone 10 polish
+- [ ] Run the BENCHMARK from the main menu on each graphics preset (Low, Medium, High, Ultra) and send the reports
+      (saved next to the .exe). This is the one thing that can only be measured on your PC.
+- [ ] Get in and out of a few cars (both sides) and a bus: do the doors swing believably?
+- [ ] Drive with the radio on at speed: can you hear the music over the engine? Too loud / too quiet?
+- [ ] When it rains (the weather changes every few in-game hours), look round downtown: grey, wet, believable?
+- [ ] Anything that looks or sounds wrong anywhere on the island: note where and what.
+
 ## v0.9.0 — Milestone 9 interactivity & life
 - [ ] Drive into lamp posts, hydrants and bins; shoot a vending machine; kick a bin. Do the pieces fly about
       believably? Park on a burst hydrant's jet.

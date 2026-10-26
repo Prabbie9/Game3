@@ -223,6 +223,17 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   a hinge; they swing open when the player gets in or out (passenger side too) and shut behind. Cab-over trucks get
   doors above the wheel arch; the bus is boarded through its front door on the kerb side, then the driver steps
   across. Closed, the cars look exactly as before. Screenshot `doors`.
+- Audio mix: the car radio ducks engine and tyre sounds 5 dB while music plays (radio -16 LUFS against engine loops
+  at -14..-11 LUFS); ambience beds sit around -30 LUFS under everything.
+- Visual pass over every district by day, night and in rain: rain read as a bright sunlit fog (the volumetric fog
+  thickens six-fold); haze and ambient light now go grey and dull with the cloud.
+- Interiors: safehouse rebuilt as lounge / kitchen / bedroom (a partition, rugs, books, 18 more Poly Haven pieces;
+  the old shelving model was 11 m tall), diner back bar dressed; birds rebuilt with bodies and heads, lit both
+  sides; the airliner and the gulls skip occlusion culling (street occluders hid them against the sky).
+- Performance: interior furniture, coins, wheels and the gun shop's racked weapons cast no shadows (start street
+  2,922 draws incl. shadows, budget 3,000); radio tracks load on worker threads; birds/ambience cost timers.
+- Fixes: foot IK no longer floods errors from a zero ground normal; parked cars no longer read freed cars; a coin
+  that had landed inside a building moved to open ground (coins search up to 18 m for a clear spot).
 
 **Next in Milestone 10** (every known issue, animation smoothing, audio mix, visual
 consistency pass, final perf pass on all presets, final export).

@@ -34,3 +34,7 @@ Real FPS: waiting for the owner's benchmark report (OWNER_TEST_CHECKLIST.md).
 | 2026-10-23 | v0.4.0 | car park (software render) | 320 (+1128) | 1.59 M | cars are the shadow-draw cost here |
 | 2026-10-23 | v0.4.0 | stream_check (headless, 45 m/s) | — | — | p99 11 ms, worst 24–36 ms; NPC characters load on threads, car models extract at load |
 Parked car budget by preset: 16 / 22 / 30 / 38; at most 3 NPC drivers around. Vehicle build ≈1 ms.
+| 2026-10-24 | v0.9.0 | start street, day (software render) | 1115 (+2102) | 2.75 M | traffic, crowd, safehouse + diner + gun shop interiors in view |
+| 2026-10-26 | v1.0 pass | start street, day (software render) | 1193 (+1729) | 2.78 M | interior furniture, coins, wheels and the gun-shop rack cast no shadows; furniture hidden beyond 70 m |
+| 2026-10-26 | v1.0 pass | stream_check (headless, 45 m/s) | — | — | p99 10.6 ms; isolated 30–100 ms container jitter frames, no script time behind them |
+| 2026-10-26 | v1.0 pass | per-frame script cost | — | — | birds 0.1–0.3 ms, ambience ≤ 0.1 ms, coins/doors negligible; radio tracks load on threads |
