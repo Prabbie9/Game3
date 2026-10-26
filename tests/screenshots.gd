@@ -86,6 +86,7 @@ func _run() -> void:
 		# district overview shots from fixed cameras (streaming follows the active camera)
 		var shots := [
 			["tour_beach", Vector3(-790, 9, 95), Vector3(-728, 14, 20)],
+			["tour_hotels", Vector3(-752, 10, 75), Vector3(-728, 13, 45)],
 			["tour_docks", Vector3(420, 30, 540), Vector3(560, 4, 800)],
 			["tour_hills", Vector3(420, 40, -420), Vector3(800, 90, -850)],
 			["tour_suburbs", Vector3(-300, 16, -600), Vector3(-200, 2, -760)],
