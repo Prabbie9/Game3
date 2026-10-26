@@ -1,3 +1,8 @@
+## Port Solano v1.1.2 — sand to the boardwalk
+
+- Playa Solano is sand all the way up to the boardwalk (a strip of lawn used to separate the two).
+- Looking through the sniper scope no longer shows your own shoulder and head.
+
 ## Port Solano v1.1.1 — sharper cars, clearer map, livelier rooms
 
 - Car bodies, tyres, glass, the vending machines and the ATMs now use compressed, mip-mapped textures: they no

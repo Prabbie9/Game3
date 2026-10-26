@@ -267,6 +267,9 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   machine, ATM, knife — had shipped uncompressed, ~300 MB, without mipmaps). Full map draws district names after
   the place icons and nudges them clear. Night shop glazing dimmed (blown out under auto-exposure). Safehouse:
   reading corner, sideboard, rugs, plants, pictures. Smoke test of the export exits cleanly at ~5.5 min (llvmpipe).
+- v1.1.2: gen_world.boardwalk_sand(): the splat (and vegetation, map) get sand from the beach up to the boardwalk;
+  the terrain's own beach mask (which also shapes heights) is untouched, so height.bin/world.json are identical.
+  The camera hides the player's body while scoped. Full screenshot review of every shot set done after v1.1.1.
 
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
@@ -299,3 +302,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v1.0.2 | iteration: tyres on the road, junction right of way | GitHub Release |
 | v1.1.0 | iteration: breakable fences and windows, pushable objects | GitHub Release |
 | v1.1.1 | iteration: texture compression, map labels, night shops, safehouse | GitHub Release |
+| v1.1.2 | iteration: beach sand to the boardwalk, scope view | GitHub Release |
