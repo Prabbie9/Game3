@@ -100,6 +100,7 @@ func _exit_tree() -> void:
 	VehicleDamage.release()
 	NPCDriver.release()
 	Explosion.release()
+	Pushables.release()
 
 
 func police_called(pos: Vector3, where: Vector3) -> void:

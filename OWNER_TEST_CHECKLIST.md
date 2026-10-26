@@ -13,6 +13,12 @@ The shared Mixamo folder has no surface-swimming or treading-water animation, so
 Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
 mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
 
+## v1.1.0 — fences, glass, things to push
+- [ ] Drive through a picket fence in the suburbs (Las Lomas, north of the freeway) and through the chain-link
+      along an Eastside yard: does it look and sound right?
+- [ ] Shoot out the diner's windows; ram a storefront window (the hospital or the police station).
+- [ ] In an Eastside industrial yard, walk into crates and drums, kick a box, dribble a football in a park.
+
 ## v1.0.0 — Milestone 10 polish
 - [ ] Run the BENCHMARK from the main menu on each graphics preset (Low, Medium, High, Ultra) and send the reports
       (saved next to the .exe). This is the one thing that can only be measured on your PC.

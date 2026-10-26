@@ -17,6 +17,14 @@ COPY = {
     "bin_2.ogg": ("kenney", "impactTin_medium_002.ogg"),
     "machine_0.ogg": ("sfx100", "machine_01.ogg"), "can_drop.ogg": ("sfx100", "slam_01.ogg"),
     "glass_break.ogg": ("bfh", "bfh1_glass_breaking_02.ogg"),
+    # fences, windows and the loose things you can push about (v1.1)
+    "wood_break_0.ogg": ("bfh", "bfh1_wood_breaking_01.ogg"), "wood_break_1.ogg": ("bfh", "bfh1_wood_breaking_02.ogg"),
+    "wood_break_2.ogg": ("bfh", "bfh1_wood_breaking_03.ogg"),
+    "window_0.ogg": ("bfh", "bfh1_glass_breaking_04.ogg"), "window_1.ogg": ("bfh", "bfh1_glass_breaking_05.ogg"),
+    "glass_fall.ogg": ("bfh", "bfh1_glass_falling_01.ogg"),
+    "crate_0.ogg": ("kenney", "impactWood_medium_000.ogg"), "crate_1.ogg": ("kenney", "impactWood_medium_001.ogg"),
+    "cone_0.ogg": ("kenney", "impactSoft_medium_000.ogg"), "cone_1.ogg": ("kenney", "impactSoft_medium_001.ogg"),
+    "drum_0.ogg": ("kenney", "impactMetal_medium_000.ogg"), "drum_1.ogg": ("kenney", "impactMetal_medium_001.ogg"),
 }
 CREDIT = {"bfh": ("rubberduck", "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"),
           "sfx100": ("rubberduck", "https://opengameart.org/content/100-cc0-sfx"),

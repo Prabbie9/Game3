@@ -8,6 +8,7 @@ const UNLOAD_R := 520.0
 const BUDGET_MS := 3.0    # main-thread time per frame for creating cell nodes
 const PROP_RANGE := {"fire_hydrant": 140.0, "fire_hydrant_aged": 140.0, "metal_trash_can": 140.0, "metal_trash_can_rust": 140.0,
 	"utility_box_01": 160.0, "utility_box_02": 160.0, "bench": 160.0, "exterior_aircon_unit": 180.0,
+	"picket_fence": 150.0, "chainlink_fence": 170.0,
 	"palm_crown": 700.0, "palm_trunk": 700.0, "date_palm": 600.0, "jacaranda": 450.0, "oak": 900.0, "boulder": 500.0}
 const IMPOSTOR_AT := 130.0  # trees switch to picture cards beyond this distance
 const MESH_FLAGS := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
@@ -338,6 +339,8 @@ func _add_props(root: Node3D, pname: String, xfs: Array) -> void:
 	# PropWorld breaks single instances: which prop / MultiMesh / instance each shape stands for
 	psb.set_meta("prop", name)
 	psb.set_meta("mmi", mmi)
+	if PropWorld.BREAKABLE.has(name) and PropWorld.BREAKABLE[name].has("surface"):
+		psb.set_meta("surface", PropWorld.BREAKABLE[name].surface)
 	for i in xfs.size():
 		var xf: Transform3D = xfs[i]
 		var col := PropCatalog.collision(name, xf.basis.get_scale().x)

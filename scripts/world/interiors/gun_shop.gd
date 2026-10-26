@@ -226,9 +226,12 @@ func _glass(c: Vector3, s: Vector3, solid := true) -> void:
 	if _glass_mat == null:
 		_glass_mat = StandardMaterial3D.new()
 		_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_glass_mat.albedo_color = Color(0.7, 0.82, 0.86, 0.18)
+		_glass_mat.albedo_color = Color(0.68, 0.8, 0.86, 0.3)
 		_glass_mat.roughness = 0.05
 		_glass_mat.metallic = 0.4
+	if solid:
+		GlassPane.make(self, c, s, _glass_mat)
+		return
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = s

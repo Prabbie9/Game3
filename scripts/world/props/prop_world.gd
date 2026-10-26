@@ -19,15 +19,22 @@ const BREAKABLE := {
 	"atm": {"mass": 300.0, "speed": 11.0, "sound": "world/metal_hit_%d.ogg", "n": 2, "atm": true},
 	"utility_box_01": {"mass": 120.0, "speed": 10.0, "sound": "world/metal_hit_%d.ogg", "n": 2},
 	"utility_box_02": {"mass": 120.0, "speed": 10.0, "sound": "world/metal_hit_%d.ogg", "n": 2},
+	# fences: a picket bay splinters into its pickets and rails; a chain-link bay is torn out and folds over.
+	# "tough": gunfire / blows (damage) it takes before it gives way
+	"picket_fence": {"mass": 28.0, "speed": 2.5, "sound": "world/wood_break_%d.ogg", "n": 3, "splinter": true, "tough": 90.0, "surface": FX.Surface.WOOD},
+	"chainlink_fence": {"mass": 45.0, "speed": 6.0, "sound": "world/metal_fall_%d.ogg", "n": 2},
 }
 const USABLE := ["vending_machine", "atm", "payphone", "bench"]
-const MAX_DEBRIS := 40
+const MAX_DEBRIS := 70
 const DEBRIS_LAYER := 32
 
 var _debris: Array[RigidBody3D] = []
 var _uses := {}          # "mmi id:instance" -> PropUse
 var _scan_t := 0.0
 var _atm_hits := {}      # "mmi id:instance" -> bullet hits taken
+var _wear := {}          # "mmi id:instance" -> damage taken (props with "tough")
+static var _plank_mesh: BoxMesh
+static var _rail_mesh: BoxMesh
 var _last_pv := Vector2.ZERO
 
 
@@ -93,11 +100,14 @@ func break_prop(body: Object, shape: int, impulse: Vector3, at: Vector3) -> Rigi
 	mmi.set_meta("broken", broken)
 	cs.set_deferred("disabled", true)
 	var def: Dictionary = BREAKABLE[name]
+	Audio.play_at(Audio.pick(String(def.sound), int(def.n)), at, -2.0, randf_range(0.9, 1.1))
+	if def.get("splinter", false):
+		return _splinter(xf, impulse, at)
 	var rb := RigidBody3D.new()
 	rb.collision_layer = DEBRIS_LAYER
 	rb.collision_mask = 1 | 2 | 4 | 8 | 16 | DEBRIS_LAYER
 	rb.mass = float(def.mass)
-	rb.set_meta("surface", FX.Surface.METAL)
+	rb.set_meta("surface", def.get("surface", FX.Surface.METAL))
 	var mi := MeshInstance3D.new()
 	mi.mesh = PropCatalog.mesh(name)
 	mi.scale = xf.basis.get_scale()
@@ -114,7 +124,6 @@ func break_prop(body: Object, shape: int, impulse: Vector3, at: Vector3) -> Rigi
 	rb.global_transform = Transform3D(xf.basis.orthonormalized(), xf.origin + Vector3(0, 0.02, 0))
 	rb.apply_impulse(impulse, at - rb.global_position)
 	_debris.append(rb)
-	Audio.play_at(Audio.pick(String(def.sound), int(def.n)), at, -2.0, randf_range(0.9, 1.1))
 	if def.get("lamp", false):
 		_lamp_out(mmi, xf.origin)
 	if def.get("hydrant", false):
@@ -124,6 +133,54 @@ func break_prop(body: Object, shape: int, impulse: Vector3, at: Vector3) -> Rigi
 	if def.get("atm", false):
 		_spill_cash(xf.origin + xf.basis.z.normalized() * 0.8)
 	return rb
+
+
+## A picket bay comes apart: its pickets and the two halves of each rail fly off as separate pieces.
+func _splinter(xf: Transform3D, impulse: Vector3, at: Vector3) -> RigidBody3D:
+	if _plank_mesh == null:
+		_plank_mesh = BoxMesh.new()
+		_plank_mesh.size = Vector3(0.085, 0.95, 0.02)
+		_plank_mesh.material = PropCatalog.picket_mat
+		_rail_mesh = BoxMesh.new()
+		_rail_mesh.size = Vector3(0.9, 0.07, 0.035)
+		_rail_mesh.material = PropCatalog.picket_mat
+	var basis := xf.basis.orthonormalized()
+	var sx := xf.basis.get_scale().x
+	var half := PropCatalog.PICKET_LEN * 0.5 * sx
+	var pieces := []   # [mesh, local position]
+	for i in 6:
+		pieces.append([_plank_mesh, Vector3(lerpf(-half + 0.2, half - 0.2, i / 5.0), 0.5, 0.0)])
+	for y: float in [0.28, 0.74]:
+		for sgn: float in [-1.0, 1.0]:
+			pieces.append([_rail_mesh, Vector3(sgn * half * 0.5, y, 0.035)])
+	var first: RigidBody3D
+	for pc: Array in pieces:
+		var m: BoxMesh = pc[0]
+		var rb := RigidBody3D.new()
+		rb.collision_layer = DEBRIS_LAYER
+		rb.collision_mask = 1 | 2 | 4 | 8 | 16 | DEBRIS_LAYER
+		rb.mass = 2.0
+		rb.set_meta("surface", FX.Surface.WOOD)
+		var mi := MeshInstance3D.new()
+		mi.mesh = m
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		rb.add_child(mi)
+		var c2 := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = m.size
+		c2.shape = bs
+		rb.add_child(c2)
+		add_child(rb)
+		var tilt := Basis(Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5).normalized(), randf_range(0.0, 0.4))
+		rb.global_transform = Transform3D(basis * tilt, xf.origin + basis * (pc[1] as Vector3))
+		var share := impulse / pieces.size() * randf_range(0.6, 1.4)
+		rb.apply_impulse(share * (rb.mass * pieces.size() / 28.0) + Vector3(randf() - 0.5, randf(), randf() - 0.5) * 2.0,
+			(at - rb.global_position) * 0.2)
+		rb.angular_velocity = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * 8.0
+		_debris.append(rb)
+		if first == null:
+			first = rb
+	return first
 
 
 func _lamp_out(mmi: Node, base: Vector3) -> void:
@@ -169,6 +226,10 @@ func _vehicle_hits(focus: Vector3, delta: float) -> void:
 		q.transform = Transform3D(v.global_basis, v.global_transform * v._bounds.get_center() + vel * delta * 2.0)
 		q.collision_mask = 16
 		for r: Dictionary in space.intersect_shape(q, 6):
+			if r.collider is GlassPane:
+				if speed > 3.0:
+					(r.collider as GlassPane).shatter((r.collider as Node3D).global_position, vel.normalized())
+				continue
 			var pr := _prop_at(r.collider, int(r.shape))
 			if pr.is_empty() or not BREAKABLE.has(pr[0]):
 				continue
@@ -216,7 +277,12 @@ func on_hit(hit: Dictionary, dir: Vector3, damage: float) -> void:
 		return
 	var def: Dictionary = BREAKABLE[pr[0]]
 	var key := "%d:%d" % [(pr[1] as Object).get_instance_id(), pr[2]]
-	if def.get("bullets", false) or def.get("hydrant", false):
+	if def.has("tough"):
+		_wear[key] = float(_wear.get(key, 0.0)) + damage
+		if float(_wear[key]) >= float(def.tough):
+			_wear.erase(key)
+			break_prop(hit.collider, int(hit.shape), dir * 60.0 + Vector3.UP * 20.0, hit.position)
+	elif def.get("bullets", false) or def.get("hydrant", false):
 		break_prop(hit.collider, int(hit.shape), dir * damage * 0.4 + Vector3.UP * 4.0, hit.position)
 	elif def.get("atm", false):
 		_atm_hits[key] = int(_atm_hits.get(key, 0)) + 1

@@ -63,7 +63,7 @@ func _ready() -> void:
 			-1:  # window
 				_wall(b, a, c, 0.0, 0.9)
 				_wall(b, a, c, 2.9, H)
-				_glass(Vector3((a.x + c.x) * 0.5, y0 + 1.9, fz), Vector3(w, 2.0, 0.05), false)
+				_glass(Vector3((a.x + c.x) * 0.5, y0 + 1.9, fz), Vector3(w, 2.0, 0.05), false, true)
 			-2:  # entrance
 				_wall(b, a, c, door_h, H)
 				if not garage:
@@ -143,16 +143,19 @@ func _shape(c: Vector3, s: Vector3) -> void:
 	_body.add_child(cs)
 
 
-func _glass(c: Vector3, s: Vector3, solid: bool) -> void:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = s
-	mi.mesh = bm
+func _glass(c: Vector3, s: Vector3, solid: bool, breakable := false) -> void:
 	var m := StandardMaterial3D.new()
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.albedo_color = Color(0.55, 0.68, 0.74, 0.35 if not solid else 0.55)
 	m.roughness = 0.05
 	m.metallic = 0.5
+	if breakable:
+		GlassPane.make(self, c, s, m)
+		return
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = s
+	mi.mesh = bm
 	mi.material_override = m
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.position = c

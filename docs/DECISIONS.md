@@ -127,3 +127,8 @@
   bus and a reverb on SFX, toggled by the camera being inside any node in the "interiors" group.
 - 2026-10-24 — Radio music is Kevin MacLeod (CC-BY 4.0, incompetech.com) plus CC0 tracks, loudness-matched to
   -16 LUFS and trimmed to 3.5 min (46 MB in all). Stations run on a shared clock, GTA-style, rather than restarting.
+- 2026-10-26 — Pushable objects are streamed rigid bodies on the debris layer (32). The player's capsule does not
+  collide with that layer (debris would jitter against it), so Pushables finds contacts itself each physics frame
+  and gives the touched body the walker's speed along the line between them; kicks and bullets scale by weight.
+  Windows are their own GlassPane bodies (world + props layers) rather than part of the merged building mesh, so
+  each can break and be glazed again on its own.

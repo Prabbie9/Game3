@@ -321,6 +321,73 @@ func _run() -> void:
 		for v: Vehicle in cars:
 			v.queue_free()
 		p.cam.camera.make_current()
+	if _want("touch"):
+		# a picket-fenced front yard, crates and drums in an industrial yard, a shop window just shot out
+		var keep := p.global_transform
+		var lots: Array = world.data.lots
+		var house: Dictionary = lots.filter(func(l): return l.kind == "house")[6]
+		var hb := Basis(Vector3.UP, float(house.get("yaw", 0.0)))
+		var hc := Vector3((float(house.x0) + float(house.x1)) * 0.5, 0, (float(house.z0) + float(house.z1)) * 0.5)
+		var eye := hc + hb * Vector3(-9.0, 0, -15.0)
+		eye.y = world.data.height_at(eye.x, eye.z) + 1.7
+		var look := hc + hb * Vector3(-1.0, 0, -6.0)
+		look.y = world.data.height_at(look.x, look.z) + 1.2
+		p.global_position = eye + Vector3(0, -0.5, 0)
+		var c := Camera3D.new()
+		world.add_child(c)
+		c.look_at_from_position(eye, look)
+		c.fov = 60
+		c.make_current()
+		world.warm_up(eye)
+		for i in 1500:
+			if world.city.is_settled():
+				break
+			await _frames(1)
+		await _frames(20)
+		await _snap("touch_yard")
+		var ind: Dictionary = lots.filter(func(l): return l.kind == "industrial")[4]
+		var ir := Rect2(float(ind.x0), float(ind.z0), float(ind.x1) - float(ind.x0), float(ind.z1) - float(ind.z0))
+		p.global_position = Vector3(ir.get_center().x, 1.0, ir.end.y - 6.0)
+		world.warm_up(p.global_position)
+		for i in 1500:
+			if world.city.is_settled():
+				break
+			await _frames(1)
+		await _frames(30)
+		var best: Node3D = null
+		for n in world.pushables.get_children():
+			if n is Pushable and (best == null or (n as Node3D).global_position.distance_to(p.global_position) < best.global_position.distance_to(p.global_position)):
+				best = n
+		if best:
+			var at := best.global_position
+			c.look_at_from_position(at + Vector3(3.2, 1.6, 2.6), at + Vector3(0, 0.2, 0))
+			await _frames(20)
+			await _snap("touch_crates")
+		var fx := ir.position.x - 1.7
+		c.look_at_from_position(Vector3(fx - 6.0, 1.7, ir.get_center().y - 8.0), Vector3(fx, 1.0, ir.get_center().y + 6.0))
+		await _frames(20)
+		await _snap("touch_chainlink")
+		p.global_transform = keep
+		world.warm_up(p.global_position)
+		await _frames(30)
+		var panes := get_tree().get_nodes_in_group("glass_panes")
+		panes.sort_custom(func(a, b): return a.global_position.distance_to(p.global_position) < b.global_position.distance_to(p.global_position))
+		if not panes.is_empty():
+			var g: GlassPane = panes[0]
+			var out := g.global_basis.z
+			var from := g.global_position + out * 4.0
+			if from.distance_to(p.global_position) > (g.global_position - out * 4.0).distance_to(p.global_position):
+				out = -out
+				from = g.global_position + out * 4.0
+			from.y = g.global_position.y + 0.2
+			c.look_at_from_position(from + g.global_basis.x * 1.5, g.global_position)
+			await _frames(20)
+			await _snap("touch_window")
+			g.shatter(g.global_position, -out)
+			await _frames(2)
+			await _snap("touch_window_shot")
+		c.queue_free()
+		p.cam.camera.make_current()
 	if _want("life"):
 		# a lucky coin in the park, pigeons on the plaza (pecking, then scattering), an airliner overhead
 		var col := world.collectibles

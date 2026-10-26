@@ -111,6 +111,12 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Brass Goblets (model) | diner interior | Tina | https://polyhaven.com/a/brass_goblets | CC0 |
 | Standing Chalkboard 01 (model) | diner interior | ParzivalCG | https://polyhaven.com/a/standing_chalkboard_01 | CC0 |
 | Coffee Cart 01 (model) | diner interior | Joe Seabuhr | https://polyhaven.com/a/CoffeeCart_01 | CC0 |
+| Wooden Crate 02 (model) | pushable crates | James Ray Cock, Jurita Burger | https://polyhaven.com/a/wooden_crate_02 | CC0 |
+| Plastic Crate 01 (model) | pushable crates | PierreB3D | https://polyhaven.com/a/plastic_crate_01 | CC0 |
+| Cardboard Box 01 (model) | pushable boxes | Rahul Chaudhary | https://polyhaven.com/a/cardboard_box_01 | CC0 |
+| Barrel 03 (model) | pushable oil drums | Serhii Khromov | https://polyhaven.com/a/barrel_03 | CC0 |
+| Football (model) | footballs | Amal Kumar | https://polyhaven.com/a/football | CC0 |
+| Modular Chainlink Fence (model) | chain-link fences | James Ray Cock, Amal Kumar | https://polyhaven.com/a/modular_chainlink_fence | CC0 |
 
 ## Sounds
 Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) into `assets/audio/`.
@@ -132,8 +138,8 @@ Processed by `tools/audio/build_audio.py` (trimmed, normalised, seamless loops) 
 | crash_1.ogg, crash_2.ogg, explosion_1.ogg, splash.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
 | siren_loop.ogg | aquinn | CC0 | https://opengameart.org/content/sirens-and-alarm-noise |
 | tyre_squeal.wav | qubodup | CC-BY 3.0 | https://opengameart.org/content/car-tire-squeal-skid-loop |
-| metal_fall_0.ogg, metal_fall_1.ogg, metal_hit_0.ogg, metal_hit_1.ogg, glass_break.ogg | rubberduck | CC0 | https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx |
-| bin_0.ogg, bin_1.ogg, bin_2.ogg | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
+| metal_fall_0.ogg, metal_fall_1.ogg, metal_hit_0.ogg, metal_hit_1.ogg, glass_break.ogg, wood_break_0.ogg, wood_break_1.ogg, wood_break_2.ogg, window_0.ogg, window_1.ogg, glass_fall.ogg | rubberduck | CC0 | https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx |
+| bin_0.ogg, bin_1.ogg, bin_2.ogg, crate_0.ogg, crate_1.ogg, cone_0.ogg, cone_1.ogg, drum_0.ogg, drum_1.ogg | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | machine_0.ogg, can_drop.ogg | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx |
 | water_jet.ogg, coins.ogg, payphone.ogg (assets/audio/world) | synthesised by tools/audio/build_world_sfx.py | own work | — |
 

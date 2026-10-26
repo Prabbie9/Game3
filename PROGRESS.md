@@ -247,6 +247,21 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   oncoming traffic could ignore it): a late car clearing on amber was being T-boned by the green side.
   Tour screenshots now wait for the city detail to finish streaming (under software rendering the cell builders
   are starved and a fixed wait showed the far stand-ins); new tour shot `tour_hotels`.
+- v1.1.0: the rest of brief §4's "breakable props (… fences, … glass), pushable physics objects", which the M9
+  build had only partly covered (lamps, hydrants, bins, street furniture):
+  - Fences: white picket fences along every suburban front yard (gaps for the driveway and the front path, short
+    side returns; CityCell._yard_fence) and Poly Haven chain-link along the industrial yards' street sides. Both are
+    MultiMesh props in PropWorld.BREAKABLE: a car ploughs through, a blast tears them out; a picket bay splinters
+    into its pickets and rails (PropWorld._splinter) and gives way to gunfire or blows ("tough": damage taken).
+  - Glass: GlassPane (scripts/world/props/glass_pane.gd) for the diner, safehouse, gun shop and storefront
+    windows: shatters when shot, punched, rammed or blasted (shard particles, breaking/falling glass sounds, a noise
+    people react to), the frame is then open; glazed again 3 minutes later once the player is 45 m away.
+  - Pushables (scripts/world/props/pushables.gd): crates, oil drums, cardboard boxes and plastic crates in the
+    industrial yards and the port, cone lines at the quay cranes and in car parks, footballs in parks, on the beach
+    and in front yards. Real rigid bodies on the debris layer, streamed in within 90 m (set out where nothing is in
+    the way) and put away beyond 130 m, remembering where they were left. Walking into one shoves it at walking
+    pace (a ball is dribbled), kicks and bullets push them by weight, cars and blasts throw them about; knock sounds
+    by material. tests/touch_check.gd covers all three.
 
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
@@ -277,3 +292,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v1.0.0 | 10 — polish & optimisation | GitHub Release |
 | v1.0.1 | iteration: beachfront balconies | GitHub Release |
 | v1.0.2 | iteration: tyres on the road, junction right of way | GitHub Release |
+| v1.1.0 | iteration: breakable fences and windows, pushable objects | GitHub Release |

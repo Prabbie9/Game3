@@ -38,6 +38,8 @@ static func prepare() -> void:
 		_entries[name] = _extract(name)
 	_entries["bench"] = _bench()
 	_entries["palm_trunk"] = _palm_trunk()
+	_entries["picket_fence"] = _picket_fence()
+	_entries["chainlink_fence"] = _chainlink_fence()
 
 
 static func release() -> void:
@@ -216,6 +218,115 @@ static func _bench() -> Dictionary:
 		am.surface_set_material(am.get_surface_count() - 1, mat)
 	am = _reduced(am, BUDGET["bench"])
 	return {"mesh": am, "aabb": AABB(Vector3(-0.92, 0, -0.3), Vector3(1.84, 0.475, 0.6)), "col": ["box"]}
+
+
+const PICKET_LEN := 2.0
+const CHAINLINK_LEN := 1.99
+static var picket_mat: StandardMaterial3D
+
+
+## A 2 m run of white picket fence along X (centred, standing on y = 0): a post at each end, two rails behind,
+## eleven pointed pickets in front (the front faces -Z).
+static func _picket_fence() -> Dictionary:
+	if picket_mat == null:
+		picket_mat = StandardMaterial3D.new()
+		picket_mat.albedo_color = Color(0.93, 0.92, 0.88)
+		picket_mat.roughness = 0.75
+		picket_mat.vertex_color_use_as_albedo = true
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half := PICKET_LEN * 0.5
+	for x: float in [-half + 0.045, half - 0.045]:
+		_box_into(st, Vector3(x, 0.55, 0.02), Vector3(0.09, 1.1, 0.09), Color(0.9, 0.89, 0.85))
+	for y: float in [0.28, 0.74]:
+		_box_into(st, Vector3(0, y, 0.035), Vector3(PICKET_LEN - 0.18, 0.07, 0.035), Color(0.88, 0.87, 0.83))
+	var n := 11
+	for i in n:
+		var x := -half + 0.17 + i * (PICKET_LEN - 0.34) / (n - 1)
+		var tint := Color(1, 1, 1) * (0.97 + 0.03 * sin(i * 2.3))
+		_picket_into(st, x, tint)
+	var am := st.commit()
+	am.surface_set_material(0, picket_mat)
+	return {"mesh": am, "aabb": AABB(Vector3(-half, 0, -0.06), Vector3(PICKET_LEN, 1.05, 0.12)), "col": ["box"]}
+
+
+## An axis-aligned box into a SurfaceTool (flat faces; normals generated after).
+static func _box_into(st: SurfaceTool, c: Vector3, s: Vector3, col: Color) -> void:
+	var h := s * 0.5
+	var faces := [[Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1)], [Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 1, 0)],
+		[Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)], [Vector3(0, -1, 0), Vector3(1, 0, 0), Vector3(0, 0, 1)],
+		[Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(0, 1, 0)], [Vector3(0, 0, -1), Vector3(0, 1, 0), Vector3(1, 0, 0)]]
+	st.set_color(col)
+	for f: Array in faces:
+		var nrm: Vector3 = f[0]
+		st.set_normal(nrm)
+		var u: Vector3 = f[1]
+		var v: Vector3 = f[2]
+		var o := c + nrm * h
+		var du := u * h
+		var dv := v * h
+		var q := [o - du - dv, o + du - dv, o + du + dv, o - du + dv]
+		for k: int in [0, 2, 1, 0, 3, 2]:
+			st.set_uv(Vector2(1.0 if k == 1 or k == 2 else 0.0, 1.0 if k >= 2 else 0.0))
+			st.add_vertex(q[k])
+
+
+## One picket: a slat 0.085 wide with a pointed top, 2 cm thick, in front of the rails.
+static func _picket_into(st: SurfaceTool, x: float, col: Color) -> void:
+	_box_into(st, Vector3(x, 0.47, 0.0), Vector3(0.085, 0.86, 0.02), col)
+	var w := 0.0425
+	st.set_color(col)
+	for z: float in [-0.01, 0.01]:
+		var a := Vector3(x - w, 0.9, z)
+		var b := Vector3(x + w, 0.9, z)
+		var t := Vector3(x, 0.99, z)
+		st.set_normal(Vector3(0, 0, signf(z)))
+		for v in ([a, b, t] if z < 0.0 else [a, t, b]):
+			st.add_vertex(v)
+	for side: float in [-1.0, 1.0]:
+		var p0 := Vector3(x + side * w, 0.9, -0.01)
+		var p1 := Vector3(x, 0.99, -0.01)
+		var p2 := Vector3(x, 0.99, 0.01)
+		var p3 := Vector3(x + side * w, 0.9, 0.01)
+		st.set_normal(Vector3(side * 0.09, w, 0).normalized())
+		var quad := [p0, p1, p2, p0, p2, p3] if side < 0.0 else [p0, p3, p2, p0, p2, p1]
+		for v in quad:
+			st.add_vertex(v)
+
+
+## A 2 m bay of the chain-link fence kit: the double-width wire panel between two posts, along X and centred.
+## The wire is alpha-tested (the kit ships it blended, which sorts badly against everything behind).
+static func _chainlink_fence() -> Dictionary:
+	var kit: Node = (load(PH % ["modular_chainlink_fence", "modular_chainlink_fence"]) as PackedScene).instantiate()
+	var parts := {}
+	for c in kit.find_children("*", "MeshInstance3D", true, false):
+		parts[String(c.name)] = c
+	var by_mat := {}
+	var half := CHAINLINK_LEN * 0.5
+	for p: Array in [["modular_chainlink_fence_double", Transform3D(Basis.IDENTITY, Vector3(half, 0, 0))],
+			["modular_chainlink_fence_post", Transform3D(Basis.IDENTITY, Vector3(-half, 0, 0))],
+			["modular_chainlink_fence_post", Transform3D(Basis.IDENTITY, Vector3(half, 0, 0))]]:
+		var mi: MeshInstance3D = parts[p[0]]
+		for s in mi.mesh.get_surface_count():
+			var mat := mi.get_active_material(s)
+			if not by_mat.has(mat):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				by_mat[mat] = st
+			(by_mat[mat] as SurfaceTool).append_from(mi.mesh, s, p[1])
+	kit.free()
+	var am := ArrayMesh.new()
+	for mat: Material in by_mat:
+		(by_mat[mat] as SurfaceTool).commit(am)
+		var m := mat
+		if mat is BaseMaterial3D and (mat as BaseMaterial3D).transparency == BaseMaterial3D.TRANSPARENCY_ALPHA:
+			m = mat.duplicate()
+			(m as BaseMaterial3D).transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			(m as BaseMaterial3D).alpha_scissor_threshold = 0.35
+			(m as BaseMaterial3D).cull_mode = BaseMaterial3D.CULL_DISABLED
+		am.surface_set_material(am.get_surface_count() - 1, m)
+	am = _reduced(am, 1500)
+	return {"mesh": am, "aabb": AABB(Vector3(-half - 0.075, 0, -0.075), Vector3(CHAINLINK_LEN + 0.15, 2.4, 0.15)), "col": ["box"]}
 
 
 ## Unit-height palm trunk (pivot at the base) textured with the fan palm's bark; scale Y per tree.

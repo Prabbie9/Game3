@@ -7,6 +7,8 @@ extends RefCounted
 const SIZE := 256.0
 const CURB_H := 0.15
 const SIDEWALK := 4.0
+const PICKET := 2.0       # fence bay lengths (PropCatalog.PICKET_LEN, CHAINLINK_LEN)
+const CHAINLINK := 1.99
 const WALLS := ["white_stucco", "brick_wall_09", "plastered_wall_02", "concrete_tile_facade"]
 const TINTS := [Color(0.98, 0.9, 0.78), Color(0.95, 0.9, 0.86), Color(0.86, 0.92, 0.95), Color(1, 1, 1), Color(1.0, 0.86, 0.74),
 	Color(0.86, 0.93, 0.9), Color(0.92, 0.85, 0.82)]
@@ -826,6 +828,11 @@ func _gas_station(r: Rect2) -> void:
 
 func _industrial(r: Rect2) -> void:
 	_parking(r)
+	# chain-link along the street sides, in the verge between the pavement and the yard (the far side only where
+	# the last parking bay leaves room)
+	_fence_line("chainlink_fence", Vector3(r.position.x - 1.7, 0, r.position.y + 6.0), Vector3(r.position.x - 1.7, 0, r.end.y - 6.0), CityCell.CHAINLINK)
+	if fmod(r.size.x, 2.6) > 1.3:
+		_fence_line("chainlink_fence", Vector3(r.end.x - 1.3, 0, r.position.y + 6.0), Vector3(r.end.x - 1.3, 0, r.end.y - 6.0), CityCell.CHAINLINK)
 	var x := r.position.x + 6.0
 	while x < r.end.x - 20.0:
 		var w := minf(rng.randf_range(36.0, 70.0), r.end.x - 6.0 - x)
@@ -990,7 +997,7 @@ func _house(r: Rect2, yaw: float, villa: bool) -> void:
 	_far_box(_rect_of(corners).grow(-0.5), base, wall_h + (0.0 if villa else 1.5), tint, 0.0)
 	# a tree or two in the yard
 	for k in rng.randi_range(1, 2):
-		var off := basis * Vector3(rng.randf_range(-w * 0.6, w * 0.6), 0, -d * 0.5 - rng.randf_range(3.0, 6.0))
+		var off := basis * Vector3(rng.randf_range(-w * 0.6, w * 0.6), 0, -d * 0.5 - rng.randf_range(2.0, 4.0))
 		var tp := Vector3(lc.x, 0, lc.y) + off
 		if absf(off.dot(rgt) - w * 0.25) < 2.5:
 			continue
@@ -1001,6 +1008,42 @@ func _house(r: Rect2, yaw: float, villa: bool) -> void:
 			_palm(tp)
 		else:
 			_prop("oak", tp, rng.randf() * TAU, rng.randf_range(0.6, 0.85))
+	if not villa:
+		_yard_fence(r.get_center(), basis, w * 0.25, -w * 0.18)
+
+
+## A white picket fence along the front of a house lot (8.6 m out from its centre, the street side) with a gap
+## for the driveway and a gate gap at the path to the door, and short returns down both sides.
+func _yard_fence(c: Vector2, basis: Basis, drive_x: float, door_x: float) -> void:
+	var o := Vector3(c.x, 0, c.y)
+	var at := func(lx: float, lz: float) -> Vector3: return o + basis * Vector3(lx, 0, lz)
+	var e := 8.6
+	var cuts := [[drive_x - 2.1, drive_x + 2.1], [door_x - 0.7, door_x + 0.7]]
+	cuts.sort_custom(func(a, b): return a[0] < b[0])
+	var x := -e
+	for cut: Array in cuts:
+		if float(cut[0]) - x > 0.6:
+			_fence_line("picket_fence", at.call(x, -e), at.call(float(cut[0]), -e), CityCell.PICKET)
+		x = maxf(x, float(cut[1]))
+	if e - x > 0.6:
+		_fence_line("picket_fence", at.call(x, -e), at.call(e, -e), CityCell.PICKET)
+	for sx: float in [-1.0, 1.0]:
+		_fence_line("picket_fence", at.call(sx * e, -e), at.call(sx * e, -e + 4.0), CityCell.PICKET)
+
+
+## Fence bays from a to b (x/z; each bay sits on the lower ground under its two ends), stretched so whole bays fit.
+func _fence_line(name: String, a: Vector3, b: Vector3, bay: float) -> void:
+	var run := Vector2(b.x - a.x, b.z - a.z)
+	var n := maxi(1, roundi(run.length() / bay))
+	var sx := run.length() / n / bay
+	var dir := run.normalized()
+	var yaw := atan2(-dir.y, dir.x)
+	for i in n:
+		var p0 := a.lerp(b, float(i) / n)
+		var p1 := a.lerp(b, float(i + 1) / n)
+		var mid := (p0 + p1) * 0.5
+		mid.y = minf(_ground_y(p0.x, p0.z), _ground_y(p1.x, p1.z)) - 0.03
+		_prop_xf(name, Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(sx, 1, 1)), mid))
 
 
 static func _rect_of(pts: Array[Vector3]) -> Rect2:

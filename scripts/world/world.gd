@@ -29,6 +29,7 @@ var police_station: Storefront
 var safehouse: Safehouse
 var collectibles: Collectibles
 var birds: Birds
+var pushables: Pushables
 var aircraft: Aircraft
 var ambience: Ambience
 var radio: Radio
@@ -157,6 +158,9 @@ func _spawn_places() -> void:
 	birds = Birds.new()
 	birds.name = "Birds"
 	add_child(birds)
+	pushables = Pushables.new()
+	pushables.name = "Pushables"
+	add_child(pushables)
 	aircraft = Aircraft.new()
 	aircraft.name = "Aircraft"
 	add_child(aircraft)

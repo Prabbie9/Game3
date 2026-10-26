@@ -1,3 +1,14 @@
+## Port Solano v1.1.0 — fences, glass and things to push
+
+- **Fences:** white picket fences now front the suburban yards, and chain-link runs along the industrial yards.
+  Drive through a picket fence and it splinters into flying pickets; chain-link gets torn out by a car or a blast.
+  A few rounds or a couple of punches break a picket bay too.
+- **Glass:** the windows of the diner, the safehouse, the gun shop and the hospital, police station and garage
+  shatter when you shoot them, punch them, ram them or blow them up. They get fixed a few minutes later.
+- **Things to push:** crates, oil drums and boxes in the industrial yards and the port, traffic cones by the quay
+  cranes and in car parks, footballs in the parks, on the beach and in front yards. Walk into them to shove them
+  along (or dribble a ball), kick them, shoot them, drive through them. They stay where you leave them.
+
 ## Port Solano v1.0.2 — on the road
 
 - Tyres sit on the road instead of sinking a few centimetres into it.
