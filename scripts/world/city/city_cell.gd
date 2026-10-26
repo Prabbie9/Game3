@@ -772,11 +772,12 @@ func _balconies(lot: Rect2, base_y: float, floors: int) -> void:
 		for i in bays:
 			var zc := lot.position.y + 1.0 + (i + 0.5) * pitch
 			var w := pitch - 0.7
-			b.box("coping", Vector3(x - 0.6, y + 0.07, zc), Vector3(1.2, 0.14, w))
-			b.box("balcony_rail", Vector3(x - 1.17, y + 1.05, zc), Vector3(0.05, 0.05, w))
-			b.box("balcony_glass", Vector3(x - 1.17, y + 0.6, zc), Vector3(0.02, 0.85, w - 0.1))
+			# slab (casts a shadow band on the wall below, which is what makes balconies read from afar)
+			b.box("balcony", Vector3(x - 0.75, y + 0.11, zc), Vector3(1.5, 0.22, w))
+			b.box("balcony_rail", Vector3(x - 1.46, y + 1.08, zc), Vector3(0.08, 0.08, w))
+			b.box("balcony_glass", Vector3(x - 1.46, y + 0.64, zc), Vector3(0.03, 0.82, w - 0.1))
 			for e: float in [-0.5, 0.5]:
-				b.box("balcony_rail", Vector3(x - 0.6, y + 0.6, zc + e * w), Vector3(1.15, 0.95, 0.04))
+				b.box("balcony_rail", Vector3(x - 0.75, y + 0.68, zc + e * w), Vector3(1.45, 1.0, 0.06))
 
 
 func _mall(r: Rect2) -> void:

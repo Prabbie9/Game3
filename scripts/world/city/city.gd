@@ -483,6 +483,8 @@ func _mat(key: String) -> Material:
 				m = _pbr("wood_floor_deck", 1.0, Color(0.55, 0.45, 0.36))
 			"rail":
 				m = _pbr("wood_floor_deck", 1.0, Color(0.92, 0.9, 0.86))
+			"balcony":
+				m = _pbr("concrete_pavement", 1.5, Color(0.86, 0.85, 0.82))
 			"balcony_rail":
 				var br := StandardMaterial3D.new()
 				br.albedo_color = Color(0.16, 0.17, 0.18)
@@ -492,7 +494,7 @@ func _mat(key: String) -> Material:
 			"balcony_glass":
 				var bg := StandardMaterial3D.new()
 				bg.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-				bg.albedo_color = Color(0.62, 0.78, 0.82, 0.32)
+				bg.albedo_color = Color(0.36, 0.52, 0.58, 0.55)
 				bg.metallic = 0.2
 				bg.roughness = 0.05
 				m = bg
