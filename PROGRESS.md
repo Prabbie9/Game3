@@ -276,3 +276,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v0.9.0 | 9 — interactivity & life | GitHub Release |
 | v1.0.0 | 10 — polish & optimisation | GitHub Release |
 | v1.0.1 | iteration: beachfront balconies | GitHub Release |
+| v1.0.2 | iteration: tyres on the road, junction right of way | GitHub Release |

@@ -1,3 +1,9 @@
+## Port Solano v1.0.2 — on the road
+
+- Tyres sit on the road instead of sinking a few centimetres into it.
+- Traffic no longer T-bones a car still crossing a junction on amber: cross traffic waits for the junction to
+  clear before pulling away on green.
+
 ## Port Solano v1.0.1 — beachfront
 
 - The beach hotels on Ocean Drive now have sea-view balconies on every floor: glass balustrades, dark rails and
