@@ -106,6 +106,7 @@ func _make(i: int) -> void:
 		pm.material_override = _mat
 		pm.rotation.x = PI * 0.5
 		pm.visibility_range_end = 160.0
+		pm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.add_child(pm)
 	var glow := OmniLight3D.new()
 	glow.light_color = Color(1.0, 0.8, 0.4)

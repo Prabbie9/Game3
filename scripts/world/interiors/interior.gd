@@ -311,6 +311,10 @@ func furnish(model: String, pos: Vector3, yaw := 0.0, collide := true, scale_k :
 	n.rotation.y = deg_to_rad(yaw)
 	n.scale = Vector3.ONE * scale_k
 	add_child(n)
+	# indoors under a roof the sun can't cast their shadows anyway; nobody sees them from across the street
+	for gi: GeometryInstance3D in n.find_children("*", "GeometryInstance3D", true, false):
+		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gi.visibility_range_end = 70.0
 	if collide:
 		var aabb := AABB()
 		var first := true
