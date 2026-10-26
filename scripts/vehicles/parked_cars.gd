@@ -23,6 +23,7 @@ const SUBURB_MODELS := ["suv", "suv", "minivan", "minivan", "wagon", "sedan", "h
 const WORK_MODELS := ["pickup", "pickup", "pickup", "offroad", "suv", "sedan", "wagon", "minivan", "van", "van"]
 
 var max_active := 30
+var cost_ms := 0.0             # main-thread time of the last frame (stream_check)
 var _slots: Array = []         # [Vector3 pos (road surface), float yaw, String model, Color paint]
 var _grid := {}                # Vector2i -> PackedInt32Array of slot ids
 var _active := {}              # slot id -> Vehicle sitting in it
@@ -142,6 +143,12 @@ func active_count() -> int:
 
 
 func _process(delta: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	_update(delta)
+	cost_ms = (Time.get_ticks_usec() - t0) / 1000.0
+
+
+func _update(delta: float) -> void:
 	if not Game.world:
 		return
 	var focus: Vector3 = Game.world.focus_point()
