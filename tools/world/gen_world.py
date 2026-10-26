@@ -653,6 +653,7 @@ def build_nature(h, d, X, Z, graph, lots):
                               rect_mask(Xs, Zs, 560, -280, 1120, 640, 10), rect_mask(Xs, Zs, -772, -1080, -560, 760, 10),
                               rect_mask(Xs, Zs, -760, 560, 0, 740, 10), rect_mask(Xs, Zs, -760, -1180, 220, -540, 10)])
     dens *= 1 - flat
+    dens *= 1 - boardwalk_sand(Xs, Zs)
     step = STEP * k
     n = dens.shape[0]
     for rd in graph.roads:
@@ -679,6 +680,13 @@ def build_nature(h, d, X, Z, graph, lots):
     return (np.clip(dens, 0, 1) * 255).astype(np.uint8)
 
 
+def boardwalk_sand(X, Z):
+    """The strip between the Playa Solano sand and the boardwalk (which runs along Ocean Drive's west side):
+    sand right up to the boardwalk, as on a real beachfront (the terrain beach mask stops ~40 m short of it)."""
+    edge = OCEAN_DRIVE_X - 8 - SIDEWALK - 8   # the boardwalk's west edge
+    return np.clip(smoothstep(edge + 4, edge - 10, X) * smoothstep(-1180, -1080, Z) * smoothstep(720, 680, Z), 0, 1)
+
+
 def build_splat(h, d, beach, X, Z, graph):
     """RGBA weights: R sand, G dry grass (hills), B rock, A green grass (lowlands, verges).
     Urban ground is drawn by the city meshes on top."""
@@ -686,6 +694,7 @@ def build_splat(h, d, beach, X, Z, graph):
     slope = np.hypot(gx, gy)
     sand = np.clip(beach * smoothstep(150, 90, d) * (d > -60), 0, 1)
     sand = np.maximum(sand, smoothstep(2.5, 0.5, h - SEA) * (d > -40) * (1 - smoothstep(780, 800, Z) * smoothstep(-120, -40, X)))
+    sand = np.maximum(sand, boardwalk_sand(X, Z) * (d > -60) * smoothstep(260, 200, d))
     rock = np.clip(smoothstep(0.7, 1.05, slope) + (h < SEA - 1.0) * 0.6, 0, 1)
     rest = np.clip(1 - sand - rock, 0, 1)
     low = smoothstep(16.0, 5.0, h) * smoothstep(0.35, 0.15, slope)
