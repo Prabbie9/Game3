@@ -213,13 +213,13 @@ static func _cut_doors(data: Dictionary, model: String) -> void:
 				if not sides.has(mat):
 					var st := SurfaceTool.new()
 					st.begin(Mesh.PRIMITIVE_TRIANGLES)
-					sides[mat] = [st, kind, not uvs.is_empty()]
+					sides[mat] = [st, kind, true]
 				var st2: SurfaceTool = sides[mat][0]
+				# every vertex gets a normal and a UV (a material can come in surfaces with and without them)
+				var face_n := (pb - pa).cross(pc - pa).normalized()
 				for vi in [a, b, c]:
-					if not normals.is_empty():
-						st2.set_normal((xf.basis * normals[vi]).normalized())
-					if not uvs.is_empty():
-						st2.set_uv(uvs[vi])
+					st2.set_normal((xf.basis * normals[vi]).normalized() if not normals.is_empty() else face_n)
+					st2.set_uv(uvs[vi] if not uvs.is_empty() else Vector2.ZERO)
 					var wv := xf * verts[vi]
 					st2.add_vertex(wv)
 					bounds[side][0] = minf(bounds[side][0], wv.x)
