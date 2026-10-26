@@ -86,6 +86,7 @@ const DOOR_OPEN := 1.1           # radians a front door swings open
 var _doors := {}                  # side (-1 driver / 1 passenger) -> hinge pivot
 var _door_angle := {}
 var _door_want := {}
+var _door_mid := {}
 var _wheels: Array[VehicleWheel3D] = []
 var _lights: Array[Light3D] = []
 var _brake_mat: StandardMaterial3D
@@ -210,6 +211,7 @@ func _build() -> void:
 		pivot.add_child(dmi)
 		add_child(pivot)
 		_doors[int(d.side)] = pivot
+		_door_mid[int(d.side)] = (d.mesh as ArrayMesh).get_aabb().get_center()
 	_make_collision(aabb)
 	center_of_mass = Vector3(0, aabb.position.y + 0.08, 0)
 
@@ -661,7 +663,15 @@ func driver_door_position() -> Vector3:
 
 
 func passenger_door_position() -> Vector3:
+	if boards_at_front():
+		var m: Vector3 = _door_mid[1]
+		return global_transform * Vector3(-_door.x, 0.0, m.z)
 	return global_transform * Vector3(-_door.x, _door.y, _door.z)
+
+
+## The bus is boarded through its front door on the kerb side (then the driver steps across to the seat).
+func boards_at_front() -> bool:
+	return model == "bus" and _door_mid.has(1)
 
 
 ## Hips target on the passenger seat (mirror of the driver's).

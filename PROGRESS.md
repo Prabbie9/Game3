@@ -217,13 +217,18 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   sleep, diner, coins placed on open ground, pickup, save state), tests/life_check.gd (soundscape by place and hour,
   indoors, pigeons, gulls, aircraft, radio); screenshots `interiors`.
 
-**Next: Milestone 10 — Polish & optimisation** (every known issue, animation smoothing, audio mix, visual
+**Milestone 10 — Polish & optimisation (in progress)**
+- Car doors: no model has separate doors, so CarLibrary cuts the front doors out of the body (the outer shell's
+  triangles wholly inside the door box between the wheel arch and the seat, from the wheel track) and hangs them on
+  a hinge; they swing open when the player gets in or out (passenger side too) and shut behind. Cab-over trucks get
+  doors above the wheel arch; the bus is boarded through its front door on the kerb side, then the driver steps
+  across. Closed, the cars look exactly as before. Screenshot `doors`.
+
+**Next in Milestone 10** (every known issue, animation smoothing, audio mix, visual
 consistency pass, final perf pass on all presets, final export).
 
 ### Known issues / debt
-- Car doors don't open during entry (car pack has no separate door meshes) — character passes through the door.
 - Wheels sit ~4 cm low on the road (suspension/visual offset; tyres look slightly loaded — kept).
-- Bus/fire engine have no passenger door and are entered from the driver side like cars.
 - Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
   library has no freestyle/treading-water clips (owner checklist asks for them).
 - tests/emergency_check.gd still fails now and then (an ambulance taking a long way round or wedged before the

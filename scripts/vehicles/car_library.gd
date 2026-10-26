@@ -110,7 +110,7 @@ static func get_model(model: String) -> Dictionary:
 
 
 ## Vehicles whose front doors are cut out of the body to swing open (none of the files has separate doors).
-const NO_DOORS := ["bus", "heli", "speedboat", "dirtbike", "bicycle"]
+const NO_DOORS := ["heli", "speedboat", "dirtbike", "bicycle"]
 
 
 ## Cuts the front doors out of the body: the outer shell's triangles (skin, window, mirror) between the front
@@ -141,6 +141,14 @@ static func _cut_doors(data: Dictionary, model: String) -> void:
 		z0 = seat_z - 0.55
 		z1 = seat_z + 0.5
 		y0 = maxf(y0, aabb.position.y + front_r * 2.0 + 0.08)
+	var only_side := 0
+	if model == "bus":
+		# the bus's door is ahead of the front wheel on the kerb side
+		z0 = aabb.position.z + 0.25
+		z1 = front_z - front_r - 0.08
+		y0 = aabb.position.y + 0.3
+		y1 = aabb.position.y + 2.7
+		only_side = 1
 	if OS.has_environment("DOOR_DEBUG"):
 		print("DOORS %s z %.2f..%.2f y %.2f..%.2f seat %.2f/%.2f front %.2f r %.2f aabb %s" % [model, z0, z1, y0, y1, seat_z, seat_y, front_z, front_r, aabb])
 	# the body's sides from the wheel track (a model's bounds can carry stray geometry)
@@ -192,9 +200,9 @@ static func _cut_doors(data: Dictionary, model: String) -> void:
 						and minf(pa.y, minf(pb.y, pc.y)) > y0 - 0.04 and maxf(pa.y, maxf(pb.y, pc.y)) < y1 + 0.04:
 					var mx := maxf(pa.x, maxf(pb.x, pc.x))
 					var nx := minf(pa.x, minf(pb.x, pc.x))
-					if mx < cx - inner:
+					if mx < cx - inner and only_side != 1:
 						side = -1
-					elif nx > cx + inner:
+					elif nx > cx + inner and only_side != -1:
 						side = 1
 				if side == 0:
 					kept.append(a)

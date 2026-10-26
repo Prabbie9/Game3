@@ -285,12 +285,12 @@ func _nearest_vehicle() -> Vehicle:
 			continue
 		if npc and v.linear_velocity.length() > 2.5:
 			continue  # can't pull someone out of a moving car
-		var d := global_position.distance_to(v.driver_door_position())
+		var d := global_position.distance_to(v.driver_door_position()) if not v.boards_at_front() else INF
 		if d < best_d:
 			best = v
 			best_d = d
 			_enter_side = 0
-		if v.has_passenger_door() and not npc:
+		if v.has_passenger_door() and (not npc or v.boards_at_front()):
 			var dp := global_position.distance_to(v.passenger_door_position())
 			if dp < best_d - 0.3:
 				best = v
