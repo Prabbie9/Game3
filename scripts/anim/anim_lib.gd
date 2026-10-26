@@ -6,6 +6,8 @@ extends RefCounted
 ## speeds and blend-space positions come from the animation itself (no foot sliding).
 
 const SRC := "res://assets/source/mixamo/animations/%s.fbx"
+## Quaternius Universal Animation Library (CC0, retargeted to the same humanoid skeleton): sources "ual:Clip".
+const UAL := "res://assets/source/quaternius/ual_standard.glb"
 const HIPS := "%GeneralSkeleton:Hips"
 
 enum Root { KEEP, IN_PLACE, NO_RISE, EXTRACT, EXTRACT_Y }
@@ -40,8 +42,9 @@ const CLIPS := {
 	"vault_high": ["male_jumping_over_an_obstacle_with_2_hands_planted", false, Root.EXTRACT],
 	"jump_hang": ["jump_to_a_braced_hang_from_standing_idle", false, Root.EXTRACT],
 	"climb": ["climb_wall_from_braced_hang_to_crouch", false, Root.EXTRACT_Y],
-	"swim": ["swimming_underwater", true, Root.IN_PLACE],
-	"swim_idle": ["floating", true, Root.IN_PLACE],
+	# surface stroke with the head up, and treading water (the Mixamo library has neither)
+	"swim": ["ual:Swim_Fwd", true, Root.IN_PLACE],
+	"swim_idle": ["ual:Swim_Idle", true, Root.IN_PLACE],
 	"cover_idle": ["standing_cover_against_object", true, Root.IN_PLACE],
 	"cover_left": ["left_standing_sneak_behind_cover", true, Root.IN_PLACE],
 	"cover_right": ["right_standing_sneak_behind_cover", true, Root.IN_PLACE],
@@ -110,6 +113,9 @@ const CLIPS := {
 	"happy_idle": ["happy_idle_variation_1", true, Root.IN_PLACE],
 }
 
+## In-place clips authored without travel: the speed (normalized units / s) their cycle reads as.
+const NATIVE_SPEED := {"swim": Vector3(0, 0, 0.47)}
+
 ## Clips played faster than authored (the Mixamo carjack takes its time settling into the seat).
 const RETIME := {"carjack": 1.6, "jacked": 1.3}
 
@@ -169,15 +175,19 @@ static func get_library() -> AnimationLibrary:
 	_lib = AnimationLibrary.new()
 	for clip_name: String in CLIPS:
 		var c: Array = CLIPS[clip_name]
-		var src = load(SRC % c[0])
-		if not src is AnimationLibrary or src.get_animation_list().is_empty():
+		var ual := String(c[0]).begins_with("ual:")
+		var src = load(UAL if ual else SRC % c[0])
+		var src_anim := String(c[0]).substr(4) if ual else ""
+		if not src is AnimationLibrary or src.get_animation_list().is_empty() or (ual and not src.has_animation(src_anim)):
 			push_error("AnimLib: missing clip %s (%s)" % [clip_name, c[0]])
 			continue
-		var anim: Animation = src.get_animation(src.get_animation_list()[0]).duplicate(true)
+		var anim: Animation = src.get_animation(src_anim if ual else src.get_animation_list()[0]).duplicate(true)
 		anim.loop_mode = Animation.LOOP_LINEAR if c[1] else Animation.LOOP_NONE
 		if RETIME.has(clip_name):
 			_retime(anim, RETIME[clip_name])
 		_process_root(clip_name, anim, c[2])
+		if NATIVE_SPEED.has(clip_name):
+			velocity[clip_name] = NATIVE_SPEED[clip_name]
 		_lib.add_animation(clip_name, anim)
 	for m: String in MIRRORS:
 		var src_name: String = MIRRORS[m]

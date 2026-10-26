@@ -132,3 +132,4 @@
   and gives the touched body the walker's speed along the line between them; kicks and bullets scale by weight.
   Windows are their own GlassPane bodies (world + props layers) rather than part of the merged building mesh, so
   each can break and be glazed again on its own.
+- 2026-10-26 — Swimming clips come from Quaternius' CC0 Universal Animation Library (the Mixamo library has no surface stroke or treading water), retargeted onto the same humanoid skeleton with a Rigify bone map at import.

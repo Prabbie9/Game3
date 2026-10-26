@@ -270,13 +270,15 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - v1.1.2: gen_world.boardwalk_sand(): the splat (and vegetation, map) get sand from the beach up to the boardwalk;
   the terrain's own beach mask (which also shapes heights) is untouched, so height.bin/world.json are identical.
   The camera hides the player's body while scoped. Full screenshot review of every shot set done after v1.1.1.
+- v1.1.3: swimming uses Quaternius' CC0 Universal Animation Library (assets/source/quaternius/ual_standard.glb,
+  committed — CC0): Swim_Fwd (head-up surface stroke) and Swim_Idle (treading water), retargeted at import with
+  assets/rigs/bonemap_rigify.tres (Rigify DEF- bones → SkeletonProfileHumanoid). AnimLib loads "ual:Clip" sources;
+  NATIVE_SPEED gives the in-place stroke its travel speed (the old clip's 0.47 units/s).
 
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 
 ### Known issues / debt
-- Swimming uses Mixamo's "Swimming Underwater" for surface swimming and "Floating" for treading water: the shared
-  library has no freestyle/treading-water clips (owner checklist asks for them).
 - tests/emergency_check.gd still fails now and then (an ambulance taking a long way round or wedged before the
   out-of-sight recovery kicks in); traffic_check / police_chase_check pass 3/3 after the latest fixes.
 - tests/stream_check.gd: on this 4-core software container the worst single frame varies run to run (30-100 ms,
@@ -303,3 +305,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v1.1.0 | iteration: breakable fences and windows, pushable objects | GitHub Release |
 | v1.1.1 | iteration: texture compression, map labels, night shops, safehouse | GitHub Release |
 | v1.1.2 | iteration: beach sand to the boardwalk, scope view | GitHub Release |
+| v1.1.3 | iteration: surface swimming and treading water | GitHub Release |

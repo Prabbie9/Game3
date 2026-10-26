@@ -8,10 +8,8 @@ reply whenever convenient and the next session will act on it.
   branch `claude/tmp-push-test` (*Code → Branches*). The session's proxy does not allow changing the default branch or
   deleting branches.
 
-## Optional: two Mixamo clips that would make swimming look better
-The shared Mixamo folder has no surface-swimming or treading-water animation, so swimming currently uses "Swimming
-Underwater" and "Floating". If you can, download **"Treading Water"** and **"Swimming"** (the freestyle one) from
-mixamo.com (FBX, *Without Skin*, 30 fps) into the Drive folder's animations — the next session will pick them up.
+## v1.1.3 — swimming
+- [ ] Jump into the plaza pool or the sea: does the surface stroke (head up) and treading water look right?
 
 ## v1.1.0 — fences, glass, things to push
 - [ ] Drive through a picket fence in the suburbs (Las Lomas, north of the freeway) and through the chain-link

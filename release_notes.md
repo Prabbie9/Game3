@@ -1,3 +1,8 @@
+## Port Solano v1.1.3 — swimming
+
+- Swimming is a proper head-up stroke at the surface, and you tread water when you stop (it used to be an
+  underwater dive pose and a float). Animations by Quaternius (CC0).
+
 ## Port Solano v1.1.2 — sand to the boardwalk
 
 - Playa Solano is sand all the way up to the boardwalk (a strip of lawn used to separate the two).

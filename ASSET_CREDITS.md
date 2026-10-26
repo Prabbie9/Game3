@@ -5,6 +5,7 @@ Every external asset used in the game. License key: CC0 = public domain; CC-BY 4
 | Asset | Used for | Author | Source | License |
 |---|---|---|---|---|
 | Mixamo characters & animations | Player/NPC characters and animations | Adobe Mixamo | https://www.mixamo.com | Mixamo license (use in games allowed; raw files not redistributed) |
+| Universal Animation Library (Standard) — Swim_Fwd, Swim_Idle | Swimming and treading water (retargeted to the humanoid skeleton) | Quaternius | https://quaternius.com/packs/universalanimationlibrary.html | CC0 |
 | Street Lamp 01 (model) | city props | Josh Dean | https://polyhaven.com/a/street_lamp_01 | CC0 |
 | Street Lamp 02 (model) | city props | Josh Dean | https://polyhaven.com/a/street_lamp_02 | CC0 |
 | Fire Hydrant (model) | city props | Gonçalo Felício | https://polyhaven.com/a/fire_hydrant | CC0 |
