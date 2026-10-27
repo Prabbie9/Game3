@@ -6,6 +6,7 @@ extends Node3D
 const LOAD_R := 380.0     # cells whose rect is within this distance of the focus are shown in detail
 const UNLOAD_R := 520.0
 const BUDGET_MS := 3.0    # main-thread time per frame for creating cell nodes
+const LEAD_S := 2.5       # moving fast, the cells nearest where the focus will be this many seconds on come first
 const PROP_RANGE := {"fire_hydrant": 140.0, "fire_hydrant_aged": 140.0, "metal_trash_can": 140.0, "metal_trash_can_rust": 140.0,
 	"utility_box_01": 160.0, "utility_box_02": 160.0, "bench": 160.0, "exterior_aircon_unit": 180.0,
 	"picket_fence": 150.0, "chainlink_fence": 170.0,
@@ -123,14 +124,31 @@ func _build_far() -> void:
 var anchor := Vector3.INF  # cells near this point stay loaded too (the player when the camera is elsewhere)
 
 
+var cost_ms := 0.0             # main-thread time spent creating cell nodes last frame (benchmark)
+var _lead := Vector3.ZERO      # where the focus will be in a couple of seconds (moving fast: build ahead first)
+var _vel := Vector3.ZERO
+var _last_t := 0
+
+
 func update(focus: Vector3) -> void:
+	var now := Time.get_ticks_usec()
+	var dt := (now - _last_t) / 1e6 if _last_t > 0 else 0.0
+	_last_t = now
+	if dt > 0.0 and dt < 0.5:
+		var v := (focus - _focus) / dt
+		_vel = _vel.lerp(v if v.length() < 120.0 else _vel, minf(1.0, dt * 4.0))   # (teleports don't count)
 	_focus = focus
+	var ahead := _vel * LEAD_S
+	ahead.y = 0.0
+	_lead = focus + ahead.limit_length(LOAD_R * 0.6)
 	var want := _all_cells_near(focus, LOAD_R)
 	if anchor != Vector3.INF:
 		want.append_array(_all_cells_near(anchor, 150.0))
-	for k: Vector2i in want:
-		if not _cells.has(k) and not _jobs.has(k) and not _queued(k):
-			_request(k)
+	var missing := want.filter(func(k: Vector2i): return not _cells.has(k) and not _jobs.has(k) and not _queued(k))
+	# nearest the point ahead first: the cells the car is about to reach are built and shown before those behind
+	missing.sort_custom(func(a: Vector2i, b: Vector2i): return _rect_dist(a, _lead) < _rect_dist(b, _lead))
+	for k: Vector2i in missing:
+		_request(k)
 	for k: Vector2i in _cells.keys():
 		if _rect_dist(k, focus) > UNLOAD_R and (anchor == Vector3.INF or _rect_dist(k, anchor) > 260.0):
 			_unload(k)
@@ -147,8 +165,9 @@ func update(focus: Vector3) -> void:
 		if _steps.is_empty():
 			if _queue.is_empty():
 				break
-			_steps = _steps_for(_queue.pop_front())
+			_steps = _steps_for(_pop_nearest())
 		_steps.pop_front().call()
+	cost_ms = (Time.get_ticks_usec() - t0) / 1000.0
 
 
 ## Frees up to n nodes of unloaded cells (freeing a whole cell at once costs tens of milliseconds).
@@ -166,6 +185,17 @@ func _free_some(n: int) -> void:
 			continue
 		child.free()
 		n -= 1
+
+
+## The built cell nearest the point ahead (instantiated next).
+func _pop_nearest() -> CityCell:
+	var best := 0
+	for i in range(1, _queue.size()):
+		if _rect_dist((_queue[i] as CityCell).key, _lead) < _rect_dist((_queue[best] as CityCell).key, _lead):
+			best = i
+	var c: CityCell = _queue[best]
+	_queue.remove_at(best)
+	return c
 
 
 func _queued(k: Vector2i) -> bool:

@@ -116,8 +116,9 @@ const CLIPS := {
 ## In-place clips authored without travel: the speed (normalized units / s) their cycle reads as.
 const NATIVE_SPEED := {"swim": Vector3(0, 0, 0.47)}
 
-## Clips played faster than authored (the Mixamo carjack takes its time settling into the seat).
-const RETIME := {"carjack": 1.6, "jacked": 1.3}
+## Clips played faster than authored (the Mixamo carjack takes its time settling into the seat). The jack pair
+## shares one rate so the jacker and the driver stay in step, as authored.
+const RETIME := {"carjack": 1.5, "jacked": 1.5}
 
 ## Mirror images (left/right swapped) of clips: passenger-side entry and exit from the driver-side ones.
 const MIRRORS := {"car_enter_r": "car_enter", "car_exit_r": "car_exit", "carjack_r": "carjack", "jacked_r": "jacked"}
@@ -167,6 +168,9 @@ static var displacement := {}
 static var yaw_change := {}
 ## Average hips height of each clip (normalized units).
 static var hip_height := {}
+## Hips position at the first / last key of each clip (normalized units, Mixamo axes), for aligning KEEP clips.
+static var hips_start := {}
+static var hips_end := {}
 
 
 static func get_library() -> AnimationLibrary:
@@ -199,16 +203,24 @@ static func get_library() -> AnimationLibrary:
 			if yaw_change.has(src_name):
 				yaw_change[m] = -float(yaw_change[src_name])
 			hip_height[m] = hip_height.get(src_name, 0.98)
+			for d: Dictionary in [hips_start, hips_end]:
+				if d.has(src_name):
+					var h: Vector3 = d[src_name]
+					d[m] = Vector3(-h.x, h.y, h.z)
 	return _lib
 
 
 static func _retime(a: Animation, speed: float) -> void:
+	# take every key out first, then put them back at the new times (moving keys one by one reorders the track
+	# under the loop: keys got moved twice or not at all, and the clip twitched)
 	for t in a.get_track_count():
+		var keys := []
+		for k in a.track_get_key_count(t):
+			keys.append([a.track_get_key_time(t, k) / speed, a.track_get_key_value(t, k)])
 		for k in range(a.track_get_key_count(t) - 1, -1, -1):
-			var value: Variant = a.track_get_key_value(t, k)
-			var time := a.track_get_key_time(t, k) / speed
 			a.track_remove_key(t, k)
-			a.track_insert_key(t, time, value)
+		for e: Array in keys:
+			a.track_insert_key(t, e[0], e[1])
 	a.length /= speed
 
 
@@ -258,6 +270,8 @@ static func _process_root(clip_name: String, anim: Animation, mode: int) -> void
 	for i in n:
 		hy += (anim.track_get_key_value(t, i) as Vector3).y
 	hip_height[clip_name] = hy / n
+	hips_start[clip_name] = p0
+	hips_end[clip_name] = p1
 	match mode:
 		Root.KEEP:
 			displacement[clip_name] = p1 - p0

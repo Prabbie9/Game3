@@ -444,6 +444,10 @@ func _build_lights(aabb: AABB) -> void:
 		l.light_energy = 6.0
 		l.light_color = Color(1.0, 0.95, 0.85)
 		l.shadow_enabled = false
+		# far-off cars' beams fade out smoothly instead of popping as the renderer's light budget changes hands
+		l.distance_fade_enabled = true
+		l.distance_fade_begin = 90.0
+		l.distance_fade_length = 30.0
 		l.visible = false
 		add_child(l)
 		_lights.append(l)

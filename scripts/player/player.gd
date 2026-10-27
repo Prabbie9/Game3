@@ -36,6 +36,17 @@ var _seq_time := 0.0
 var _seq_from := Transform3D()
 var _seq_to := Transform3D()
 var _seat_local := Transform3D()
+# entering / leaving a vehicle (KEEP clips carry the body): the clip's root in the vehicle's space, the height it
+# rises (or drops) over the clip so the hips land on the seat (or the feet on the ground), and the hand-over
+# into the seated / standing pose afterwards
+var _seq_local := Transform3D()
+var _seq_lift := 0.0
+var _seq_len := 1.0
+var _seq_approach := 0.25
+var _hand_t := -1.0
+var _hand_from := Transform3D()
+var _hand_hips := Vector3.ZERO
+var _exit_done := false
 var foot_ik: FootIK
 var ragdoll: Ragdoll
 var crouched := false
@@ -360,17 +371,24 @@ func enter_vehicle(v: Vehicle) -> void:
 	v.reserve(self)
 	v.open_door(1 if _enter_clip == "car_enter_r" else -1, true)
 	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
-	# Place the character so the root-motion clip ends with the hips at the seat.
-	var seat := _seat_root(v) if _enter_clip != "car_enter_r" else _passenger_root(v)
+	# Place the character so the root-motion clip ends with the hips on the seat: the root starts on the ground by
+	# the door, under where the clip leaves the hips, and rises with the climb in by whatever this seat is higher
+	# or lower than the one the clip was made for.
+	var seat := v.seat_transform() if _enter_clip != "car_enter_r" else v.passenger_seat_transform()
 	var turn := visual.clip_yaw(_enter_clip)
+	var hips := visual.clip_hips(_enter_clip, true)
 	var start_basis := seat.basis * Basis(Vector3.UP, -turn)
-	var d := visual.clip_displacement(_enter_clip)
-	var start := Transform3D(start_basis, seat.origin - start_basis * Vector3(d.x, 0, d.z))
+	var start := Transform3D(start_basis, seat.origin - start_basis * Vector3(hips.x, 0, hips.z))
 	start.origin.y = v.ground_height_at(start.origin)
+	var inv := v.global_transform.affine_inverse()
+	_seq_local = inv * start
+	_seq_lift = (inv * seat.origin - _seq_local * hips).y
+	_seq_len = visual.clip_length(_enter_clip)
 	_seq_from = global_transform
-	_seq_to = start
+	_seq_approach = clampf(global_position.distance_to(start.origin) / 2.5, 0.25, 0.6)   # walk the last bit to the door
 	_seq_time = 0.0
-	_seat_local = v.global_transform.affine_inverse() * seat
+	_hand_t = -1.0
+	_seat_local = inv * (_seat_root(v) if _enter_clip != "car_enter_r" else _passenger_root(v))
 	visual.travel(_enter_clip)
 	cam.mode = CameraRig.Mode.VEHICLE
 	cam.target = v
@@ -388,16 +406,18 @@ func exit_vehicle() -> void:
 	vehicle.set_driver_input_enabled(false)
 	vehicle.open_door(-1, true)
 	Audio.play_at(Audio.stream("vehicles/door_open.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -3.0, randf_range(0.95, 1.05))
-	var seat := _seat_root(vehicle)
-	global_transform = seat
-	var turn := visual.clip_yaw("car_exit")
-	var d := visual.clip_displacement("car_exit")
-	var end_basis := seat.basis * Basis(Vector3.UP, turn)
-	var end := Transform3D(end_basis, seat.origin + seat.basis * Vector3(d.x, 0, d.z))
-	end.origin.y = vehicle.ground_height_at(end.origin)
-	_seq_from = seat
-	_seq_to = end
+	# the clip starts with the hips on the seat and carries the body out; the root drops by the seat's height
+	# above the ground the clip was made for, so the feet land on the road
+	var inv := vehicle.global_transform.affine_inverse()
+	var seat_pt := inv * vehicle.seat_transform().origin
+	var b := _seat_local.basis
+	_seq_local = Transform3D(b, seat_pt - b * visual.clip_hips("car_exit", false))
+	var out := vehicle.global_transform * (_seq_local * visual.clip_hips("car_exit", true))
+	_seq_lift = vehicle.ground_height_at(out) - (vehicle.global_transform * _seq_local.origin).y
+	_seq_len = visual.clip_length("car_exit")
 	_seq_time = 0.0
+	_hand_t = -1.0
+	_exit_done = false
 	visual.travel("car_exit")
 
 
@@ -423,20 +443,81 @@ func _sequence(delta: float) -> void:
 	if vehicle is Bike or _shuffle_t >= 0.0:
 		return  # mounting a bike and the seat shuffle are driven from _process
 	_seq_time += delta
-	if state == State.ENTERING:
+	# the clip's last stretch crossfades into the seated (or standing) state, which the state machine starts a
+	# crossfade before the clip ends: follow that hand-over from the moment it begins
+	if _hand_t >= 0.0:
+		_hand_t += delta
+	elif _seq_time > 0.5 and visual.current_state() == _hand_to():
+		_hand_t = 0.0
+		_hand_hips = visual.clip_hips(_enter_clip if state == State.ENTERING else "car_exit", true)
+		_hand_from = _seq_local
+		_hand_from.origin.y += _seq_lift
+		if state == State.EXITING:
+			# standing by the car: turn about the hips into the standing pose, feet on the road
+			_hand_from = vehicle.global_transform * _hand_from
+			var hips_w := _hand_from * _hand_hips
+			_seq_to = Transform3D(_hand_from.basis * Basis(Vector3.UP, visual.clip_yaw("car_exit")),
+				Vector3(hips_w.x, vehicle.ground_height_at(hips_w), hips_w.z))
+	if state == State.EXITING and _exit_done and _hand_t >= float(HANDOVER.car_exit):
+		_finish_exit()
+		return
+	if state == State.ENTERING and _hand_t < 0.0:
 		# quick blend to the door start pose, then the clip carries the body into the seat
-		var k := clampf(_seq_time / 0.25, 0.0, 1.0)
-		global_transform = _seq_from.interpolate_with(_seq_to, k * k * (3.0 - 2.0 * k))
+		var k := clampf(_seq_time / _seq_approach, 0.0, 1.0)
+		var local := _seq_local
+		local.origin.y += _seq_lift * smoothstep(0.3 * _seq_len, 0.9 * _seq_len, _seq_time)
+		global_transform = _seq_from.interpolate_with(vehicle.global_transform * local, k * k * (3.0 - 2.0 * k))
 	else:
-		# the exit clip carries the body out of the seat; the root stays at the seat until it ends
-		global_transform = vehicle.global_transform * _seat_local
+		global_transform = vehicle.global_transform * _vehicle_local()
+
+
+## The state the entry / exit clip hands over to, and how long that crossfade is (HumanoidVisual's links).
+func _hand_to() -> StringName:
+	if state == State.EXITING:
+		return &"ground"
+	return &"passenger" if _enter_clip == "car_enter_r" else &"drive"
+
+
+const HANDOVER := {"car_enter": 0.25, "car_enter_r": 0.25, "carjack": 0.3, "car_exit": 0.3}
+
+
+## Where the player's root sits in the vehicle's space while getting in, driving or getting out: the clip's root
+## (the exit one drops to the ground as the feet reach it, and moves there from the seated root over the first
+## crossfade), then the hand-over into the seated / standing pose, turning about the hips so they stay put
+## while the poses crossfade, and the seat.
+func _vehicle_local() -> Transform3D:
+	var clip := _enter_clip if state == State.ENTERING else "car_exit"
+	# how far the state machine's crossfade has got (the new state's play time), never behind our own clock
+	var faded := _hand_t
+	if _hand_t >= 0.0 and visual.current_state() == _hand_to():
+		faded = maxf(faded, visual.playback.get_current_play_position())
+	var k := clampf(faded / float(HANDOVER.get(clip, 0.25)), 0.0, 1.0)
+	# (the clip plays on under the crossfade: its hips, where they are now, blend into the seated / standing ones)
+	var h := visual.clip_hips_at(clip, minf(_seq_time, _seq_len))
+	if state == State.ENTERING and _hand_t >= 0.0:
+		var hh := visual.clip_hip_height("passenger" if _enter_clip == "car_enter_r" else _seat_clip(vehicle))
+		var bs := _hand_from.basis.slerp(_seat_local.basis, k)
+		var hips := (_hand_from * h).lerp(_seat_local * Vector3(0, hh, 0), k)
+		return Transform3D(bs, hips - bs * h.lerp(Vector3(0, hh, 0), k))
+	if state == State.EXITING and _hand_t >= 0.0:
+		var bs := _hand_from.basis.slerp(_seq_to.basis, k)
+		var hips := (_hand_from * h).lerp(_seq_to.origin, k)
+		var off := bs * (h * (1.0 - k))
+		var root := Vector3(hips.x - off.x, lerpf(_hand_from.origin.y, _seq_to.origin.y, k), hips.z - off.z)
+		return vehicle.global_transform.affine_inverse() * Transform3D(bs, root)
+	if state == State.EXITING:
+		var local := _seq_local
+		local.origin.y += _seq_lift * smoothstep(0.35 * _seq_len, 0.85 * _seq_len, _seq_time)
+		return _seat_local.interpolate_with(local, clampf(_seq_time / 0.2, 0.0, 1.0))
+	return _seat_local
 
 
 func _on_action_finished(anim: StringName) -> void:
 	if anim == &"car_enter_r" and state == State.ENTERING:
-		# in through the passenger door: slide across to the wheel
+		# in through the passenger door and settled: slide across to the wheel
 		vehicle.open_door(1, false)
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.passenger_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
+		_hand_t = -1.0
 		_shuffle_t = 0.0
 		return
 	if (anim == &"car_enter" or anim == &"carjack") and state == State.ENTERING:
@@ -444,27 +525,39 @@ func _on_action_finished(anim: StringName) -> void:
 		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), vehicle.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
 		if _seat_clip(vehicle) != "drive":
 			visual.travel(_seat_clip(vehicle))
+		_hand_t = -1.0
 		state = State.DRIVING
 		vehicle.set_driver(self)
 		vehicle_changed.emit(vehicle)
 	elif anim == &"car_exit" and state == State.EXITING:
-		global_transform = _seq_to
-		var v := vehicle
-		v.open_door(-1, false)
-		Audio.play_at(Audio.stream("vehicles/door_close.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
-		vehicle = null
-		v.set_driver(null)
-		state = State.ON_FOOT
-		collision_layer = 2
-		collision_mask = 1 | 4 | 8 | 16
-		cam.mode = CameraRig.Mode.ON_FOOT
-		cam.target = self
-		visual.jump_to("ground")
-		vehicle_changed.emit(null)
+		if _hand_t >= 0.0 and _hand_t < float(HANDOVER.car_exit):
+			_exit_done = true   # the hand-over into the standing pose finishes first (_sequence)
+		else:
+			_finish_exit()
+
+
+## Out of the car and standing beside it: on foot again.
+func _finish_exit() -> void:
+	var v := vehicle
+	_exit_done = false
+	if _hand_t >= 0.0:
+		_hand_t = float(HANDOVER.car_exit)
+		global_transform = v.global_transform * _vehicle_local()
+	_hand_t = -1.0
+	v.open_door(-1, false)
+	Audio.play_at(Audio.stream("vehicles/door_close.ogg"), v.driver_door_position() + Vector3(0, 1, 0), -2.0, randf_range(0.95, 1.05))
+	vehicle = null
+	v.set_driver(null)
+	state = State.ON_FOOT
+	collision_layer = 2
+	collision_mask = 1 | 4 | 8 | 16
+	cam.mode = CameraRig.Mode.ON_FOOT
+	cam.target = self
+	vehicle_changed.emit(null)
 
 
 func _driving() -> void:
-	global_transform = vehicle.global_transform * _seat_local
+	global_transform = vehicle.global_transform * _vehicle_local()
 	aiming = weapon.drive_by
 	aim_weight = 1.0 if weapon.drive_by else 0.0
 	if Input.is_action_just_pressed("interact") and vehicle.linear_velocity.length() < 2.5:
@@ -491,9 +584,9 @@ func _process(_delta: float) -> void:
 		_ride_pose(_delta)
 		if state == State.ENTERING:
 			return
-	if state == State.DRIVING or state == State.EXITING:
+	if (state == State.DRIVING or state == State.EXITING or (state == State.ENTERING and _hand_t >= 0.0)) and vehicle:
 		# follow the car with the interpolated transform so the driver never jitters
-		global_transform = vehicle.get_global_transform_interpolated() * _seat_local
+		global_transform = vehicle.get_global_transform_interpolated() * _vehicle_local()
 
 
 # --- crouch ----------------------------------------------------------------
@@ -1244,6 +1337,7 @@ func set_drive_by(on: bool) -> void:
 func debug_seat_in(v: Vehicle) -> void:
 	vehicle = v
 	state = State.DRIVING
+	_hand_t = -1.0
 	collision_layer = 0
 	collision_mask = 0
 	foot_ik.weight = 0.0

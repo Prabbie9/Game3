@@ -1,7 +1,8 @@
 class_name NPCDriver
 extends Node3D
 ## Someone sitting at the wheel of an idling car. When carjacked they are pulled out (Mixamo "Pulled Out Of
-## Pilot Seat", synced with the jacker's clip), then run off and disappear once out of sight. Population and
+## Pilot Seat", synced with the jacker's clip) and, while still on their feet, break into a run and disappear
+## once out of sight. Population and
 ## traffic AI (Milestone 6) build on this; for now drivers wait in parked cars with the engine running.
 
 enum State { SEATED, PULLED, FLEEING }
@@ -13,8 +14,16 @@ var vehicle: Vehicle
 var state := State.SEATED
 var visual: HumanoidVisual
 var _t := 0.0
-var _end := Transform3D()
 var _flee_dir := Vector3.FORWARD
+# pulled out: the clip's root (hips on the seat at the start), how far it drops to the road, when the driver is
+# up on their feet (the cut into the run), and the hand-over from there
+var _from := Transform3D()
+var _root := Transform3D()
+var _lift := 0.0
+var _cut := 1.0
+var _cut_from := Transform3D()
+var _cut_hips := Vector3.ZERO
+const CUT_BLEND := 0.3
 
 
 static var _scenes := {}   # character -> PackedScene, kept so the loader cache never drops them
@@ -79,18 +88,21 @@ func _place() -> void:
 func pull_out(from: Node3D) -> void:
 	state = State.PULLED
 	_t = 0.0
-	var seat := global_transform
+	var at := global_transform
 	var parent := get_parent()
 	parent.remove_child(self)
 	vehicle.get_parent().add_child(self)
-	global_transform = seat
+	global_transform = at
 	visual.travel("jacked")
-	var d := visual.clip_displacement("jacked")
-	var turn := visual.clip_yaw("jacked")
-	var end_basis := seat.basis * Basis(Vector3.UP, turn)
-	_end = Transform3D(end_basis, seat.origin + seat.basis * Vector3(d.x, 0, d.z))
-	_end.origin.y = vehicle.ground_height_at(_end.origin)
-	var away := _end.origin - from.global_position
+	# hips stay on the seat as the clip takes over from the seated pose; then the clip carries the body out and
+	# the root drops by however much this seat is higher than the one the clip was made for
+	var seat := vehicle.seat_transform()
+	_from = at
+	_root = Transform3D(seat.basis, seat.origin - seat.basis * visual.clip_hips("jacked", false))
+	_cut = visual.clip_peak_time("jacked", 0.35, 0.8)
+	var up := _root * visual.clip_hips_at("jacked", _cut)
+	_lift = vehicle.ground_height_at(up) - _root.origin.y
+	var away := up - from.global_position
 	away.y = 0
 	_flee_dir = away.normalized() if away.length() > 0.1 else -vehicle.global_basis.x
 	vehicle = null
@@ -103,11 +115,31 @@ func _physics_process(delta: float) -> void:
 			if is_instance_valid(vehicle):
 				_place()
 		State.PULLED:
-			if _t >= visual.clip_length("jacked") - 0.05:
-				global_transform = _end
+			var r := _root
+			r.origin.y += _lift * smoothstep(0.25 * _cut, _cut, _t)
+			global_transform = _from.interpolate_with(r, clampf(_t / 0.15, 0.0, 1.0))
+			if _t >= _cut:
+				# up on their feet: into the run, turning about the hips as the poses crossfade
+				_cut_from = r
+				_cut_hips = visual.clip_hips_at("jacked", _t)
+				visual.set_locomotion(RUN)
+				visual.travel("ground")
 				state = State.FLEEING
 				_t = 0.0
-				visual.jump_to("ground")
+		State.FLEEING when _t < CUT_BLEND:
+			# the pulled-out clip plays on under the crossfade: keep its hips offset (fading) and carry the hips off
+			# from where they were at the cut, speeding up to a run
+			var faded := _t
+			if visual.current_state() == &"ground":
+				faded = maxf(faded, visual.playback.get_current_play_position())
+			var k := minf(faded / CUT_BLEND, 1.0)
+			var hips := _cut_from * _cut_hips
+			var face := Basis.looking_at(_flee_dir, Vector3.UP)
+			var b := _cut_from.basis.slerp(face, k)
+			var h := visual.clip_hips_at("jacked", _cut + _t) * (1.0 - k)
+			var run := _flee_dir * RUN * _t * _t / (2.0 * CUT_BLEND)   # speeding up to a run over the crossfade
+			global_transform = Transform3D(b, Vector3(hips.x, _cut_from.origin.y, hips.z) + run - b * Vector3(h.x, 0, h.z))
+			visual.set_locomotion(RUN)
 		State.FLEEING:
 			# run away from the jacker, following the ground, and vanish once far
 			global_basis = Basis.looking_at(_flee_dir, Vector3.UP) if _flee_dir.length() > 0.1 else global_basis
@@ -115,7 +147,7 @@ func _physics_process(delta: float) -> void:
 			var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.5, 0), global_position + Vector3(0, -3, 0), 1)
 			var hit := get_world_3d().direct_space_state.intersect_ray(q)
 			if hit:
-				global_position.y = hit.position.y
+				global_position.y = lerpf(global_position.y, hit.position.y, minf(1.0, delta * 14.0))   # up a kerb in a stride, not a pop
 			visual.set_locomotion(RUN)
 			if _t > 9.0:
 				queue_free()

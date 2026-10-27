@@ -240,8 +240,12 @@ func _graphics() -> void:
 	_toggle("Volumetric fog", gs.values.volumetric_fog, func(on): _set_value("volumetric_fog", on))
 	_toggle("Bloom", gs.values.glow, func(on): _set_value("glow", on))
 	var shadow_sizes := [2048, 2048, 4096, 8192]
-	var shadow_filters := [1, 2, 3, 4]
+	var shadow_filters := [1, 2, 3, 3]
+	# (High and Ultra share the filter and differ in shadow map size)
 	var si := maxi(shadow_filters.find(int(gs.values.shadow_filter)), 0)
+	for i in shadow_sizes.size():
+		if shadow_filters[i] == int(gs.values.shadow_filter) and shadow_sizes[i] == int(gs.values.shadow_size):
+			si = i
 	_cycle("Shadow quality", LEVELS, si, func(i: int):
 		gs.values.shadow_size = shadow_sizes[i]
 		_set_value("shadow_filter", shadow_filters[i]))

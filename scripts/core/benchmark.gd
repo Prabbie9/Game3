@@ -20,6 +20,10 @@ var _curve: Curve3D
 var _t := 0.0
 var _frames := PackedFloat32Array()
 var _stats := {"draws": 0.0, "shadow_draws": 0.0, "prims": 0.0, "objects": 0.0, "process": 0.0, "physics": 0.0, "n": 0}
+## main-thread time of the game's own systems (ms per frame, summed) and the slowest frames with what was going on
+const SYSTEMS := ["city", "traffic", "population", "parked", "pushables", "birds", "ambience"]
+var _sys := {}
+var _spikes: Array = []
 var _done := false
 
 
@@ -65,6 +69,14 @@ func _process(delta: float) -> void:
 		_stats.process += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 		_stats.physics += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 		_stats.n += 1
+		var w := Game.world
+		var costs := {}
+		for s: String in SYSTEMS:
+			var node: Object = w.get(s) if w else null
+			costs[s] = float(node.get("cost_ms")) if node and node.get("cost_ms") != null else 0.0
+			_sys[s] = float(_sys.get(s, 0.0)) + costs[s]
+		if delta * 1000.0 > 50.0:
+			_spikes.append([_t, delta * 1000.0, pos, costs, w.city._queue.size() if w and w.get("city") else 0])
 	if _t >= DURATION:
 		_done = true
 		_write_report()
@@ -100,6 +112,18 @@ func _write_report() -> void:
 	var c := maxf(_stats.n, 1)
 	lines.append("Average per frame: draw calls %d (+%d shadow), primitives %.2f M, objects %d" % [_stats.draws / c, _stats.shadow_draws / c, _stats.prims / c / 1e6, _stats.objects / c])
 	lines.append("Average CPU: process %.2f ms, physics %.2f ms" % [_stats.process / c, _stats.physics / c])
+	var parts := PackedStringArray()
+	for s: String in SYSTEMS:
+		parts.append("%s %.2f" % [s, float(_sys.get(s, 0.0)) / c])
+	lines.append("Game systems, main thread ms per frame: %s" % ", ".join(parts))
+	lines.append("")
+	lines.append("Frames over 50 ms: %d" % _spikes.size())
+	for e: Array in _spikes.slice(0, 20):
+		var cs := PackedStringArray()
+		for s: String in SYSTEMS:
+			if float(e[3][s]) > 0.5:
+				cs.append("%s %.1f" % [s, e[3][s]])
+		lines.append("  %5.1f s  %6.1f ms  at %s  cells waiting %d  %s" % [e[0], e[1], (e[2] as Vector3).snapped(Vector3.ONE), e[4], ", ".join(cs)])
 	lines.append("")
 	lines.append("Frame time per second of the run (avg ms | worst ms):")
 	var per_sec := []

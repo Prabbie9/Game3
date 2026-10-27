@@ -274,6 +274,31 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   committed — CC0): Swim_Fwd (head-up surface stroke) and Swim_Idle (treading water), retargeted at import with
   assets/rigs/bonemap_rigify.tres (Rigify DEF- bones → SkeletonProfileHumanoid). AnimLib loads "ual:Clip" sources;
   NATIVE_SPEED gives the in-place stroke its travel speed (the old clip's 0.47 units/s).
+- v1.2.0 (owner's bug list after the v1.1.3 benchmarks):
+  - God Mode (scripts/ui/god_mode.gd, F1 / pause menu): cheats in Game.cheats (invincible → Player.take_damage,
+    infinite_ammo → Weapon._fire / grenades, never_wanted → Wanted._raise, car_god → VehicleDamage._protected),
+    spawning (vehicles of every class, pedestrians, cops via Wanted._make_cop, Pushables._make), time / weather,
+    teleports (a car is frozen until its ground streams in), debug (perf overlay, Engine.time_scale, traffic/people).
+    tests/god_mode_check.gd.
+  - Car entry / exit / carjack: AnimLib._retime used to move keys one at a time and scrambled them (carjack keys
+    at 9.4 s in a 5.9 s clip). The state machine starts an AT_END crossfade xfade-seconds before the clip ends while
+    animation_finished fires after it, so the root sat still while the pose dragged the hips ~1.9 m: Player now
+    detects the hand-over by the playback's current node and turns the root about the hips using the tree's own
+    fade time (`_vehicle_local`). Entry roots rise / exit roots drop by the seat's height difference from the clip's
+    (AnimLib.hips_start / hips_end). NPCDriver: jacked clip cut at its hips' peak (driver on their feet) into the
+    run, root following the hips. carjack + jacked share RETIME 1.5. tests/carjack_check.gd measures hips speed per
+    physics tick (car, box truck, passenger side, exit, jacked driver; < 7 m/s).
+  - CarLibrary body bounds from mesh vertices (box-transformed AABBs had the coupe 3.66 m wide). tools/dev/driver_lineup.gd.
+  - gen_world: _road_clearance / _fit_lot keep every lot clear of every road and sidewalk (houses placed only where
+    clear; 340 of them); connectors curve into the ring junctions; Ocean Drive reaches z=-1160 (only dead end left:
+    the lookout); Las Lomas relief ramps in from Ocean Drive (the beach strip flattening ran to z=-1080 and made a
+    10 m bank); villa terraces after the road carve, kept off Canyon Rd.
+  - Sea swim volume at sea level (was 2x), sea depth 0 over land; pier ramp collision tilt fixed; respawn clears
+    the wanted level. tests/swim_check.gd, tests/surface_check.gd.
+  - LightPool: lamps keep their light until it has faded out (0.4 s), hysteresis on the cut-off, distance fade;
+    headlights distance-fade. tests/lights_check.gd. City streaming leads the focus by 2.5 s of travel (requests and
+    instantiation nearest the lead first). Ultra: SSIL half size, shadow filter 3 (8192 atlas kept), 5 SDFGI
+    cascades. Benchmark report: per-system main-thread costs (incl. City.cost_ms) and every frame over 50 ms.
 
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.

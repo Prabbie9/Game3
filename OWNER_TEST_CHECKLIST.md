@@ -8,6 +8,17 @@ reply whenever convenient and the next session will act on it.
   branch `claude/tmp-push-test` (*Code → Branches*). The session's proxy does not allow changing the default branch or
   deleting branches.
 
+## v1.2.0 — God Mode, smoother cars, tidier island
+- [ ] Press **F1** (or GOD MODE in the pause menu): try each tab. Spawn a few vehicles (and SPAWN AND DRIVE),
+  a pedestrian, a police officer, some crates; teleport round the districts and to a map waypoint; change the time
+  of day and the weather. Anything missing you'd want in there?
+- [ ] Carjack a waiting driver and get in and out of a few cars, a box truck and a bus: any twitch, slide or snap?
+- [ ] Drive at night down a lamp-lit avenue at speed: do the street lights still flicker?
+- [ ] Drive fast round the freeway and along Ocean Drive: does the city ahead appear in time?
+- [ ] Las Lomas (north of the freeway): houses, fences and driveways sensible? Any road that ends abruptly?
+- [ ] Walk and drive up the pier ramp; swim in the sea and climb out on the beach.
+- [ ] Run the BENCHMARK on High and Ultra and send the reports (they now list per-system CPU costs and the hitches).
+
 ## v1.1.3 — swimming
 - [ ] Jump into the plaza pool or the sea: does the surface stroke (head up) and treading water look right?
 

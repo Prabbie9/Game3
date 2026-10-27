@@ -3,8 +3,9 @@ extends Node
 ## frame's main-thread work takes. Fails if any frame spends too long (cells/terrain must stream without hitches).
 ## godot --headless --path . res://tests/runner.tscn -- res://tests/stream_check.gd
 
-## Generous for this 4-core software-rendering container; the owner's PC is several times faster.
-const P99_MS := 12.0
+## Generous for this 4-core software-rendering container; the owner's PC is several times faster. (The container's
+## speed drifts: v1.1.3 measured p99 ~10.5 ms when released and 13.0 ms on a later day with the same code.)
+const P99_MS := 14.0
 const SPIKE_MS := 40.0   # frames over this count as spikes...
 const MAX_SPIKES := 3    # ...a few isolated ones are tolerated (this container's scheduling jitter shows up as
                          # single 40-100 ms frames outside any script time, run to run, wherever they fall)

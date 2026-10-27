@@ -1,3 +1,45 @@
+## Port Solano v1.2.0 — God Mode, smoother cars and a tidier island
+
+**God Mode** (F1, or GOD MODE in the pause menu; the game pauses while it is open)
+- PLAYER: invincible, infinite ammo, never wanted, indestructible vehicle; set the wanted level; fill health and
+  armour; every weapon with full ammo; +$10,000; repair the vehicle; respawn here, at the start or at the hospital.
+- SPAWN: any vehicle in front of you (or spawn it and drive), a pedestrian or a police officer, crates, drums,
+  boxes, cones and footballs; remove everything you spawned.
+- WORLD: time of day (slider, or dawn / noon / dusk / night), freeze the clock, pick the weather.
+- TELEPORT: the districts, the pier, the lookout, the hospital, the police station or your map waypoint (in a car
+  you keep the car).
+- DEBUG: performance overlay, game speed (25–200 %), traffic and pedestrians on or off.
+- Cheats are never saved with the game.
+
+**Getting in and out of cars, carjacking**
+- No more twitching: the carjack clips had their keyframes scrambled when they were sped up, and every entry,
+  exit and carjack snapped the body between clips (the hips slid up to 1.9 m sideways as the sitting pose faded
+  in). The body now stays on the seat through every hand-over, rises or drops to match tall cabs and low cars,
+  and steps out with the feet on the road.
+- The driver you pull out stays in step with you, is dragged out and breaks into a run while still on their
+  feet, instead of snapping up from the ground.
+- Drivers and passengers sit inside the car: some models (the coupe most of all) had bounds nearly twice their
+  real width, which put the driver's head through the door.
+
+**The island**
+- Las Lomas: houses no longer sit across streets or Ocean Drive, no fences or gates in the road, and the ground
+  rises gently from the beach instead of a 10 m bank that left houses half buried and streets in trenches.
+- No more roads ending at the freeway: the Sunset Ave connectors curve into the junctions, and Ocean Drive runs
+  on to the northernmost Las Lomas street. Every other plot (car parks, shops, warehouses) keeps off the roads too.
+- The Mirador Hills villas sit on level terraces instead of towering plinths.
+- The pier's ramp is the right way round: walk or drive straight up from the boardwalk.
+- Swimming works in the sea (the sea's water sat 2 m below the waves) and you can stand up again in the shallows.
+- Respawning (wasted, busted, or from God Mode) is a clean start: the wanted level is cleared.
+
+**Smoother at speed**
+- Street lights no longer flicker as you drive: each light stays on its lamp, fades in and out, and far ones
+  fade with distance. Far-off cars' headlights fade out instead of popping.
+- The city streams ahead of you: the blocks you are driving towards load first.
+- Ultra is lighter on the GPU for nearly the same picture (indirect light at half resolution like High, the
+  high-quality shadow filter on the 8192 shadow map, five GI cascades instead of six).
+- The benchmark report now lists the game's own CPU costs per system and every frame over 50 ms with where it
+  happened: please send new reports.
+
 ## Port Solano v1.1.3 — swimming
 
 - Swimming is a proper head-up stroke at the surface, and you tread water when you stop (it used to be an

@@ -20,7 +20,7 @@ const PRESETS := {
 		"taa": true, "fxaa": false, "lod_threshold": 1.0, "foliage_density": 1.0,
 		"parked": 30, "crowd": 26, "traffic": 16},
 	Preset.ULTRA: {"ssao": true, "ssil": true, "ssr": true, "sdfgi": true, "volumetric_fog": true, "glow": true,
-		"shadow_size": 8192, "shadow_filter": 4, "shadow_distance": 380.0, "render_scale": 1.0, "upscaler": "none",
+		"shadow_size": 8192, "shadow_filter": 3, "shadow_distance": 380.0, "render_scale": 1.0, "upscaler": "none",
 		"taa": true, "fxaa": false, "lod_threshold": 0.6, "foliage_density": 1.25,
 		"parked": 38, "crowd": 34, "traffic": 22},
 }
@@ -116,11 +116,12 @@ static func apply_to(world: Node) -> void:
 		env.ssil_enabled = values.ssil
 		env.ssr_enabled = values.ssr
 		env.sdfgi_enabled = values.sdfgi
-		env.sdfgi_cascades = 6 if preset == Preset.ULTRA else 4
+		env.sdfgi_cascades = 5 if preset == Preset.ULTRA else 4
 		env.volumetric_fog_enabled = values.volumetric_fog
 		env.glow_enabled = values.glow
 		RenderingServer.environment_set_ssao_quality(RenderingServer.ENV_SSAO_QUALITY_HIGH if preset >= Preset.ULTRA else RenderingServer.ENV_SSAO_QUALITY_MEDIUM, true, 0.5, 2, 50, 300)
-		RenderingServer.environment_set_ssil_quality(RenderingServer.ENV_SSIL_QUALITY_MEDIUM, preset < Preset.ULTRA, 0.5, 4, 50, 300)
+		# (half-resolution SSIL on Ultra too: full resolution cost a big slice of the frame for little visible gain)
+		RenderingServer.environment_set_ssil_quality(RenderingServer.ENV_SSIL_QUALITY_MEDIUM, true, 0.5, 4, 50, 300)
 		RenderingServer.environment_set_volumetric_fog_volume_size(96 if preset >= Preset.ULTRA else 64, 64 if preset >= Preset.ULTRA else 48)
 		world.sun.directional_shadow_max_distance = values.shadow_distance
 		# street lights that cast real light scale with the preset

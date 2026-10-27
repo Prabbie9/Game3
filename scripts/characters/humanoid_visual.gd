@@ -254,7 +254,7 @@ func _build_tree() -> void:
 	_link(sm, "carjack", "drive", 0.3, true)
 	_link(sm, "carjack", "ground", 0.2)
 	_link(sm, "drive", "jacked", 0.15)
-	_link(sm, "jacked", "ground", 0.3, true)
+	_link(sm, "jacked", "ground", 0.3)   # cut while the driver is on their feet, into the run (NPCDriver)
 	_link(sm, "jacked", "fall", 0.2)
 	_link(sm, "ground", "thrown", 0.15)
 	_link(sm, "thrown", "ground", 0.3, true)
@@ -399,6 +399,36 @@ func clip_displacement(clip: String) -> Vector3:
 ## Average hips height of a clip in metres for this character.
 func clip_hip_height(clip: String) -> float:
 	return AnimLib.hip_height.get(clip, 0.9) * motion_scale
+
+
+## Hips position at a clip's first (or last) key in metres, in this node's space.
+func clip_hips(clip: String, at_end: bool) -> Vector3:
+	var h: Vector3 = (AnimLib.hips_end if at_end else AnimLib.hips_start).get(clip, Vector3(0, 0.9, 0)) * motion_scale
+	return Vector3(-h.x, h.y, -h.z)
+
+
+## Hips position at time t (seconds) into a clip, in metres in this node's space.
+func clip_hips_at(clip: String, t: float) -> Vector3:
+	var a := anim_player.get_animation(clip)
+	var tr := a.find_track(NodePath(AnimLib.HIPS), Animation.TYPE_POSITION_3D) if a else -1
+	if tr < 0:
+		return Vector3(0, 0.9, 0)
+	var h := a.position_track_interpolate(tr, clampf(t, 0.0, a.length)) * motion_scale
+	return Vector3(-h.x, h.y, -h.z)
+
+
+## When the hips stand highest between fractions k0 and k1 of a clip (seconds).
+func clip_peak_time(clip: String, k0: float, k1: float) -> float:
+	var length := clip_length(clip)
+	var best := k0 * length
+	var top := -INF
+	for i in 41:
+		var t := lerpf(k0, k1, i / 40.0) * length
+		var y := clip_hips_at(clip, t).y
+		if y > top:
+			top = y
+			best = t
+	return best
 
 
 func clip_yaw(clip: String) -> float:
