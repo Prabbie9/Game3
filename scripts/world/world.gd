@@ -106,6 +106,9 @@ func _ready() -> void:
 	var perf: CanvasLayer = preload("res://scripts/ui/perf_overlay.gd").new()
 	perf.name = "PerfOverlay"
 	add_child(perf)
+	var god := GodMode.new()
+	god.name = "GodMode"
+	add_child(god)
 	if Game.benchmark_mode:
 		add_child(preload("res://scripts/core/benchmark.gd").new())
 	GraphicsSettings.apply_to(self)

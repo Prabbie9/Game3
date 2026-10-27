@@ -1066,7 +1066,7 @@ func add_armor(amount: float) -> void:
 
 
 func take_damage(amount: float, _from: Node = null) -> void:
-	if state == State.DEAD:
+	if state == State.DEAD or Game.cheat("invincible"):
 		return
 	var absorbed := minf(armor, amount * 0.7)
 	armor -= absorbed

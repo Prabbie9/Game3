@@ -45,6 +45,12 @@ var using_gamepad := false
 ## Gameplay options (settings menu): gamepad aim assist, blood effects.
 var aim_assist := true
 var blood := true
+## God Mode (debug menu) cheats: invincible, infinite_ammo, never_wanted, car_god. Not saved with the game.
+var cheats := {}
+
+
+func cheat(id: String) -> bool:
+	return bool(cheats.get(id, false))
 
 
 func _ready() -> void:

@@ -10,7 +10,7 @@ const KEYS := {
 	"handbrake": [KEY_SPACE], "horn": [KEY_H], "headlights": [KEY_L], "camera_mode": [KEY_V],
 	"indicator_left": [KEY_Z], "indicator_right": [KEY_X], "hazards": [KEY_B], "look_behind": [KEY_E],
 	"ascend": [KEY_SPACE], "descend": [KEY_CTRL], "radio_next": [KEY_PERIOD], "radio_prev": [KEY_COMMA],
-	"pause": [KEY_ESCAPE], "perf_overlay": [KEY_F3], "map": [KEY_M],
+	"pause": [KEY_ESCAPE], "perf_overlay": [KEY_F3], "god_mode": [KEY_F1], "map": [KEY_M],
 	"weapon_next": [], "weapon_prev": [], "weapon_wheel": [KEY_TAB],
 }
 const MOUSE := {

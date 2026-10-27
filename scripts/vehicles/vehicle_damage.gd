@@ -43,7 +43,7 @@ func health_fraction() -> float:
 ## A collision: `point` and `push` (inward displacement direction × strength) in the car frame, `strength` in m/s
 ## of velocity change.
 func hit(point: Vector3, push: Vector3, strength: float) -> void:
-	if strength < 3.0:
+	if strength < 3.0 or _protected():
 		return
 	var dmg := pow(strength - 3.0, 1.5) * 9.0
 	_damage(dmg)
@@ -88,7 +88,7 @@ func bullet(point: Vector3, damage: float) -> void:
 
 
 func _damage(amount: float) -> void:
-	if wrecked:
+	if wrecked or _protected():
 		return
 	health = maxf(health - amount, 0.0)
 	_update_smoke()
@@ -131,6 +131,11 @@ func _upload_dents() -> void:
 	for m in materials:
 		m.set_shader_parameter("dents", a)
 		m.set_shader_parameter("dent_push", b)
+
+
+## God Mode's "car_god": whatever the player is in or on takes no damage.
+func _protected() -> bool:
+	return Game.cheat("car_god") and Game.player != null and Game.player.get("vehicle") == vehicle
 
 
 ## Back to new (respray garage): engine, body, lamps and glass. A wreck can't be saved.
@@ -257,7 +262,7 @@ func _ignite() -> void:
 
 ## Blow up: fireball, shock wave (pushes bodies, hurts people), the car hops and is left a charred wreck.
 func explode() -> void:
-	if wrecked:
+	if wrecked or _protected():
 		return
 	wrecked = true
 	on_fire = false

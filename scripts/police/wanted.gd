@@ -60,6 +60,8 @@ func crime_against_police(killed: bool) -> void:
 
 
 func _raise(to: int, pos: Vector3) -> void:
+	if Game.cheat("never_wanted"):
+		return
 	if stars > 0:
 		heat += 0.5 * float(to)    # more crimes while wanted: climb a star every two or so
 	else:

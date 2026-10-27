@@ -369,7 +369,8 @@ func _start_reload() -> void:
 func _fire() -> void:
 	_cooldown = float(data.interval)
 	var a: Array = ammo[current]
-	a[0] = int(a[0]) - 1
+	if not Game.cheat("infinite_ammo"):
+		a[0] = int(a[0]) - 1
 	ammo_changed.emit(a[0], a[1])
 	fired.emit()
 	_flash_time = 0.06
@@ -584,7 +585,8 @@ func _release_grenade() -> void:
 	var a: Array = ammo[current]
 	if int(a[0]) <= 0:
 		return
-	a[0] = int(a[0]) - 1
+	if not Game.cheat("infinite_ammo"):
+		a[0] = int(a[0]) - 1
 	ammo_changed.emit(a[0], -1)
 	var g := Grenade.new()
 	g.source = _player

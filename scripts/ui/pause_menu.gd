@@ -6,7 +6,7 @@ const CONTROLS := [
 	["ON FOOT", ""],
 	["Move / sprint", "move_forward|sprint"], ["Jump, vault, climb", "jump"], ["Crouch", "crouch"], ["Take cover", "cover"],
 	["Aim / shoot", "aim|fire"], ["Reload", "reload"], ["Weapon wheel (hold)", "weapon_wheel"], ["Next / previous weapon", "weapon_next|weapon_prev"],
-	["Swap shoulder", "shoulder_swap"], ["Enter vehicle / use", "interact"], ["Map", "map"],
+	["Swap shoulder", "shoulder_swap"], ["Enter vehicle / use", "interact"], ["Map", "map"], ["God Mode (debug menu)", "god_mode"],
 	["VEHICLE", ""],
 	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
 	["Indicators / hazards", "indicator_left|indicator_right|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
@@ -45,6 +45,7 @@ func _ready() -> void:
 	UITheme.menu_button(_col, "MAP", _open_map)
 	UITheme.menu_button(_col, "SETTINGS", _open_settings)
 	UITheme.menu_button(_col, "STATS", _show_stats)
+	UITheme.menu_button(_col, "GOD MODE", _open_god_mode)
 	UITheme.menu_button(_col, "SAVE GAME", _show_slots.bind(true))
 	UITheme.menu_button(_col, "LOAD GAME", _show_slots.bind(false))
 	UITheme.menu_button(_col, "QUIT TO MENU", func():
@@ -147,6 +148,13 @@ func _open_map() -> void:
 	resume()
 	if Game.world and Game.world.full_map:
 		Game.world.full_map._toggle()
+
+
+func _open_god_mode() -> void:
+	resume()
+	var g := get_tree().get_first_node_in_group("god_mode") as GodMode
+	if g:
+		g.open()
 
 
 func _open_settings() -> void:
