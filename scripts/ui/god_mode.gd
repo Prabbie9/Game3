@@ -16,7 +16,7 @@ const SPOTS := [
 	["Playa Solano beach", Vector2(-830.0, -120.0)], ["Port of Solano", Vector2(500.0, 610.0)],
 	["Eastside", Vector2(840.0, 60.0)], ["Las Lomas", Vector2(-280.0, -760.0)],
 	["Mirador lookout", Vector2(840.0, -850.0)], ["Solano Fwy (north)", Vector2(0.0, -500.0)],
-	["Stunt ramps: quay gap jump", Vector2(225.0, 834.0)], ["Stunt ramp: beach", Vector2(-815.0, -360.0)],
+	["Stunt ramps: harbour gap jump", Vector2(225.0, 834.0)], ["Stunt ramp: beach", Vector2(-815.0, -360.0)],
 ]
 const DAY_RATE := 1.0 / 120.0   # World.time_scale: game hours per real second
 

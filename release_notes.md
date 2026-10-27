@@ -7,7 +7,7 @@
   pavements' collision also follows the street's slope on hills instead of stepping, and junction corners no
   longer stick out into the road.
 - **Stunt ramps**, just for fun: three along Playa Solano beach, one on the sand north of the beach, one on the
-  open ground by the harbour, and a gap jump on the port quay (launch ramp, landing ramp). They're on the map (J),
+  open ground by the harbour, and a gap jump out on the harbour headland (launch ramp, landing ramp). They're on the map (J),
   and God Mode can take you to them.
 - **Helicopter:** the flight controls stay on screen while you fly. Climb with Space / RB, **descend with
   Ctrl or C / LB**, nose down / up with W / S (RT / LT), turn with A / D (left stick).
