@@ -506,32 +506,37 @@ func _run() -> void:
 		c.queue_free()
 		p.cam.camera.make_current()
 	if _want("jack"):
-		# a carjack frame by frame (slow motion): the jacker and the driver pulled out
+		# a carjack frame by frame, every half second of the clip: the jacker and the driver pulled out (on the
+		# street east of the start, seen from the middle of the road)
 		var jv := Vehicle.new()
 		jv.model = "sedan"
+		jv.position = Vector3(60.0, 0.6, -5.2)
+		jv.rotation.y = PI * 0.5
 		world.add_child(jv)
-		jv.global_position = p.global_position + Vector3(6.0, 0.8, 4.0)
-		jv.rotation.y = 0.0
 		while not NPCDriver.is_ready("ch33_nonpbr"):
 			await _frames(1)
-		NPCDriver.seat_in(jv, "ch33_nonpbr")
-		await _frames(60)
-		p.global_position = jv.driver_door_position() + jv.global_basis.x * -0.8
-		await _frames(5)
+		await _frames(30)
+		var npc := NPCDriver.seat_in(jv, "ch33_nonpbr")
+		await _frames(30)
+		p.global_position = jv.driver_door_position() + Vector3(0, 0.1, 0)
+		await _frames(10)
 		var c := Camera3D.new()
 		world.add_child(c)
 		var door := jv.driver_door_position()
-		c.look_at_from_position(door - jv.global_basis.x * 6.0 - jv.global_basis.z * 1.5 + Vector3(0, 1.6, 0), door + Vector3(0, 0.9, 0) + jv.global_basis.x * 0.6)
+		c.look_at_from_position(door - jv.global_basis.x * 6.5 + jv.global_basis.z * 2.0 + Vector3(0, 1.7, 0), door + Vector3(0, 0.9, 0) + jv.global_basis.x * 0.4)
 		c.fov = 55
-		c.make_current()
-		Engine.time_scale = 0.12
 		p.enter_vehicle(jv)
+		c.make_current()
 		for i in 14:
-			await _frames(3)
+			var until := i * 0.5
+			while p.state == Player.State.ENTERING and p._seq_time < until:
+				await _frames(1)
+			c.make_current()
 			await _snap("jack_%02d" % i)
-		Engine.time_scale = 1.0
 		await _frames(30)
 		c.queue_free()
+		if is_instance_valid(npc):
+			npc.queue_free()
 		p.cam.camera.make_current()
 	if _want("car"):
 		var v: Vehicle = world.get_tree().get_nodes_in_group("vehicles")[0]
