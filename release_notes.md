@@ -4,8 +4,8 @@
   inwards, so from outside you saw straight through the near walls into the far ones. Fixed.
 - **No more ledge between the grass and the pavement.** The outer edge of every pavement was a bare 15 cm step
   you had to jump; it now has a gentle invisible ramp down to the lawn, so you walk (and drive) straight on. The
-  pavements' collision also follows the street's slope on hills instead of stepping, and junction corners no
-  longer stick out into the road.
+  pavements' collision also follows the street's slope on hills instead of stepping, and the kerbs (junction
+  corners included) have a gentle ramp up from the road, so you don't snag on them on foot.
 - **Stunt ramps**, just for fun: three along Playa Solano beach, one on the sand north of the beach, one on the
   open ground by the harbour, and a gap jump out on the harbour headland (launch ramp, landing ramp). They're on the map (J),
   and God Mode can take you to them.

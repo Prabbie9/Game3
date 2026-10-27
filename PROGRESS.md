@@ -310,7 +310,8 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
 - v1.3.0: CityCell._house walls / door / shutter / gable were wound inwards (MeshBatch.wall(a, b) faces
   (b - a) x up; the houses passed corners counter to every other building): tests/facing_check.gd. Pavements:
   CityCell.hulls (ConvexPolygonShape3D, built in City steps like the boxes) follow the pavement mesh: slab, kerb
-  ramp and an outer ramp to the ground (`_verge`, 4:1, 0.5-2.5 m); junction corners use their outline.
+  ramp and an outer ramp to the ground (`_verge`, 4:1, 0.5-2.5 m); junction corners use their outline, plus kerb ramps from the road
+  (audio_check's sprint used to pass only because the runner stood stuck on the old corner box; it now checks speed too).
   tests/kerb_check.gd walks lawn -> road at 48 places (old code: 28 stuck at the outer edge) and drives a car on.
   StuntRamp (scripts/world/props/stunt_ramp.gd) at World.RAMPS, on the full map (places() 5th field = map only);
   tests/ramp_check.gd. Helicopter hint in the HUD; descend also on C. God Mode: hold VIEW (god_mode_pad,
