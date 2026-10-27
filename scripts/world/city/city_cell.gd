@@ -1134,7 +1134,7 @@ func _pier(r: Rect2) -> void:
 		Vector2(x_land, z1), Vector2(x_land, z0), Vector2(x_land - ramp, z0), Vector2(x_land - ramp, z1))
 	var ang := atan2(deck_y - CURB_H, ramp)
 	_col(Vector3(x_land - ramp * 0.5, (deck_y + CURB_H) * 0.5 - 0.15, (z0 + z1) * 0.5), Vector3(ramp / cos(ang), 0.3, w),
-		Basis(Vector3(0, 0, 1), ang))
+		Basis(Vector3(0, 0, 1), -ang))   # rises toward the sea, like the deck boards above it
 	# deck + edge boards
 	b.flat("deck", x_sea, z0, x_land - ramp, z1, deck_y)
 	b.wall("deck", Vector3(x_sea, deck_y - 0.5, z1), Vector3(x_land - ramp, deck_y - 0.5, z1), 0.5)

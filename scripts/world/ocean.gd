@@ -54,8 +54,9 @@ func setup(sea_level: float, world_half: float) -> void:
 	var vol := WaterVolume.new()
 	vol.name = "Sea"
 	vol.show_surface = false
+	vol.sea = true
 	vol.size = Vector3(APRON * 2.0, 60.0, APRON * 2.0)
-	vol.position = Vector3(0, level - 30.0, 0)
+	vol.position = Vector3(0, -30.0, 0)   # local: this node already sits at sea level (top of the volume = the sea)
 	add_child(vol)
 	position.y = level
 

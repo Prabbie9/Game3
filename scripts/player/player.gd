@@ -52,6 +52,7 @@ var _act_blend := 0.18
 var _act_next := ""  # chained action (jump to hang -> climb)
 var _act_hit_done := false
 var _swim_push := 0.0
+var _ground_wait := 0.0    # seconds left to hold still until there is ground under a new position
 var _release_t := 1.0
 var _anchor_w := 0.0
 var _release_speed := 0.0
@@ -99,6 +100,16 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -60.0 and state != State.DRIVING:
 		_rescue()
 		return
+	# just put somewhere new (respawn, load, teleport): wait for the ground there to stream in before falling
+	if _ground_wait > 0.0 and state == State.ON_FOOT:
+		_ground_wait -= delta
+		var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.5, 0), global_position + Vector3(0, -3.0, 0), 1 | 16)
+		q.exclude = [get_rid()]
+		var over_sea := WorldData.get_data().height_at(global_position.x, global_position.z) < WorldData.get_data().sea - 0.3
+		if not over_sea and get_world_3d().direct_space_state.intersect_ray(q).is_empty() and _water_depth() <= 0.0:
+			velocity = Vector3.ZERO
+			return
+		_ground_wait = 0.0
 	match state:
 		State.ON_FOOT:
 			_on_foot(delta)
@@ -779,9 +790,14 @@ func _water_depth() -> float:
 	return 0.0
 
 
-func _surface_y() -> float:
+## The water surface over the player; `waves` gives the sea's moving swell, otherwise its calm level.
+func _surface_y(waves := true) -> float:
 	for w in get_tree().get_nodes_in_group("water"):
 		if w.depth_at(global_position) > 0.0:
+			# in the sea, ride the visible swell (the same waves the boats float on)
+			var gw := Game.world as World
+			if waves and w.sea and gw and gw.ocean:
+				return gw.ocean.wave_height(global_position.x, global_position.z)
 			return w.surface_y()
 	return global_position.y
 
@@ -816,23 +832,25 @@ func _swim(delta: float) -> void:
 	# float with the hips just under the surface; gentle bob
 	# treading water keeps the head and shoulders out; swimming lies along the surface
 	var moving := clampf(hvel.length() / maxf(visual.swim_speed * SWIM_BOOST, 0.1), 0.0, 1.0)
-	var hips := lerpf(visual.clip_hip_height("swim_idle") + 0.5, visual.clip_hip_height("swim") + 0.12, moving)
+	var hips := lerpf(visual.clip_hip_height("swim_idle") + 0.28, visual.clip_hip_height("swim") - 0.06, moving)
 	var want_y := _surface_y() - hips + sin(Time.get_ticks_msec() * 0.002) * 0.04
-	velocity = Vector3(hvel.x, (want_y - global_position.y) * 4.0, hvel.z)
+	# follow the surface closely: the sea's swell rises and falls faster than a lazy spring keeps up with
+	velocity = Vector3(hvel.x, (want_y - global_position.y) * 9.0, hvel.z)
 	move_and_slide()
 	visual.set_state_blend("swim", hvel.length() / SWIM_BOOST, visual.swim_speed)
 	# pull out over an edge just above the water: press jump, or keep swimming into it
 	_swim_push = _swim_push + delta if input.length() > 0.5 and get_slide_collision_count() > 0 else 0.0
 	if Game.controls_enabled and (Input.is_action_just_pressed("jump") or _swim_push > 0.35) and _try_climb_out():
 		return
-	# climb out where it gets shallow
-	if _water_depth() < SWIM_DEPTH - 0.25:
-		var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.0, 0), global_position + Vector3(0, -0.6, 0), 1 | 16)
-		var hit := get_world_3d().direct_space_state.intersect_ray(q)
-		if hit:
-			global_position.y = hit.position.y
-			state = State.ON_FOOT
-			visual.travel("ground")
+	# stand up where it gets shallow: the seabed under the swimmer (not the swimmer's own depth, which floats
+	# close to the entry threshold and would flip between swimming and wading)
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.0, 0), global_position + Vector3(0, -1.2, 0), 1 | 16)
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit and _surface_y(false) - (hit.position as Vector3).y < SWIM_DEPTH - 0.2:
+		global_position.y = hit.position.y
+		state = State.ON_FOOT
+		visual.travel("ground")
 
 
 ## Climb out of the water onto an edge in front (pool coping, quay): the braced climb starts from the water.
@@ -957,6 +975,7 @@ func _respawn(at := Transform3D(), text := "You woke up a little bruised.") -> v
 	collision_mask = MASK_ON_FOOT
 	state = State.ON_FOOT
 	visual.jump_to("ground")
+	_ground_wait = 8.0
 	crouched = false
 	cam.crouch = false
 	_swim_push = 0.0

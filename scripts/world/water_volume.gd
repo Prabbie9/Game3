@@ -5,6 +5,8 @@ extends Node3D
 
 @export var size := Vector3(20, 3, 20)
 @export var show_surface := true
+## The ocean's volume: water only where the terrain dips below the surface.
+var sea := false
 
 
 func _ready() -> void:
@@ -54,5 +56,8 @@ func surface_y() -> float:
 func depth_at(p: Vector3) -> float:
 	var l := p - global_position
 	if absf(l.x) > size.x * 0.5 or absf(l.z) > size.z * 0.5 or l.y > size.y * 0.5 or l.y < -size.y * 0.5:
+		return 0.0
+	# the sea only where the seabed is below the surface (not under the land)
+	if sea and WorldData.get_data().height_at(p.x, p.z) > surface_y() - 0.2:
 		return 0.0
 	return surface_y() - p.y
