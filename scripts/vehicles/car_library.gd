@@ -349,11 +349,13 @@ static func _extract(_pack: Node3D, model: String) -> Dictionary:
 			wparts.append([mi.mesh, winv * _gxf(mi)])
 		var local_center: Vector3 = inv * (w.center as Vector3)
 		wheel_data.append({"pos": local_center, "radius": (w.aabb as AABB).size.y * 0.5, "parts": wparts})
-	# tight bounds in the car frame (world-axis bounds of rotated cars are inflated)
+	# tight bounds in the car frame, from the vertices: a mesh's own box carried into the car frame is inflated
+	# whenever the two are rotated against each other (the coupe's came out 3.7 m wide, seating its driver in
+	# the door and sizing its collision far too wide)
 	var local_aabb := AABB()
 	var first := true
 	for mi in body_meshes:
-		var a := (inv * _gxf(mi)) * mi.get_aabb()
+		var a := _vertex_aabb(mi.mesh, inv * _gxf(mi))
 		local_aabb = a if first else local_aabb.merge(a)
 		first = false
 	# indicators blink on the amber lenses; a cluster without any uses its outer third instead
@@ -399,6 +401,20 @@ static func _split_optics(arr: Array, xf: Transform3D, out: Dictionary, amber: D
 			if uv.size() > 0:
 				st.set_uv(uv[idx[t + k]])
 			st.add_vertex([a, b, c][k])
+
+
+static func _vertex_aabb(mesh: Mesh, xf: Transform3D) -> AABB:
+	var box := AABB()
+	var first := true
+	for si in mesh.get_surface_count():
+		for v: Vector3 in mesh.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]:
+			var w := xf * v
+			if first:
+				box = AABB(w, Vector3.ZERO)
+				first = false
+			else:
+				box = box.expand(w)
+	return box if not first else xf * mesh.get_aabb()
 
 
 static func _global_aabb(meshes: Array[MeshInstance3D]) -> AABB:

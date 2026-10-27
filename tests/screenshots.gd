@@ -294,7 +294,7 @@ func _run() -> void:
 	if _want("doors"):
 		# front doors cut from the body, swung open: a sedan, a muscle car, a van and a box truck side by side
 		var cars := []
-		var models := ["sedan", "muscle", "van", "boxtruck"]
+		var models := ["sedan", "muscle", "coupe", "boxtruck"]
 		for i in models.size():
 			var v := Vehicle.new()
 			v.model = models[i]
@@ -503,6 +503,34 @@ func _run() -> void:
 			await _snap("enter_%02d" % int(t * 10))
 		p.visual.tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_IDLE
 		await _frames(10)
+		c.queue_free()
+		p.cam.camera.make_current()
+	if _want("jack"):
+		# a carjack frame by frame (slow motion): the jacker and the driver pulled out
+		var jv := Vehicle.new()
+		jv.model = "sedan"
+		world.add_child(jv)
+		jv.global_position = p.global_position + Vector3(6.0, 0.8, 4.0)
+		jv.rotation.y = 0.0
+		while not NPCDriver.is_ready("ch33_nonpbr"):
+			await _frames(1)
+		NPCDriver.seat_in(jv, "ch33_nonpbr")
+		await _frames(60)
+		p.global_position = jv.driver_door_position() + jv.global_basis.x * -0.8
+		await _frames(5)
+		var c := Camera3D.new()
+		world.add_child(c)
+		var door := jv.driver_door_position()
+		c.look_at_from_position(door - jv.global_basis.x * 6.0 - jv.global_basis.z * 1.5 + Vector3(0, 1.6, 0), door + Vector3(0, 0.9, 0) + jv.global_basis.x * 0.6)
+		c.fov = 55
+		c.make_current()
+		Engine.time_scale = 0.12
+		p.enter_vehicle(jv)
+		for i in 14:
+			await _frames(3)
+			await _snap("jack_%02d" % i)
+		Engine.time_scale = 1.0
+		await _frames(30)
 		c.queue_free()
 		p.cam.camera.make_current()
 	if _want("car"):

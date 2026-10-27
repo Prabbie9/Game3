@@ -152,6 +152,7 @@ INDUSTRIAL_X = [700, 840, 980]
 BEACH_STREETS_Z = [-360, -240, -120, 0, 120, 240, 360]
 CANYON = [(360, -500), (372, -590), (450, -650), (560, -640), (660, -690), (640, -790), (700, -880), (790, -900), (840, -850)]
 LOOKOUT = (840, -850)
+MANSIONS = [(520, -700, 0.3), (610, -735, 2.6), (735, -830, 1.2), (690, -950, 0.1)]   # x, z, yaw
 
 
 class Graph:
@@ -249,7 +250,7 @@ def build_roads():
         g.road([(-400, a), (x0, a)], 14.0, 2, "avenue", True, "")
         g.road([(400, a), (x1, a)], 14.0, 2, "avenue", True, "")
     # Ocean Drive (beach) N-S with the beach streets
-    od = [(OCEAN_DRIVE_X, -1060), (OCEAN_DRIVE_X, -560)] + [(OCEAN_DRIVE_X, z) for z in BEACH_STREETS_Z] + [(OCEAN_DRIVE_X, 560), (OCEAN_DRIVE_X, 700)]
+    od = [(OCEAN_DRIVE_X, -1160), (OCEAN_DRIVE_X, -1060), (OCEAN_DRIVE_X, -560)] + [(OCEAN_DRIVE_X, z) for z in BEACH_STREETS_Z] + [(OCEAN_DRIVE_X, 560), (OCEAN_DRIVE_X, 700)]
     od = sorted(set(od), key=lambda p: p[1])
     for a, b in zip(od[:-1], od[1:]):
         g.road([a, b], 16.0, 2, "drive", True, "Ocean Dr")
@@ -294,8 +295,8 @@ def build_roads():
     for x in (-240, 0, 240):
         if any(abs(x - sx) < 1 for sx in SUBURB_X):
             continue
-    for x in (-280, -40, 200):  # connectors ring -> Sunset Ave (z=-560)
-        g.road([(x, -560), (x, z0)] if x != -280 else [(-280, -560), (-280, z0 + 20), (-240, z0)], 12.0, 1, "street", True, "")
+    for x in (-280, -40, 200):  # connectors Sunset Ave (z=-560) -> the ring's junctions with the avenues 40 m east
+        g.road(catmull([(x, -560), (x, -548), (x + 20, -528), (x + 40, -508), (x + 40, z0)], sub=4), 12.0, 1, "street", True, "")
     # canyon road up the hills
     g.road(catmull(CANYON, sub=8), 9.0, 1, "hill", False, "Canyon Rd", spacing=6.0)
     return g
@@ -425,7 +426,8 @@ def build_terrain(coast, graph):
     hills = 120.0 * np.exp(-r2 / (2 * 290.0 ** 2)) + 55.0 * np.exp(-((X - 1050) ** 2 + (Z + 420) ** 2) / (2 * 190.0 ** 2))
     hills += 18.0 * fbm(X, Z, 1 / 260.0, 5, seed=7, ridged=True) * smoothstep(0, 60, hills)
     north = 9.0 * smoothstep(-560, -1100, Z) * (1 - hill_mask) + 2.5 * fbm(X, Z, 1 / 180.0, 3, seed=3)
-    relief = hills * hill_mask + north * smoothstep(-470, -620, Z)
+    # Las Lomas rises inland from Ocean Drive (level with the beach) instead of meeting a flattened strip at a bank
+    relief = hills * hill_mask + north * smoothstep(-470, -620, Z) * smoothstep(-735, -560, X)
     relief += 1.2 * fbm(X, Z, 1 / 90.0, 3, seed=5)
     inland = smoothstep(0, 140, d)
     h = h + np.maximum(relief, 0) * inland * (1 - quay)
@@ -435,7 +437,8 @@ def build_terrain(coast, graph):
         rect_mask(X, Z, -600, -540, 600, 540, 50),
         rect_mask(X, Z, -110, 560, 1100, 850, 30),
         rect_mask(X, Z, 560, -280, 1120, 640, 40),
-        rect_mask(X, Z, -772, -1080, -560, 760, 25),
+        rect_mask(X, Z, -772, -560, -560, 760, 25),
+        rect_mask(X, Z, -772, -1170, -728, -560, 25),   # Ocean Drive north, along the beach
         rect_mask(X, Z, -760, 560, 0, 740, 40),
     ]) * (d > -2)
     h = h * (1 - flat) + 0.0 * flat
@@ -453,6 +456,20 @@ def build_terrain(coast, graph):
     lx, lz = LOOKOUT
     m = smoothstep(46, 30, np.hypot(X - lx, Z - lz))
     hmap = hmap * (1 - m) + m * _sample(hmap, lx, lz)
+    # mansion pads: a level terrace cut into the hillside under each villa and its garden, kept off the road
+    # (Canyon Rd's embankment blend reaches 60 m out, so the pads come after it)
+    for mx, mz, _ in MANSIONS:
+        i0, i1 = int((mx - 50 + HALF) / STEP), int((mx + 50 + HALF) / STEP) + 1
+        j0, j1 = int((mz - 50 + HALF) / STEP), int((mz + 50 + HALF) / STEP) + 1
+        WX, WZ = X[j0:j1, i0:i1], Z[j0:j1, i0:i1]
+        near = np.full(WX.shape, np.inf)
+        for rd in graph.roads:
+            if rd["kind"] == "hill":
+                for p, q in zip(rd["pts"][:-1], rd["pts"][1:]):
+                    np.minimum(near, seg_dist(WX, WZ, p[0], p[2], q[0], q[2])[0] - rd["w"] * 0.5 - 2.5, out=near)
+        m = smoothstep(46, 24, np.hypot(WX - mx, WZ - mz)) * smoothstep(1.0, 10.0, near)
+        y = _sample(hmap, mx, mz)
+        hmap[j0:j1, i0:i1] = hmap[j0:j1, i0:i1] * (1 - m) + m * y
     return hmap, d, beach, X, Z
 
 
@@ -605,19 +622,36 @@ def build_lots(graph):
         lots.append({"kind": "container_yard", "x0": xa, "z0": 712, "x1": min(xa + 210, 1060), "z1": 812, "seed": 8 + xa})
     for x in (100, 200, 450, 550, 850, 950):
         lots.append({"kind": "crane", "x0": x - 10, "z0": 822, "x1": x + 10, "z1": 846, "seed": x})
-    # suburbs: house plots along every E-W street, both sides
+    # every big plot keeps off the roads and their sidewalks (freeway bends, connectors, wavy suburb streets)
+    clear = _road_clearance(graph)
+    kept = []
+    for l in lots:
+        if l["kind"] in FIT_KINDS and not _fit_lot(l, clear):
+            continue
+        kept.append(l)
+    lots = kept
+    # suburbs: house plots along every E-W street, both sides, each clear of every road (the wavy N-S streets,
+    # Ocean Drive, the ring connectors) with a metre to spare
     for zi, z in enumerate(SUBURB_Z):
         xs = [OCEAN_DRIVE_X] + SUBURB_X
         for a, b in zip(xs[:-1], xs[1:]):
-            x = a + 16
-            while x < b - 16:
-                for side in (-1, 1):
-                    if (z == SUBURB_Z[0] and side > 0) or (z == SUBURB_Z[-1] and side < 0):
-                        continue
-                    zc = z + 6.0 * math.sin(x / 70.0 + zi) + side * 22.0
-                    lots.append({"kind": "house", "x0": x - 9, "z0": zc - 9, "x1": x + 9, "z1": zc + 9,
-                                 "yaw": 0.0 if side > 0 else math.pi, "seed": int(rnd.integers(1 << 30))})
-                x += 22.0 + float(rnd.uniform(0, 6))
+            for side in (-1, 1):
+                if (z == SUBURB_Z[0] and side > 0) or (z == SUBURB_Z[-1] and side < 0):
+                    continue
+                x = a + 14.0
+                while x < b - 9.0:
+                    placed = False
+                    for hx in (x, x + 2.0, x + 4.0, x + 6.0, x + 8.0):
+                        zc = z + 6.0 * math.sin(hx / 70.0 + zi) + side * 22.0
+                        r = (hx - 9, zc - 9, hx + 9, zc + 9)
+                        if _penetration(clear, *r) <= -1.0:
+                            lots.append({"kind": "house", "x0": r[0], "z0": r[1], "x1": r[2], "z1": r[3],
+                                         "yaw": 0.0 if side > 0 else math.pi, "seed": int(rnd.integers(1 << 30))})
+                            x = hx + 22.0 + float(rnd.uniform(0, 6))
+                            placed = True
+                            break
+                    if not placed:
+                        x += 10.0
     # beach: boardwalk along Ocean Drive's sand side, a pier at the end of the main avenue, lifeguard towers
     for za in range(-1040, 680, 200):  # in pieces so each streams with its own cell
         lots.append({"kind": "boardwalk", "x0": OCEAN_DRIVE_X - 8 - SIDEWALK - 8, "z0": za, "x1": OCEAN_DRIVE_X - 8 - SIDEWALK,
@@ -630,9 +664,55 @@ def build_lots(graph):
     lx, lz = LOOKOUT
     lots.append({"kind": "lookout", "x0": lx - 18, "z0": lz - 18, "x1": lx + 18, "z1": lz + 18, "seed": 5})
     # mansions along the canyon road
-    for (x, z, yaw) in ((520, -700, 0.3), (610, -735, 2.6), (735, -830, 1.2), (690, -950, 0.1)):
+    for (x, z, yaw) in MANSIONS:
         lots.append({"kind": "mansion", "x0": x - 16, "z0": z - 14, "x1": x + 16, "z1": z + 14, "yaw": yaw, "seed": int(x)})
     return lots
+
+
+FIT_KINDS = ("parking", "mall", "midrise", "park", "gas_station", "industrial", "beachfront")
+
+
+def _road_clearance(graph):
+    """Points every metre along every road, each with the radius a lot must keep clear of (half width + sidewalk)."""
+    P, R = [], []
+    for rd in graph.roads:
+        rad = rd["w"] * 0.5 + (SIDEWALK if rd["walk"] else 1.5)
+        pts = rd["pts"]
+        for a, b in zip(pts[:-1], pts[1:]):
+            n = max(int(math.hypot(b[0] - a[0], b[-1] - a[-1])), 1)
+            for k in range(n + 1):
+                t = k / n
+                P.append((a[0] + (b[0] - a[0]) * t, a[-1] + (b[-1] - a[-1]) * t))
+                R.append(rad)
+    return np.array(P), np.array(R)
+
+
+def _penetration(clear, x0, z0, x1, z1, idx=False):
+    """How far the nearest road (plus sidewalk) reaches into the rect (negative: the gap to it)."""
+    P, R = clear
+    dx = np.maximum(np.maximum(x0 - P[:, 0], P[:, 0] - x1), 0)
+    dz = np.maximum(np.maximum(z0 - P[:, 1], P[:, 1] - z1), 0)
+    pen = R - np.hypot(dx, dz)
+    j = int(np.argmax(pen))
+    return (float(pen[j]), j) if idx else float(pen[j])
+
+
+def _fit_lot(l, clear, keep=0.25):
+    """Shrink a lot edge by edge until no road reaches into it; False if too little is left to build on."""
+    P, R = clear
+    for _ in range(60):
+        pen, j = _penetration(clear, l["x0"], l["z0"], l["x1"], l["z1"], idx=True)
+        if pen <= keep:
+            return True
+        px, pz = P[j]
+        r = R[j] + 0.5
+        moves = [("x0", px + r, px + r - l["x0"]), ("x1", px - r, l["x1"] - (px - r)),
+                 ("z0", pz + r, pz + r - l["z0"]), ("z1", pz - r, l["z1"] - (pz - r))]
+        key, val, _ = min(moves, key=lambda m: m[2])
+        l[key] = float(val)
+        if l["x1"] - l["x0"] < 16.0 or l["z1"] - l["z0"] < 16.0:
+            return False
+    return False
 
 
 # ----------------------------------------------------------------------------------------- splat + map
