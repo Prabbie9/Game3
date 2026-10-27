@@ -957,7 +957,14 @@ func _respawn(at := Transform3D(), text := "You woke up a little bruised.") -> v
 	collision_mask = MASK_ON_FOOT
 	state = State.ON_FOOT
 	visual.jump_to("ground")
+	crouched = false
+	cam.crouch = false
+	_swim_push = 0.0
 	Game.controls_enabled = true
+	# a fresh start: the police and the panic of the last life are over
+	var w := Game.world as World
+	if w and w.wanted:
+		w.wanted.clear()
 	if text != "":
 		Game.message(text)
 

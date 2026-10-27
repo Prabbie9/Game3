@@ -88,7 +88,9 @@ func _run() -> void:
 			c.queue_free()
 		w.cops.clear()
 	_check(w.stars == 0, "out of sight and outside the search area: lost them (%.0f s)" % t)
-	# wasted -> hospital
+	# wasted -> hospital, wanted level gone
+	Game.crime("attack_police", p.global_position)
+	var stars_before := w.stars
 	p.take_damage(500.0)
 	t = 0.0
 	while t < 14.0 and p.state != Player.State.ON_FOOT:
@@ -96,6 +98,7 @@ func _run() -> void:
 		t += 0.5
 	var hosp := world.respawn_point("hospital").origin
 	_check(p.state == Player.State.ON_FOOT and p.global_position.distance_to(hosp) < 4.0, "WASTED: comes round at the hospital (%.1f m, %.0f s)" % [p.global_position.distance_to(hosp), t])
+	_check(stars_before > 0 and w.stars == 0, "a respawn clears the wanted level (%d -> %d)" % [stars_before, w.stars])
 	# respray: drive into the garage while wanted (nobody watching)
 	Game.crime("attack_police", p.global_position)
 	for c in get_tree().get_nodes_in_group("police"):
