@@ -1,3 +1,35 @@
+## Port Solano v1.2.1 — Xbox controller
+
+Plug in an Xbox controller (wired, or Bluetooth / wireless adapter) and play the whole game on it; prompts and
+menus switch to the pad as soon as you touch it.
+
+| On foot | | At the wheel | |
+|---|---|---|---|
+| Left stick | move (push lightly to walk) | Left stick | steer |
+| Right stick | look | Right stick | look |
+| A (hold) | sprint | RT / LT | accelerate / brake and reverse |
+| X | jump, vault, climb | RB | handbrake |
+| Y | enter vehicle / use | Y | get out |
+| B | reload | LS (click) | horn (tap: siren on emergency vehicles) |
+| LT / RT | aim / shoot | RS (click) | look behind |
+| LB (hold) | weapon wheel | D-pad up | headlights |
+| D-pad left / right | previous / next weapon | D-pad left / right | previous / next radio station |
+| RB | take cover | A | indicator the way you're steering (centred: off) |
+| LS (click) | crouch | B | hazard lights |
+| RS (click) | swap shoulder | LB + X | aim and shoot from the window |
+| D-pad down | map | VIEW | camera view |
+| MENU | pause (God Mode is in the pause menu) | RB / LB | helicopter up / down |
+
+- The controller rumbles when you shoot (harder for the shotgun, sniper and launcher), take a hit, crash or are
+  near an explosion. Turn it off in Settings → Gameplay → Controller vibration.
+- Buttons are named the Xbox way everywhere (MENU, VIEW, LS, RS); every pad button can be rebound in
+  Settings → Controls.
+- God Mode shows pad hints: D-pad to move and change, A to do it, LB / RB for tabs, B to close.
+
+**Fix**
+- v1.2.0 could build the same city block twice as you moved around, which spammed errors and could crash the
+  game when quitting. Fixed.
+
 ## Port Solano v1.2.0 — God Mode, smoother cars and a tidier island
 
 **God Mode** (F1, or GOD MODE in the pause menu; the game pauses while it is open)

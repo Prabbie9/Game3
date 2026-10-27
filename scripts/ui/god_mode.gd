@@ -28,6 +28,7 @@ var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _status: Label
 var _where: Label
+var _hint: Label
 var _vehicle_i := 0
 var _person_i := 0
 var _object_i := 0
@@ -78,8 +79,8 @@ func _ready() -> void:
 	col.add_child(_status)
 	_where = UITheme.label("", 16, UITheme.body, UITheme.MUTED)
 	col.add_child(_where)
-	var hint := UITheme.label("[↑ ↓] choose   [← →] change   [ENTER] do it   [TAB] next tab   [F1 / ESC] close", 16, UITheme.body, UITheme.MUTED)
-	col.add_child(hint)
+	_hint = UITheme.label("", 16, UITheme.body, UITheme.MUTED)
+	col.add_child(_hint)
 
 
 func is_open() -> bool:
@@ -94,6 +95,8 @@ func open() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Audio.play_ui("open")
 	_status.text = ""
+	_hint.text = "[D-PAD] choose and change   [A] do it   [LB / RB] tabs   [B] close" if Game.using_gamepad \
+		else "[↑ ↓] choose   [← →] change   [ENTER] do it   [TAB] next tab   [F1 / ESC] close"
 	_show_tab(_tab)
 
 

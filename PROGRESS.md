@@ -299,6 +299,14 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
     headlights distance-fade. tests/lights_check.gd. City streaming leads the focus by 2.5 s of travel (requests and
     instantiation nearest the lead first). Ultra: SSIL half size, shadow filter 3 (8192 atlas kept), 5 SDFGI
     cascades. Benchmark report: per-system main-thread costs (incl. City.cost_ms) and every frame over 50 ms.
+- v1.2.1 Xbox controller: InputSetup.PAD_BUTTONS grouped by context (on foot / at the wheel / anywhere); new pad
+  bindings look_behind RS, radio_prev / radio_next D-pad left / right, headlights D-pad up, hazards B and
+  `indicator_pad` A (Vehicle: signals the way the stick is pushed, centred cancels). Xbox names (MENU, VIEW, LS,
+  RS). Game.rumble() (Settings.gameplay.vibration) on shots, hits, crashes, nearby blasts. Pause-menu controls list
+  leaves out actions with no binding on the current device. tests/gamepad_check.gd: every on-foot / driving action
+  has a pad binding, no button shared within a context, the A indicator.
+  Fix: v1.2.0's City.update filtered `want` (focus + anchor cells, which overlap) before requesting, so a cell
+  listed twice got two jobs; the orphaned one errored in _collect and leaked a worker task (double free at exit).
 
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
@@ -332,3 +340,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v1.1.2 | iteration: beach sand to the boardwalk, scope view | GitHub Release |
 | v1.1.3 | iteration: surface swimming and treading water | GitHub Release |
 | v1.2.0 | iteration: God Mode, smooth carjacking and car entry, tidy Las Lomas, no road dead ends, steady street lights | GitHub Release |
+| v1.2.1 | iteration: full Xbox controller layout and vibration | GitHub Release |

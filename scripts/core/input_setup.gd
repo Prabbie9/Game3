@@ -1,6 +1,8 @@
 class_name InputSetup
 extends RefCounted
 ## Default keyboard/mouse + gamepad bindings (defined in code so the rebinding menu can rewrite them).
+## Gamepad: Xbox layout (Godot's JOY_BUTTON_A is the bottom face button, B right, X left, Y top). One button can
+## serve both on foot and at the wheel: the game only reads each action where it applies.
 
 const KEYS := {
 	"move_forward": [KEY_W], "move_back": [KEY_S], "move_left": [KEY_A], "move_right": [KEY_D],
@@ -18,12 +20,18 @@ const MOUSE := {
 	"weapon_next": [MOUSE_BUTTON_WHEEL_DOWN], "weapon_prev": [MOUSE_BUTTON_WHEEL_UP],
 }
 const PAD_BUTTONS := {
+	# on foot
 	"jump": [JOY_BUTTON_X], "sprint": [JOY_BUTTON_A], "crouch": [JOY_BUTTON_LEFT_STICK],
 	"interact": [JOY_BUTTON_Y], "reload": [JOY_BUTTON_B], "shoulder_swap": [JOY_BUTTON_RIGHT_STICK], "cover": [JOY_BUTTON_RIGHT_SHOULDER],
-	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "headlights": [JOY_BUTTON_DPAD_LEFT], "hazards": [JOY_BUTTON_DPAD_UP], "ascend": [JOY_BUTTON_RIGHT_SHOULDER], "descend": [JOY_BUTTON_LEFT_SHOULDER],
-	"camera_mode": [JOY_BUTTON_BACK], "pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],
 	"weapon_next": [JOY_BUTTON_DPAD_RIGHT], "weapon_prev": [JOY_BUTTON_DPAD_LEFT], "weapon_wheel": [JOY_BUTTON_LEFT_SHOULDER],
-	"vehicle_aim": [JOY_BUTTON_LEFT_SHOULDER], "vehicle_fire": [JOY_BUTTON_X], "radio_next": [JOY_BUTTON_DPAD_RIGHT],
+	# at the wheel (Y gets out, RT / LT drive)
+	"handbrake": [JOY_BUTTON_RIGHT_SHOULDER], "horn": [JOY_BUTTON_LEFT_STICK], "look_behind": [JOY_BUTTON_RIGHT_STICK],
+	"headlights": [JOY_BUTTON_DPAD_UP], "radio_prev": [JOY_BUTTON_DPAD_LEFT], "radio_next": [JOY_BUTTON_DPAD_RIGHT],
+	"hazards": [JOY_BUTTON_B], "indicator_pad": [JOY_BUTTON_A], "camera_mode": [JOY_BUTTON_BACK],
+	"vehicle_aim": [JOY_BUTTON_LEFT_SHOULDER], "vehicle_fire": [JOY_BUTTON_X],
+	"ascend": [JOY_BUTTON_RIGHT_SHOULDER], "descend": [JOY_BUTTON_LEFT_SHOULDER],
+	# anywhere
+	"pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],
 }
 ## action -> [axis, direction]
 const PAD_AXES := {

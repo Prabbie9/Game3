@@ -12,7 +12,7 @@ const BUS_LABELS := {"Master": "Master volume", "Music": "Radio and music", "SFX
 
 static var audio := {"Master": 0.85, "Music": 0.8, "SFX": 1.0, "Vehicles": 1.0, "Ambience": 1.0}
 static var gameplay := {"aim_assist": true, "blood": true, "subtitles": true, "invert_y": false, "mouse_sens": 1.0,
-	"pad_sens": 1.0, "hud": true}
+	"pad_sens": 1.0, "hud": true, "vibration": true}
 ## action -> {"kb": [event dicts], "pad": [event dicts]} for actions the player has rebound
 static var bindings := {}
 static var _loaded := false
@@ -137,8 +137,8 @@ static func from_dict(d: Dictionary) -> InputEvent:
 
 
 const PAD_NAMES := {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y",
-	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_LEFT_STICK: "L3",
-	JOY_BUTTON_RIGHT_STICK: "R3", JOY_BUTTON_START: "START", JOY_BUTTON_BACK: "VIEW", JOY_BUTTON_GUIDE: "GUIDE",
+	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_LEFT_STICK: "LS",
+	JOY_BUTTON_RIGHT_STICK: "RS", JOY_BUTTON_START: "MENU", JOY_BUTTON_BACK: "VIEW", JOY_BUTTON_GUIDE: "XBOX",
 	JOY_BUTTON_DPAD_UP: "D-PAD UP", JOY_BUTTON_DPAD_DOWN: "D-PAD DOWN", JOY_BUTTON_DPAD_LEFT: "D-PAD LEFT",
 	JOY_BUTTON_DPAD_RIGHT: "D-PAD RIGHT"}
 

@@ -27,6 +27,7 @@ const BINDABLE := [
 	["Steer right", "steer_right", false], ["Handbrake", "handbrake", true], ["Horn / siren", "horn", true],
 	["Headlights", "headlights", true], ["Camera view", "camera_mode", true], ["Look behind", "look_behind", true],
 	["Indicator left", "indicator_left", true], ["Indicator right", "indicator_right", true],
+	["Indicator the way you steer (gamepad)", "indicator_pad", true],
 	["Hazard lights", "hazards", true], ["Aim from the window", "vehicle_aim", true],
 	["Shoot from the window", "vehicle_fire", true], ["Helicopter up", "ascend", true],
 	["Helicopter down", "descend", true], ["Next radio station", "radio_next", true],
@@ -351,6 +352,7 @@ func _gameplay() -> void:
 	_toggle("HUD", g.hud, func(on): set_g.call("hud", on))
 	_toggle("Invert look up / down", g.invert_y, func(on): set_g.call("invert_y", on))
 	_slider("Mouse sensitivity", 25.0, 300.0, 5.0, float(g.mouse_sens) * 100.0, func(x): return "%d%%" % int(x), func(x: float): set_g.call("mouse_sens", x / 100.0))
+	_toggle("Controller vibration", bool(g.get("vibration", true)), func(on): set_g.call("vibration", on))
 	_slider("Gamepad look speed", 25.0, 300.0, 5.0, float(g.pad_sens) * 100.0, func(x): return "%d%%" % int(x), func(x: float): set_g.call("pad_sens", x / 100.0))
 
 

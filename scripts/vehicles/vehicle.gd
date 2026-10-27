@@ -813,6 +813,10 @@ func _physics_process(delta: float) -> void:
 			set_indicator(Blinker.OFF if indicator == Blinker.LEFT else Blinker.LEFT)
 		if Input.is_action_just_pressed("indicator_right"):
 			set_indicator(Blinker.OFF if indicator == Blinker.RIGHT else Blinker.RIGHT)
+		if Input.is_action_just_pressed("indicator_pad"):
+			# gamepad: one button signals the way the stick is pushed (centred: cancels)
+			var want := Blinker.LEFT if steer_in > 0.3 else (Blinker.RIGHT if steer_in < -0.3 else Blinker.OFF)
+			set_indicator(Blinker.OFF if want == indicator else want)
 		if Input.is_action_just_pressed("hazards"):
 			set_indicator(Blinker.OFF if indicator == Blinker.HAZARD else Blinker.HAZARD)
 	elif ai_drive:

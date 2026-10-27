@@ -9,7 +9,7 @@ const CONTROLS := [
 	["Swap shoulder", "shoulder_swap"], ["Enter vehicle / use", "interact"], ["Map", "map"], ["God Mode (debug menu)", "god_mode"],
 	["VEHICLE", ""],
 	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
-	["Indicators / hazards", "indicator_left|indicator_right|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
+	["Indicators (pad: A, the way you steer) / hazards", "indicator_left|indicator_right|indicator_pad|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
 	["Shoot from the window", "vehicle_aim|vehicle_fire"], ["Radio station", "radio_next|radio_prev"], ["Exit vehicle", "interact"],
 ]
 
@@ -88,9 +88,12 @@ func _fill_controls() -> void:
 			continue
 		var keys := []
 		for a: String in String(row[1]).split("|"):
+			# actions that only exist on the other device (pad indicator, God Mode's F1) are left out
+			if a != "move_forward" and Settings.binding_name(a, Game.using_gamepad) == "—" and not (Game.using_gamepad and InputPrompts.PAD.has(a)):
+				continue
 			keys.append(InputPrompts.prompt(a) if a != "move_forward" else ("[L-STICK]" if Game.using_gamepad else "[%s%s%s%s]" % [Settings.binding_name("move_forward", false), Settings.binding_name("move_left", false), Settings.binding_name("move_back", false), Settings.binding_name("move_right", false)]))
 		_controls.add_child(UITheme.label(row[0], 17, UITheme.body))
-		_controls.add_child(UITheme.label(" ".join(keys), 17, UITheme.body_bold))
+		_controls.add_child(UITheme.label(" ".join(keys) if not keys.is_empty() else "PAUSE MENU", 17, UITheme.body_bold))
 
 
 func _show_stats() -> void:

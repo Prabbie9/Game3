@@ -144,7 +144,11 @@ func update(focus: Vector3) -> void:
 	var want := _all_cells_near(focus, LOAD_R)
 	if anchor != Vector3.INF:
 		want.append_array(_all_cells_near(anchor, 150.0))
-	var missing := want.filter(func(k: Vector2i): return not _cells.has(k) and not _jobs.has(k) and not _queued(k))
+	# (the focus and the anchor overlap: a cell listed twice must still be requested once)
+	var missing := []
+	for k: Vector2i in want:
+		if not _cells.has(k) and not _jobs.has(k) and not _queued(k) and not k in missing:
+			missing.append(k)
 	# nearest the point ahead first: the cells the car is about to reach are built and shown before those behind
 	missing.sort_custom(func(a: Vector2i, b: Vector2i): return _rect_dist(a, _lead) < _rect_dist(b, _lead))
 	for k: Vector2i in missing:

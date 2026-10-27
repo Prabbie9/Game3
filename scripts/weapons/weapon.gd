@@ -373,6 +373,8 @@ func _fire() -> void:
 		a[0] = int(a[0]) - 1
 	ammo_changed.emit(a[0], a[1])
 	fired.emit()
+	var kick := float({"shotgun": 0.75, "sniper": 0.85, "launcher": 1.0, "rifle": 0.35, "smg": 0.25}.get(current, 0.3))
+	Game.rumble(kick * 0.6, kick, 0.06 + kick * 0.12)
 	_flash_time = 0.06
 	_flash_mesh.rotation.z = randf() * TAU
 	var vol := float(data.get("volume", 0.0))

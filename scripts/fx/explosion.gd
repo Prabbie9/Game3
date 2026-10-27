@@ -16,6 +16,10 @@ static func release() -> void:
 static func blast(scene: Node, at: Vector3, radius := 9.0, damage := 150.0, source: Node = null, exclude: Object = null) -> void:
 	if source != null and source == Game.player:
 		Game.crime("explosion", at)
+	if Game.player:
+		var near := 1.0 - clampf(Game.player.global_position.distance_to(at) / (radius * 6.0), 0.0, 1.0)
+		if near > 0.0:
+			Game.rumble(near, near, 0.25 + near * 0.35)
 	if PropWorld.get_props():
 		PropWorld.get_props().blast(at, radius)
 	Audio.play_at(Audio.pick("weapons/explosion_%d.ogg", 2), at, 6.0, randf_range(0.92, 1.05), &"SFX", 450.0)

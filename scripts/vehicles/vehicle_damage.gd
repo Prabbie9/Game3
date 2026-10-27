@@ -46,6 +46,8 @@ func hit(point: Vector3, push: Vector3, strength: float) -> void:
 	if strength < 3.0 or _protected():
 		return
 	var dmg := pow(strength - 3.0, 1.5) * 9.0
+	if Game.player != null and Game.player.get("vehicle") == vehicle:
+		Game.rumble(0.6, clampf((strength - 3.0) / 12.0, 0.2, 1.0), 0.2)
 	_damage(dmg)
 	var size := vehicle._size
 	var depth := clampf((strength - 3.0) * 0.026, 0.0, MAX_PUSH)

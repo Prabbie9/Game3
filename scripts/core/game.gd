@@ -118,6 +118,15 @@ func police_called(pos: Vector3, where: Vector3) -> void:
 		say("Caller", lines[randi() % lines.size()] % world.place_name(where))
 
 
+## Controller vibration (gamepad in use and vibration on in the settings): weak = high-frequency motor,
+## strong = low-frequency motor, 0..1.
+func rumble(weak: float, strong: float, seconds: float) -> void:
+	if not using_gamepad or not bool(Settings.gameplay.get("vibration", true)):
+		return
+	for id in Input.get_connected_joypads():
+		Input.start_joy_vibration(id, clampf(weak, 0.0, 1.0), clampf(strong, 0.0, 1.0), seconds)
+
+
 func stat_add(key: String, amount: float = 1.0) -> void:
 	stats[key] = float(stats.get(key, 0.0)) + amount
 

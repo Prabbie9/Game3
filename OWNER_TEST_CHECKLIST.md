@@ -8,6 +8,12 @@ reply whenever convenient and the next session will act on it.
   branch `claude/tmp-push-test` (*Code → Branches*). The session's proxy does not allow changing the default branch or
   deleting branches.
 
+## v1.2.1 — Xbox controller
+- [ ] Play a while with only the Xbox controller: on foot, a gunfight, a car, a bike, the helicopter, the menus,
+  the map and God Mode (pause menu). Anything you couldn't do, or a button you'd rather have elsewhere?
+- [ ] In a car: A with the stick pushed left / right (indicators), B (hazards), D-pad left / right (radio), RS (look
+  behind). Does the vibration feel right (shots, crashes, explosions)? Too strong / too weak?
+
 ## v1.2.0 — God Mode, smoother cars, tidier island
 - [ ] Press **F1** (or GOD MODE in the pause menu): try each tab. Spawn a few vehicles (and SPAWN AND DRIVE),
   a pedestrian, a police officer, some crates; teleport round the districts and to a map waypoint; change the time

@@ -1161,6 +1161,7 @@ func add_armor(amount: float) -> void:
 func take_damage(amount: float, _from: Node = null) -> void:
 	if state == State.DEAD or Game.cheat("invincible"):
 		return
+	Game.rumble(0.5, clampf(amount / 40.0, 0.25, 1.0), 0.25)
 	var absorbed := minf(armor, amount * 0.7)
 	armor -= absorbed
 	health = maxf(0.0, health - (amount - absorbed))
