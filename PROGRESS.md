@@ -331,3 +331,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v1.1.1 | iteration: texture compression, map labels, night shops, safehouse | GitHub Release |
 | v1.1.2 | iteration: beach sand to the boardwalk, scope view | GitHub Release |
 | v1.1.3 | iteration: surface swimming and treading water | GitHub Release |
+| v1.2.0 | iteration: God Mode, smooth carjacking and car entry, tidy Las Lomas, no road dead ends, steady street lights | GitHub Release |
