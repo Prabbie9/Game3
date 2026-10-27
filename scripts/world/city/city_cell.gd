@@ -24,6 +24,7 @@ var net: RoadNet
 var b := MeshBatch.new()
 var far := MeshBatch.new()  # cheap stand-in shown when the cell isn't loaded in detail (one material)
 var boxes: Array = []    # [Transform3D, Vector3 size]
+var hulls: Array = []    # PackedVector3Array of convex collision points (sloping pavements and their ramps)
 var props := {}          # catalog name -> Array[Transform3D]
 var lights: Array = []   # Vector3 bulb positions
 var waters: Array = []   # [Vector3 centre, Vector3 size]
@@ -63,6 +64,25 @@ func _plain() -> void:
 
 func _col(center: Vector3, size: Vector3, basis := Basis.IDENTITY) -> void:
 	boxes.append([Transform3D(basis, center), size])
+
+
+## A solid under a (possibly sloping) top face: the top corners and the same again `depth` lower.
+func _hull(top: Array, depth: float) -> void:
+	var pts := PackedVector3Array()
+	for t: Vector3 in top:
+		pts.append(t)
+		pts.append(t - Vector3(0, depth, 0))
+	hulls.append(pts)
+
+
+## Where a pavement ramp meets the ground beyond its outer edge `at` (out along `out`): far enough out to be
+## gentle (4:1), never under 0.5 m nor over 2.5 m.
+func _verge(at: Vector3, out: Vector3) -> Vector3:
+	var g := _ground_y(at.x + out.x * 0.6, at.z + out.z * 0.6)
+	var run := clampf(absf(at.y - g) * 4.0, 0.5, 2.5)
+	var e := at + out * run
+	e.y = _ground_y(e.x, e.z)
+	return e
 
 
 func _prop(name: String, pos: Vector3, yaw: float, scale := 1.0) -> void:
@@ -290,15 +310,19 @@ func _sidewalk(ss: Array, w: float, side: float, kind: String) -> void:
 		var len := f.length()
 		if len < 0.05:
 			continue
-		var basis := _along(f)
 		var mid := (p + q) * 0.5
-		var rm := _v3(((rp + rq) * 0.5).normalized(), 0)
-		_col(mid + rm * (inner + SIDEWALK * 0.5) + Vector3(0, CURB_H * 0.5, 0), Vector3(len, CURB_H, SIDEWALK), basis)
-		# invisible ramp at the kerb so wheels and feet mount it smoothly
-		var ramp := 0.5
-		var ang := atan2(CURB_H, ramp)
-		_col(mid + rm * (inner - ramp * 0.5) + Vector3(0, CURB_H * 0.5 - 0.025, 0), Vector3(len, 0.05, ramp / cos(ang)),
-			basis * Basis(Vector3.RIGHT, -ang * side))
+		# collision that follows the pavement exactly (sloping with the street, so no stair-steps on hills): the
+		# slab, an invisible ramp up from the road at the kerb, and one down from the outer edge to the ground
+		# beyond (lawns, verges), whose bare 15 cm edge used to stop people walking onto the pavement from the
+		# grass and jolt cars
+		var dp := _v3(rp, 0)
+		var dq := _v3(rq, 0)
+		_hull([Ip, Op, Oq, Iq], CURB_H + 0.3)
+		_hull([p + dp * (inner - 0.5), q + dq * (inner - 0.5), Iq, Ip], 0.3)
+		var outer_p := _verge(Op, dp)
+		var outer_q := _verge(Oq, dq)
+		if absf(Op.y - outer_p.y) < 1.2 and absf(Oq.y - outer_q.y) < 1.2:
+			_hull([Op, outer_p, outer_q, Oq], 0.3)
 		# street furniture along this stretch
 		var dir := f / len
 		var to_road := -_v3(rp, 0)
@@ -416,18 +440,22 @@ func _junction(node: int) -> void:
 			if (seg[0] as Vector3).distance_to(seg[1]) > 0.05:
 				b.wall("curb", seg[0], seg[1], CURB_H)
 				b.wall("curb", seg[1], seg[0], CURB_H)
-		# collision: box over the corner in road A's frame
-		var fa: Vector2 = A.e.dir
-		var basis := _along(fa)
-		var lo := Vector3(INF, 0, INF)
-		var hi := Vector3(-INF, 0, -INF)
-		var inv := basis.inverse()
+		# collision: the corner's own outline (a box round it stuck out into the road at skewed junctions), and a
+		# ramp from its outer edge down to the ground beyond
+		var top := []
 		for p: Vector3 in pts:
-			var l := inv * (p - cen)
-			lo = Vector3(minf(lo.x, l.x), 0, minf(lo.z, l.z))
-			hi = Vector3(maxf(hi.x, l.x), 0, maxf(hi.z, l.z))
-		var mid := cen + basis * ((lo + hi) * 0.5)
-		_col(mid + Vector3(0, CURB_H * 0.5, 0), Vector3(hi.x - lo.x, CURB_H, hi.z - lo.z), basis)
+			top.append(p + y)
+		_hull(top, CURB_H + 0.3)
+		var o2: Vector3 = top[2]
+		var o3: Vector3 = top[3]
+		var out := ((o2 + o3) * 0.5 - (cen + y))
+		out.y = 0.0
+		if out.length() > 0.1:
+			out = out.normalized()
+			var e2 := _verge(o2, out)
+			var e3 := _verge(o3, out)
+			if absf(o2.y - e2.y) < 1.2 and absf(o3.y - e3.y) < 1.2:
+				_hull([o2, e2, e3, o3], 0.3)
 
 
 # ------------------------------------------------------------------------------------------------ nature
@@ -961,7 +989,7 @@ func _house(r: Rect2, yaw: float, villa: bool) -> void:
 		var e: Vector3 = corners[i]
 		b.uv2.x = a.distance_to(e)
 		b.color = Color(tint.r, tint.g, tint.b, rng.randf())
-		b.wall(key, e, a, wall_h)
+		b.wall(key, a, e, wall_h)   # (a -> e runs clockwise seen from above: the face looks outwards)
 	var top := base + wall_h
 	_plain()
 	var fwd := basis * Vector3(0, 0, -1)
@@ -969,9 +997,9 @@ func _house(r: Rect2, yaw: float, villa: bool) -> void:
 	var front_mid := (corners[0] + corners[1]) * 0.5
 	# door and garage on the front (-Z) facade
 	var door_c := front_mid - rgt * (w * 0.18) + fwd * 0.03
-	b.wall("door", door_c - rgt * 0.5, door_c + rgt * 0.5, 2.15)
+	b.wall("door", door_c + rgt * 0.5, door_c - rgt * 0.5, 2.15)
 	var gar_c := front_mid + rgt * (w * 0.25) + fwd * 0.03
-	b.wall("shutter", gar_c - rgt * 1.5, gar_c + rgt * 1.5, 2.4)
+	b.wall("shutter", gar_c + rgt * 1.5, gar_c - rgt * 1.5, 2.4)
 	# driveway to the street
 	var street := front_mid + fwd * 12.0
 	var dw0 := gar_c + Vector3(0, 0, 0)
@@ -1079,7 +1107,7 @@ func _gable(corners: Array[Vector3], top: float, basis: Basis, w: float, d: floa
 		var a := c + Xw * sx - Zw * sx
 		var e := c + Xw * sx + Zw * sx
 		var t := c + Xw * sx + rw
-		b.tri("gable", a, e, t, Vector2(0, 0), Vector2(d, 0), Vector2(d * 0.5, rw.y))
+		b.tri("gable", e, a, t, Vector2(0, 0), Vector2(d, 0), Vector2(d * 0.5, rw.y))   # facing out of the house
 	_plain()
 
 

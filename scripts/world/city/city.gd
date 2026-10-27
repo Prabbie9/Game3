@@ -302,6 +302,18 @@ func _steps_for(c: CityCell) -> Array[Callable]:
 				cs.transform = bx[0]
 				sb.add_child(cs)
 			root.add_child(sb))
+	for i0 in range(0, c.hulls.size(), 32):
+		steps.append(func() -> void:
+			var sb := StaticBody3D.new()
+			sb.collision_layer = 1
+			sb.collision_mask = 0
+			for pts: PackedVector3Array in c.hulls.slice(i0, i0 + 32):
+				var cs := CollisionShape3D.new()
+				var shape := ConvexPolygonShape3D.new()
+				shape.points = pts
+				cs.shape = shape
+				sb.add_child(cs)
+			root.add_child(sb))
 	for pname: String in c.props:
 		var xfs: Array = c.props[pname]
 		for i0 in range(0, xfs.size(), 40):
