@@ -129,10 +129,14 @@ func _run() -> void:
 	_check(not bin.is_empty(), "a bin near the start")
 	if not bin.is_empty():
 		var bp: Vector3 = (bin[2] as Transform3D).origin
+		var up_t := 0.0
+		while p.state != Player.State.ON_FOOT and up_t < 8.0:   # (the lamp-post car can knock them over passing by)
+			await _secs(0.1)
+			up_t += 0.1
 		p.global_position = bp + Vector3(2.0, 0.1, 0)
 		p.rotation.y = PI * 0.5
 		p.cam.yaw = p.rotation.y
-		print("      teleported to %s state %s vehicle %s" % [p.global_position, p.state, p.vehicle])
+		print("      teleported to %s state %s act %s vehicle %s" % [p.global_position, p.state, p._act, p.vehicle])
 		await get_tree().physics_frame
 		print("      one frame later %s" % p.global_position)
 		await _secs(0.3)

@@ -446,6 +446,18 @@ func _junction(node: int) -> void:
 		for p: Vector3 in pts:
 			top.append(p + y)
 		_hull(top, CURB_H + 0.3)
+		# an invisible ramp up each kerb from the road, as along the pavements
+		for k: int in [0, 4, 5]:
+			var a: Vector3 = pts[k]
+			var d: Vector3 = pts[(k + 1) % pts.size()]
+			if a.distance_to(d) < 0.05:
+				continue
+			var n := (d - a).cross(Vector3.UP)
+			n.y = 0.0
+			n = n.normalized()
+			if n.dot((a + d) * 0.5 - cen) < 0.0:
+				n = -n
+			_hull([a + y, d + y, d + n * 0.5, a + n * 0.5], 0.3)
 		var o2: Vector3 = top[2]
 		var o3: Vector3 = top[3]
 		var out := ((o2 + o3) * 0.5 - (cen + y))

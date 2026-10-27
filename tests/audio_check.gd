@@ -36,14 +36,17 @@ func _run() -> void:
 	p.foot_ik.stepped.connect(func(foot: int, pos: Vector3, col: Object): steps.append([foot, pos, col]))
 	Game.controls_enabled = true
 	p.cam.yaw = p.rotation.y
-	for mode: Array in [["run", false, 2.0, 3.4], ["sprint", true, 2.4, 4.2]]:
+	# [name, sprint, steps/s range, least ground speed] (a sprint is ~1.45 m strides at 6.4 m/s)
+	for mode: Array in [["run", false, 2.0, 3.4, 3.0], ["sprint", true, 3.4, 5.2, 5.0]]:
 		steps.clear()
 		Input.action_press("move_forward")
 		if mode[1]:
 			Input.action_press("sprint")
 		await _frames(60)
 		steps.clear()
+		var from := p.global_position
 		await _frames(180)
+		var speed := Vector2(p.global_position.x - from.x, p.global_position.z - from.z).length() / 3.0
 		Input.action_release("move_forward")
 		Input.action_release("sprint")
 		var rate := steps.size() / 3.0
@@ -53,6 +56,7 @@ func _run() -> void:
 				alternate = false
 		_check(rate >= mode[2] and rate <= mode[3], "%s: %.1f steps/s" % [mode[0], rate])
 		_check(alternate, "%s: feet alternate" % mode[0])
+		_check(speed >= mode[4], "%s: keeps going (%.1f m/s; nothing in the way)" % [mode[0], speed])
 		await _frames(40)
 	var d := WorldData.get_data()
 	_check(d.ground_kind(26, 9, false) == "concrete", "street is concrete")
