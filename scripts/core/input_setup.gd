@@ -11,7 +11,7 @@ const KEYS := {
 	"accelerate": [KEY_W], "brake": [KEY_S], "steer_left": [KEY_A], "steer_right": [KEY_D],
 	"handbrake": [KEY_SPACE], "horn": [KEY_H], "headlights": [KEY_L], "camera_mode": [KEY_V],
 	"indicator_left": [KEY_Z], "indicator_right": [KEY_X], "hazards": [KEY_B], "look_behind": [KEY_E],
-	"ascend": [KEY_SPACE], "descend": [KEY_CTRL], "radio_next": [KEY_PERIOD], "radio_prev": [KEY_COMMA],
+	"ascend": [KEY_SPACE], "descend": [KEY_CTRL, KEY_C], "radio_next": [KEY_PERIOD], "radio_prev": [KEY_COMMA],
 	"pause": [KEY_ESCAPE], "perf_overlay": [KEY_F3], "god_mode": [KEY_F1], "map": [KEY_M],
 	"weapon_next": [], "weapon_prev": [], "weapon_wheel": [KEY_TAB],
 }
@@ -30,8 +30,8 @@ const PAD_BUTTONS := {
 	"hazards": [JOY_BUTTON_B], "indicator_pad": [JOY_BUTTON_A], "camera_mode": [JOY_BUTTON_BACK],
 	"vehicle_aim": [JOY_BUTTON_LEFT_SHOULDER], "vehicle_fire": [JOY_BUTTON_X],
 	"ascend": [JOY_BUTTON_RIGHT_SHOULDER], "descend": [JOY_BUTTON_LEFT_SHOULDER],
-	# anywhere
-	"pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN],
+	# anywhere (hold VIEW for God Mode; at the wheel a tap of VIEW still changes the camera)
+	"pause": [JOY_BUTTON_START], "map": [JOY_BUTTON_DPAD_DOWN], "god_mode_pad": [JOY_BUTTON_BACK],
 }
 ## action -> [axis, direction]
 const PAD_AXES := {
@@ -72,3 +72,11 @@ static func apply_defaults() -> void:
 			e.axis = PAD_AXES[a][0]
 			e.axis_value = PAD_AXES[a][1]
 			InputMap.action_add_event(a, e)
+	# menus on a pad: Godot's built-in ui_accept / ui_cancel carry no joypad buttons, so A pressed nothing and B
+	# didn't go back
+	for pair: Array in [["ui_accept", JOY_BUTTON_A], ["ui_cancel", JOY_BUTTON_B]]:
+		var has := InputMap.action_get_events(pair[0]).any(func(e): return e is InputEventJoypadButton and e.button_index == pair[1])
+		if not has:
+			var e := InputEventJoypadButton.new()
+			e.button_index = pair[1]
+			InputMap.action_add_event(pair[0], e)

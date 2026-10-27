@@ -22,6 +22,7 @@ const BINDABLE := [
 	["Reload", "reload", true], ["Weapon wheel", "weapon_wheel", true], ["Next weapon", "weapon_next", true],
 	["Previous weapon", "weapon_prev", true], ["Enter vehicle / use", "interact", true],
 	["Swap shoulder", "shoulder_swap", true], ["Map", "map", true], ["God Mode (debug menu)", "god_mode", false],
+	["God Mode, gamepad (hold)", "god_mode_pad", true],
 	["VEHICLE", "", false],
 	["Accelerate", "accelerate", true], ["Brake / reverse", "brake", true], ["Steer left", "steer_left", false],
 	["Steer right", "steer_right", false], ["Handbrake", "handbrake", true], ["Horn / siren", "horn", true],

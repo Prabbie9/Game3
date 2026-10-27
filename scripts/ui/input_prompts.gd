@@ -6,7 +6,8 @@ const PAD := {"interact": "Y", "jump": "X", "sprint": "A", "aim": "LT", "fire": 
 	"accelerate": "RT", "brake": "LT", "handbrake": "RB", "pause": "MENU", "map": "D-PAD DOWN", "cover": "RB", "crouch": "LS",
 	"ui_accept": "A", "ui_cancel": "B", "weapon_wheel": "LB", "weapon_next": "D-PAD RIGHT", "weapon_prev": "D-PAD LEFT",
 	"shoulder_swap": "RS", "vehicle_aim": "LB", "vehicle_fire": "X", "radio_next": "D-PAD RIGHT", "radio_prev": "D-PAD LEFT",
-	"look_behind": "RS", "headlights": "D-PAD UP", "hazards": "B", "indicator_pad": "A", "horn": "LS", "camera_mode": "VIEW"}
+	"look_behind": "RS", "headlights": "D-PAD UP", "hazards": "B", "indicator_pad": "A", "horn": "LS", "camera_mode": "VIEW", "god_mode_pad": "HOLD VIEW",
+	"ascend": "RB", "descend": "LB"}
 
 
 static func prompt(action: String) -> String:

@@ -66,8 +66,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("shoulder_swap"):
 		shoulder = -shoulder
 	elif event.is_action_pressed("camera_mode") and mode == Mode.VEHICLE:
-		vehicle_view = (vehicle_view + 1) % VEHICLE_VIEWS
-		_cine_kind = -1
+		if event is InputEventJoypadButton:
+			_view_down_at = Time.get_ticks_msec()   # on a pad VIEW also opens God Mode when held: act on a tap's release
+		else:
+			_next_view()
+	elif event.is_action_released("camera_mode") and event is InputEventJoypadButton and mode == Mode.VEHICLE \
+			and Time.get_ticks_msec() - _view_down_at < int(GodMode.PAD_HOLD * 1000.0 * 0.6):
+		_next_view()
+
+
+var _view_down_at := 0
+
+
+func _next_view() -> void:
+	vehicle_view = (vehicle_view + 1) % VEHICLE_VIEWS
+	_cine_kind = -1
 
 
 func add_recoil(amount: float) -> void:

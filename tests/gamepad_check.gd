@@ -60,6 +60,24 @@ func _press_a(down: bool) -> void:
 	Input.parse_input_event(e)
 
 
+## Press a pad button, hold it `secs` (real frames, so it works while the game is paused), release.
+func _button(b: JoyButton, secs: float) -> void:
+	var e := InputEventJoypadButton.new()
+	e.button_index = b
+	e.pressed = true
+	Input.parse_input_event(e)
+	var t := 0.0
+	while t < secs:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	var r := InputEventJoypadButton.new()
+	r.button_index = b
+	r.pressed = false
+	Input.parse_input_event(r)
+	for i in 3:
+		await get_tree().process_frame
+
+
 func _stick_x(v: float) -> void:
 	var e := InputEventJoypadMotion.new()
 	e.axis = JOY_AXIS_LEFT_X
@@ -100,5 +118,43 @@ func _run() -> void:
 		await get_tree().physics_frame
 		_check(car.indicator == w[1], "A with the stick %s: indicator %s" % ["left" if w[0] < 0 else ("right" if w[0] > 0 else "centred"), w[2]])
 	_stick_x(0.0)
+	# VIEW: a tap at the wheel changes the camera; held, it opens God Mode (and doesn't change the camera)
+	var cam := world.player.cam
+	var god: GodMode = world.get_node("GodMode")
+	var view0 := cam.vehicle_view
+	await _button(JOY_BUTTON_BACK, 0.15)
+	_check(cam.vehicle_view != view0 and not god.is_open(), "a tap of VIEW changes the camera view (%d -> %d)" % [view0, cam.vehicle_view])
+	var view1 := cam.vehicle_view
+	await _button(JOY_BUTTON_BACK, 1.0)
+	_check(god.is_open() and cam.vehicle_view == view1, "holding VIEW opens God Mode, camera unchanged")
+	await _button(JOY_BUTTON_B, 0.1)
+	_check(not god.is_open() and not get_tree().paused, "B closes it again")
+	# the pause menu: MENU opens it, B backs out
+	var pm := get_tree().get_first_node_in_group("pause_menu")
+	if pm == null:   # (it belongs to the main scene; this test loads the world on its own)
+		pm = preload("res://scripts/ui/pause_menu.gd").new()
+		get_tree().root.add_child(pm)
+		await get_tree().process_frame
+	await _button(JOY_BUTTON_START, 0.1)
+	_check(pm._root.visible and get_tree().paused, "MENU opens the pause menu")
+	await _button(JOY_BUTTON_B, 0.1)
+	_check(not pm._root.visible and not get_tree().paused, "B closes the pause menu")
+	# helicopter: LB descends, RB climbs
+	var heli := Helicopter.new()
+	world.add_child(heli)
+	heli.global_position = Vector3(0.0, 40.0, 0.0)   # over an avenue junction (open sky)
+	world.player.debug_seat_in(heli)
+	heli.rotor = 1.0   # already spun up: it hovers where it is
+	for i in 120:
+		await get_tree().physics_frame
+	var y0 := heli.global_position.y
+	await _button(JOY_BUTTON_LEFT_SHOULDER, 2.5)
+	var y1 := heli.global_position.y
+	_check(y1 < y0 - 6.0, "LB brings the helicopter down (%.1f m -> %.1f m)" % [y0, y1])
+	for i in 90:   # (let go: it steadies into a hover)
+		await get_tree().physics_frame
+	var y2 := heli.global_position.y
+	await _button(JOY_BUTTON_RIGHT_SHOULDER, 3.0)
+	_check(heli.global_position.y > y2 + 6.0, "RB takes it up again (%.1f m -> %.1f m)" % [y2, heli.global_position.y])
 	print("GAMEPAD CHECK %s" % ("PASSED" if fails == 0 else "FAILED (%d)" % fails))
 	get_tree().quit(0 if fails == 0 else 1)

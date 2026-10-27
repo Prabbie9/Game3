@@ -16,8 +16,11 @@ const SPOTS := [
 	["Playa Solano beach", Vector2(-830.0, -120.0)], ["Port of Solano", Vector2(500.0, 610.0)],
 	["Eastside", Vector2(840.0, 60.0)], ["Las Lomas", Vector2(-280.0, -760.0)],
 	["Mirador lookout", Vector2(840.0, -850.0)], ["Solano Fwy (north)", Vector2(0.0, -500.0)],
+	["Stunt ramps: quay gap jump", Vector2(225.0, 834.0)], ["Stunt ramp: beach", Vector2(-815.0, -360.0)],
 ]
 const DAY_RATE := 1.0 / 120.0   # World.time_scale: game hours per real second
+
+const PAD_HOLD := 0.7   # seconds of VIEW held to open God Mode on a gamepad (a shorter tap is the camera view)
 
 static var spawned: Array = []
 
@@ -29,6 +32,8 @@ var _scroll: ScrollContainer
 var _status: Label
 var _where: Label
 var _hint: Label
+var _pad_hold := 0.0
+var _pad_done := false
 var _vehicle_i := 0
 var _person_i := 0
 var _object_i := 0
@@ -107,13 +112,17 @@ func close() -> void:
 	Audio.play_ui("back")
 
 
+func _toggle_open() -> void:
+	var pm := get_tree().get_first_node_in_group("pause_menu")
+	if is_open():
+		close()
+	elif not get_tree().paused and not (pm and pm.get("_root") and pm._root.visible):
+		open()
+
+
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("god_mode"):
-		var pm := get_tree().get_first_node_in_group("pause_menu")
-		if is_open():
-			close()
-		elif not get_tree().paused and not (pm and pm.get("_root") and pm._root.visible):
-			open()
+		_toggle_open()
 		get_viewport().set_input_as_handled()
 		return
 	if not is_open():
@@ -129,7 +138,16 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# gamepad: hold VIEW to open (or close) God Mode
+	if Input.is_action_pressed("god_mode_pad"):
+		_pad_hold += delta
+		if _pad_hold >= PAD_HOLD and not _pad_done:
+			_pad_done = true
+			_toggle_open()
+	else:
+		_pad_hold = 0.0
+		_pad_done = false
 	if is_open() and Game.player:
 		var p: Vector3 = Game.player.global_position
 		_where.text = "Position  %.1f, %.1f, %.1f   ·   %s   ·   %s" % [p.x, p.y, p.z, _world().place_name(p), _clock(_world().time_of_day)]

@@ -307,6 +307,15 @@ https://drive.google.com/drive/folders/1EEE9K89wnqsCae86tSGU-OfidZIGW-bW?usp=sha
   has a pad binding, no button shared within a context, the A indicator.
   Fix: v1.2.0's City.update filtered `want` (focus + anchor cells, which overlap) before requesting, so a cell
   listed twice got two jobs; the orphaned one errored in _collect and leaked a worker task (double free at exit).
+- v1.3.0: CityCell._house walls / door / shutter / gable were wound inwards (MeshBatch.wall(a, b) faces
+  (b - a) x up; the houses passed corners counter to every other building): tests/facing_check.gd. Pavements:
+  CityCell.hulls (ConvexPolygonShape3D, built in City steps like the boxes) follow the pavement mesh: slab, kerb
+  ramp and an outer ramp to the ground (`_verge`, 4:1, 0.5-2.5 m); junction corners use their outline.
+  tests/kerb_check.gd walks lawn -> road at 48 places (old code: 28 stuck at the outer edge) and drives a car on.
+  StuntRamp (scripts/world/props/stunt_ramp.gd) at World.RAMPS, on the full map (places() 5th field = map only);
+  tests/ramp_check.gd. Helicopter hint in the HUD; descend also on C. God Mode: hold VIEW (god_mode_pad,
+  GodMode.PAD_HOLD); CameraRig switches the vehicle view on a pad tap's release. InputSetup adds A / B to
+  ui_accept / ui_cancel (Godot 4.7's built-ins have no joypad buttons). gamepad_check covers all of it.
 
 **Next: keep iterating (brief §7)** — review screenshots, improve the weakest-looking areas, deepen existing
 systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
@@ -341,3 +350,4 @@ systems; act on the owner's benchmark reports from OWNER_TEST_CHECKLIST.md.
 | v1.1.3 | iteration: surface swimming and treading water | GitHub Release |
 | v1.2.0 | iteration: God Mode, smooth carjacking and car entry, tidy Las Lomas, no road dead ends, steady street lights | GitHub Release |
 | v1.2.1 | iteration: full Xbox controller layout and vibration | GitHub Release |
+| v1.3.0 | iteration: solid houses, pavement edges, stunt ramps, helicopter hints, pad God Mode / menus | GitHub Release |

@@ -252,9 +252,22 @@ func _process(_delta: float) -> void:
 		hint = "%s  Enter vehicle" % InputPrompts.prompt("interact")
 	elif it:
 		hint = "%s  %s" % [InputPrompts.prompt("interact"), it.interact_prompt(_player)]
+	elif _player.state == Player.State.DRIVING and _player.vehicle is Helicopter:
+		# flying: the controls stay on screen (climb / descend aren't the driving keys)
+		hint = "%s Climb   %s Descend   %s Nose down / up   %s Turn" % [InputPrompts.prompt("ascend"), InputPrompts.prompt("descend"),
+			_pair("accelerate", "brake"), _pair("steer_left", "steer_right")]
+		if _player.vehicle.linear_velocity.length() < 2.5:
+			hint += "   %s Exit" % InputPrompts.prompt("interact")
 	elif _player.state == Player.State.DRIVING and _player.vehicle.linear_velocity.length() < 2.5:
 		hint = "%s  Exit vehicle" % InputPrompts.prompt("interact")
 	_hint.text = hint
+
+
+## Two prompts as one ("[W/S]", "[RT/LT]"), or the stick on a pad for steering.
+func _pair(a: String, b: String) -> String:
+	if Game.using_gamepad and a == "steer_left":
+		return "[L-STICK]"
+	return "[%s/%s]" % [InputPrompts.prompt(a).trim_prefix("[").trim_suffix("]"), InputPrompts.prompt(b).trim_prefix("[").trim_suffix("]")]
 
 
 ## Crosshair: a dot, plus four ticks that open with the current spread (guns) and a hit marker.

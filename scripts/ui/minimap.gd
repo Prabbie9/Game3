@@ -60,6 +60,8 @@ func _draw() -> void:
 	if Game.world.has_method("places"):
 		var r2 := Rect2(Vector2(10, 10), size_px - Vector2(20, 20))
 		for pl: Array in Game.world.places():
+			if pl.size() > 4:
+				continue   # (full map only)
 			var sp: Vector2 = to_px.call(pl[0])
 			sp = Vector2(clampf(sp.x, r2.position.x, r2.end.x), clampf(sp.y, r2.position.y, r2.end.y))
 			draw_circle(sp, 8.0, Color(UITheme.INK, 0.9))

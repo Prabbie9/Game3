@@ -1,3 +1,19 @@
+## Port Solano v1.3.0 — solid houses, smooth pavements, stunt ramps
+
+- **Houses are solid.** The suburban houses and the hillside villas had their walls, doors and gable ends facing
+  inwards, so from outside you saw straight through the near walls into the far ones. Fixed.
+- **No more ledge between the grass and the pavement.** The outer edge of every pavement was a bare 15 cm step
+  you had to jump; it now has a gentle invisible ramp down to the lawn, so you walk (and drive) straight on. The
+  pavements' collision also follows the street's slope on hills instead of stepping, and junction corners no
+  longer stick out into the road.
+- **Stunt ramps**, just for fun: three along Playa Solano beach, one on the sand north of the beach, one on the
+  open ground by the harbour, and a gap jump on the port quay (launch ramp, landing ramp). They're on the map (J),
+  and God Mode can take you to them.
+- **Helicopter:** the flight controls stay on screen while you fly. Climb with Space / RB, **descend with
+  Ctrl or C / LB**, nose down / up with W / S (RT / LT), turn with A / D (left stick).
+- **God Mode on the controller:** hold VIEW for a moment (a quick tap at the wheel still changes the camera).
+- **Controller menus:** A now selects and B goes back in every menu (Godot's menu actions had no pad buttons).
+
 ## Port Solano v1.2.1 — Xbox controller
 
 Plug in an Xbox controller (wired, or Bluetooth / wireless adapter) and play the whole game on it; prompts and

@@ -222,6 +222,9 @@ func places() -> Array:
 		out.append([hospital.rect.get_center(), "H", Color(0.9, 0.3, 0.32), "Hospital"])
 	if police_station:
 		out.append([police_station.rect.get_center(), "P", Color(0.35, 0.55, 0.95), "Police"])
+	# stunt ramps: on the full map only (a 5th field), not pinned round the minimap's edge
+	for r: Array in RAMPS.slice(0, 6):
+		out.append([Vector2(r[0], r[1]), "J", Color(0.95, 0.75, 0.1), "Stunt ramp", true])
 	return out
 
 
@@ -281,6 +284,21 @@ func _spawn_vehicles() -> void:
 	boat.position = Vector3(-1020.0, data.sea - 0.5, 15.0)
 	boat.rotation.y = PI * 0.5
 	add_child(boat)
+	# stunt ramps, just for fun: along the beach, on open ground by the harbour, and a gap jump on the quay
+	for r: Array in RAMPS:
+		var ramp := StuntRamp.new()
+		ramp.height = r[3]
+		ramp.position = Vector3(r[0], data.height_at(r[0], r[1]) - 0.02, r[1])
+		ramp.rotation.y = r[2]
+		add_child(ramp)
+
+
+## [x, z, yaw (the ramp rises towards -Z before yaw: 0 = drive north), height]
+const RAMPS := [
+	[-815.0, -420.0, 0.0, 2.2], [-815.0, 330.0, PI, 2.2], [-830.0, -150.0, 0.0, 1.6], [-800.0, -1000.0, 0.0, 2.6],
+	[-500.0, 740.0, -PI * 0.5, 2.2],
+	[285.0, 834.0, -PI * 0.5, 2.4], [314.0, 834.0, PI * 0.5, 2.4],   # quay: launch east, land on the far ramp
+]
 
 
 func _build_environment() -> void:

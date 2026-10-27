@@ -94,10 +94,15 @@ func _run() -> void:
 			["tour_downtown", Vector3(150, 60, 220), Vector3(0, 20, 0)],
 			["tour_yard", Vector3(470, 14, 690), Vector3(520, 2, 760)],
 			["tour_oaks", Vector3(560, 0, -620), Vector3(700, 0, -760)],
+			["tour_house", Vector3(-276, 2.2, -752), Vector3(-262, 2.5, -737)],   # street level, Las Lomas
+			["tour_ramps", Vector3(300, 7, 812), Vector3(300, 1, 834)],           # the quay gap jump
 		]
 		for sh: Array in shots:
 			if not (_want("tour") or _want(sh[0])):
 				continue
+			if sh[0] == "tour_house":
+				sh[1].y += world.data.height_at(sh[1].x, sh[1].z)
+				sh[2].y += world.data.height_at(sh[2].x, sh[2].z)
 			if sh[0] == "tour_oaks":
 				sh[1].y = world.data.height_at(sh[1].x, sh[1].z) + 12.0
 				sh[2].y = world.data.height_at(sh[2].x, sh[2].z)

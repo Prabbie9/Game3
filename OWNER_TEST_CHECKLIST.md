@@ -8,6 +8,13 @@ reply whenever convenient and the next session will act on it.
   branch `claude/tmp-push-test` (*Code → Branches*). The session's proxy does not allow changing the default branch or
   deleting branches.
 
+## v1.3.0 — solid houses, smooth pavements, stunt ramps
+- [ ] Walk round a few houses in Las Lomas and up in the hills: solid from outside now?
+- [ ] Walk and drive from lawns and verges onto pavements and roads: any ledge left anywhere?
+- [ ] Try the ramps (map: J; God Mode → TELEPORT → stunt ramps). Is the quay gap jump makeable? Want more?
+- [ ] Helicopter: climb / descend (Space / Ctrl, RB / LB) with the on-screen hint.
+- [ ] Controller: hold VIEW for God Mode; A / B in the menus.
+
 ## v1.2.1 — Xbox controller
 - [ ] Play a while with only the Xbox controller: on foot, a gunfight, a car, a bike, the helicopter, the menus,
   the map and God Mode (pause menu). Anything you couldn't do, or a button you'd rather have elsewhere?

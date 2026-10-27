@@ -6,11 +6,13 @@ const CONTROLS := [
 	["ON FOOT", ""],
 	["Move / sprint", "move_forward|sprint"], ["Jump, vault, climb", "jump"], ["Crouch", "crouch"], ["Take cover", "cover"],
 	["Aim / shoot", "aim|fire"], ["Reload", "reload"], ["Weapon wheel (hold)", "weapon_wheel"], ["Next / previous weapon", "weapon_next|weapon_prev"],
-	["Swap shoulder", "shoulder_swap"], ["Enter vehicle / use", "interact"], ["Map", "map"], ["God Mode (debug menu)", "god_mode"],
+	["Swap shoulder", "shoulder_swap"], ["Enter vehicle / use", "interact"], ["Map", "map"], ["God Mode (debug menu)", "god_mode|god_mode_pad"],
 	["VEHICLE", ""],
 	["Accelerate / brake", "accelerate|brake"], ["Handbrake", "handbrake"], ["Horn", "horn"], ["Headlights", "headlights"],
 	["Indicators (pad: A, the way you steer) / hazards", "indicator_left|indicator_right|indicator_pad|hazards"], ["Camera view", "camera_mode"], ["Look behind", "look_behind"],
 	["Shoot from the window", "vehicle_aim|vehicle_fire"], ["Radio station", "radio_next|radio_prev"], ["Exit vehicle", "interact"],
+	["HELICOPTER", ""],
+	["Climb / descend", "ascend|descend"], ["Nose down (forward) / up (back)", "accelerate|brake"], ["Turn", "steer_left|steer_right"],
 ]
 
 var _root: Control
